@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Config>
+  <HannibalAI>
+    <Enabled>1</Enabled>
+    <AIService>
+      <Endpoint>https://api.openai.com/v1/chat/completions</Endpoint>
+      <APIKey></APIKey>
+      <ModelVersion>gpt-4</ModelVersion>
+      <MaxTokens>1000</MaxTokens>
+      <Temperature>0.7</Temperature>
+    </AIService>
+    <BattleAnalysis>
+      <UpdateIntervalSeconds>1.0</UpdateIntervalSeconds>
+      <AnalysisThresholdDistance>100</AnalysisThresholdDistance>
+      <MinimumUnitCountForAnalysis>5</MinimumUnitCountForAnalysis>
+    </BattleAnalysis>
+    <CommanderLearning>
+      <Enabled>1</Enabled>
+      <LearningRate>0.1</LearningRate>
+      <MemoryPersistenceDays>30</MemoryPersistenceDays>
+      <MaxStoredBattles>100</MaxStoredBattles>
+    </CommanderLearning>
+    <Debug>
+      <Enabled>0</Enabled>
+      <LogLevel>Info</LogLevel>
+      <ShowAIDecisions>1</ShowAIDecisions>
+      <ShowBattleAnalysis>1</ShowBattleAnalysis>
+    </Debug>
+  </HannibalAI>
+</Config> 

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AIBehaviors>
+  <TacticalBehaviors>
+    <Behavior id="aggressive_advance">
+      <Conditions>
+        <Condition type="strength_ratio" operator="greater_than" value="1.2" />
+        <Condition type="distance" operator="greater_than" value="50" />
+      </Conditions>
+      <Actions>
+        <Action type="formation" value="line" />
+        <Action type="movement" value="advance" />
+        <Action type="speed" value="normal" />
+      </Actions>
+    </Behavior>
+    <Behavior id="defensive_hold">
+      <Conditions>
+        <Condition type="strength_ratio" operator="less_than" value="0.8" />
+        <Condition type="terrain_advantage" operator="true" />
+      </Conditions>
+      <Actions>
+        <Action type="formation" value="shield_wall" />
+        <Action type="movement" value="hold" />
+        <Action type="ranged_units" value="focus_fire" />
+      </Actions>
+    </Behavior>
+    <Behavior id="flanking_maneuver">
+      <Conditions>
+        <Condition type="cavalry_ratio" operator="greater_than" value="0.3" />
+        <Condition type="enemy_formation" value="line" />
+      </Conditions>
+      <Actions>
+        <Action type="cavalry_formation" value="wedge" />
+        <Action type="movement" value="flank" />
+        <Action type="target" value="enemy_flanks" />
+      </Actions>
+    </Behavior>
+  </TacticalBehaviors>
+</AIBehaviors> 
