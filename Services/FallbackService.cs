@@ -124,7 +124,7 @@ namespace HannibalAI.Services
             }
             catch (Exception ex)
             {
-                Debug.Print($"[HannibalAI] Error in fallback service: {ex.Message}");
+                TaleWorlds.Library.Debug.Print($"[HannibalAI] Error in fallback service: {ex.Message}");
                 return CreateEmergencyFallback();
             }
         }

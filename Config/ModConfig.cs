@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using System.Xml.Serialization;
+using Newtonsoft.Json;
 using TaleWorlds.Library;
 
 namespace HannibalAI.Config
@@ -8,22 +8,29 @@ namespace HannibalAI.Config
     public class ModConfig
     {
         private static ModConfig _instance;
-        private static readonly string ConfigPath = Path.Combine(BasePath.Name, "Modules", "HannibalAI", "DefaultConfig.xml");
+        private static readonly string ConfigPath = Path.Combine(BasePath.Name, "Modules", "HannibalAI", "hannibal_ai_config.json");
         private static readonly string CustomConfigPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.Personal),
             "Mount and Blade II Bannerlord",
             "Configs",
             "HannibalAI",
-            "config.xml"
+            "hannibal_ai_config.json"
         );
 
-        public bool Enabled { get; set; } = true;
-        public string AIEndpoint { get; set; } = "https://api.openai.com/v1/chat/completions";
-        public string APIKey { get; set; } = "";
-        public AIServiceConfig AIService { get; set; } = new AIServiceConfig();
-        public BattleAnalysisConfig BattleAnalysis { get; set; } = new BattleAnalysisConfig();
-        public CommanderLearningConfig CommanderLearning { get; set; } = new CommanderLearningConfig();
-        public DebugConfig Debug { get; set; } = new DebugConfig();
+        public string AIEndpoint { get; set; } = "https://api.example.com/hannibal-ai";
+        public string APIKey { get; set; } = "your-api-key-here";
+        public string LogLevel { get; set; } = "Info";
+        public bool EnableDebugMode { get; set; } = false;
+        public int BattleAnalysisInterval { get; set; } = 5;
+        public int FormationUpdateInterval { get; set; } = 2;
+        public int MaxUnitsPerFormation { get; set; } = 100;
+        public int MinimumUnitCountForFlank { get; set; } = 20;
+        public float RetreatThreshold { get; set; } = 0.3f;
+        public float AggressivenessLevel { get; set; } = 0.7f;
+        public float TerrainAnalysisWeight { get; set; } = 0.5f;
+        public float WeatherEffectWeight { get; set; } = 0.3f;
+        public UnitTypePreferences UnitTypePreferences { get; set; } = new UnitTypePreferences();
+        public FormationPreferences FormationPreferences { get; set; } = new FormationPreferences();
 
         public static ModConfig Instance
         {
@@ -44,21 +51,15 @@ namespace HannibalAI.Config
                 // Try to load custom config first
                 if (File.Exists(CustomConfigPath))
                 {
-                    using (var reader = new StreamReader(CustomConfigPath))
-                    {
-                        var serializer = new XmlSerializer(typeof(ModConfig));
-                        return (ModConfig)serializer.Deserialize(reader);
-                    }
+                    string json = File.ReadAllText(CustomConfigPath);
+                    return JsonConvert.DeserializeObject<ModConfig>(json);
                 }
 
                 // Fall back to default config
                 if (File.Exists(ConfigPath))
                 {
-                    using (var reader = new StreamReader(ConfigPath))
-                    {
-                        var serializer = new XmlSerializer(typeof(ModConfig));
-                        return (ModConfig)serializer.Deserialize(reader);
-                    }
+                    string json = File.ReadAllText(ConfigPath);
+                    return JsonConvert.DeserializeObject<ModConfig>(json);
                 }
             }
             catch (Exception ex)
@@ -74,11 +75,8 @@ namespace HannibalAI.Config
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(CustomConfigPath));
-                using (var writer = new StreamWriter(CustomConfigPath))
-                {
-                    var serializer = new XmlSerializer(typeof(ModConfig));
-                    serializer.Serialize(writer, this);
-                }
+                string json = JsonConvert.SerializeObject(this, Formatting.Indented);
+                File.WriteAllText(CustomConfigPath, json);
             }
             catch (Exception ex)
             {
@@ -87,34 +85,20 @@ namespace HannibalAI.Config
         }
     }
 
-    public class AIServiceConfig
+    public class UnitTypePreferences
     {
-        public string Endpoint { get; set; } = "https://api.openai.com/v1/chat/completions";
-        public string APIKey { get; set; } = "";
-        public string ModelVersion { get; set; } = "gpt-4";
-        public int MaxTokens { get; set; } = 1000;
-        public float Temperature { get; set; } = 0.7f;
+        public float Infantry { get; set; } = 1.0f;
+        public float Cavalry { get; set; } = 1.2f;
+        public float Ranged { get; set; } = 0.8f;
+        public float HorseArcher { get; set; } = 1.1f;
     }
 
-    public class BattleAnalysisConfig
+    public class FormationPreferences
     {
-        public float UpdateIntervalSeconds { get; set; } = 1.0f;
-        public int MinimumUnitCountForAnalysis { get; set; } = 5;
-    }
-
-    public class CommanderLearningConfig
-    {
-        public bool Enabled { get; set; } = true;
-        public float LearningRate { get; set; } = 0.1f;
-        public int MemoryPersistenceDays { get; set; } = 30;
-        public int MaxStoredBattles { get; set; } = 100;
-    }
-
-    public class DebugConfig
-    {
-        public bool Enabled { get; set; } = false;
-        public string LogLevel { get; set; } = "Info";
-        public bool ShowAIDecisions { get; set; } = true;
-        public bool ShowBattleAnalysis { get; set; } = true;
+        public float Line { get; set; } = 1.0f;
+        public float Square { get; set; } = 0.8f;
+        public float Circle { get; set; } = 0.6f;
+        public float Scatter { get; set; } = 0.4f;
+        public float Loose { get; set; } = 0.7f;
     }
 } 

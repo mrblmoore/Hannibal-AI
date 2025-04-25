@@ -4,20 +4,94 @@ using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
 using TaleWorlds.Library;
+using TaleWorlds.CampaignSystem;
+using TaleWorlds.Core;
+using HannibalAI.Config;
 
 namespace HannibalAI.Services
 {
     public class CommanderMemoryService
     {
+        private static CommanderMemoryService _instance;
+        private static readonly object _lock = new object();
+        private readonly Dictionary<string, CommanderMemory> _commanderMemories;
+        private readonly ModConfig _config;
         private readonly Dictionary<string, CommanderProfile> _profiles;
         private readonly string _savePath;
         private const int MAX_BATTLES_PER_COMMANDER = 10;
 
-        public CommanderMemoryService()
+        private CommanderMemoryService()
         {
+            _commanderMemories = new Dictionary<string, CommanderMemory>();
+            _config = ModConfig.Instance;
             _profiles = new Dictionary<string, CommanderProfile>();
             _savePath = Path.Combine(BasePath.Name, "Modules", "HannibalAI", "CommanderProfiles");
             LoadProfiles();
+        }
+
+        public static CommanderMemoryService Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    lock (_lock)
+                    {
+                        if (_instance == null)
+                        {
+                            _instance = new CommanderMemoryService();
+                        }
+                    }
+                }
+                return _instance;
+            }
+        }
+
+        public void UpdateCommanderMemory(string commanderId, float value)
+        {
+            if (!_commanderMemories.ContainsKey(commanderId))
+            {
+                _commanderMemories[commanderId] = new CommanderMemory
+                {
+                    LastUpdateTime = CampaignTime.Now,
+                    Value = value
+                };
+            }
+            else
+            {
+                var memory = _commanderMemories[commanderId];
+                memory.Value = Math.Min(_config.CommanderMemoryMaxValue, 
+                    Math.Max(_config.CommanderMemoryMinValue, value));
+                memory.LastUpdateTime = CampaignTime.Now;
+            }
+        }
+
+        public float GetCommanderMemory(string commanderId)
+        {
+            if (_commanderMemories.TryGetValue(commanderId, out var memory))
+            {
+                var timeSinceLastUpdate = CampaignTime.Now.ToHours - memory.LastUpdateTime.ToHours;
+                if (timeSinceLastUpdate > _config.CommanderMemoryDuration)
+                {
+                    _commanderMemories.Remove(commanderId);
+                    return 0f;
+                }
+
+                var decayedValue = memory.Value * 
+                    (1f - (_config.CommanderMemoryDecayRate * timeSinceLastUpdate));
+                return Math.Max(_config.CommanderMemoryMinValue, decayedValue);
+            }
+            return 0f;
+        }
+
+        public void ClearCommanderMemory(string commanderId)
+        {
+            _commanderMemories.Remove(commanderId);
+        }
+
+        public void ClearAllMemories()
+        {
+            _commanderMemories.Clear();
         }
 
         public CommanderProfile GetCommanderProfile(string commanderId)
@@ -174,6 +248,12 @@ namespace HannibalAI.Services
             {
                 Debug.Print($"[HannibalAI] Error saving commander profiles: {ex.Message}");
             }
+        }
+
+        private class CommanderMemory
+        {
+            public CampaignTime LastUpdateTime { get; set; }
+            public float Value { get; set; }
         }
     }
 

@@ -37,7 +37,7 @@ namespace HannibalAI.Battle
 
             var snapshot = new BattleSnapshot
             {
-                Time = Mission.Current.MissionTime,
+                Time = mission.CurrentTime,
                 CommanderId = commanderId,
                 Units = new List<UnitData>(),
                 Formations = new List<FormationSnapshot>()

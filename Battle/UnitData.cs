@@ -40,7 +40,7 @@ namespace HannibalAI.Battle
             IsPlayerControlled = agent.IsPlayerControlled;
         }
 
-        public bool HasRangedWeapon(Agent agent)
+        private bool HasRangedWeapon(Agent agent)
         {
             if (agent?.Equipment == null) return false;
 

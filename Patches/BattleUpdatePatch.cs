@@ -75,7 +75,12 @@ namespace HannibalAI.Patches
                 }
 
                 _lastUpdateTime = 0f;
-                _battleController.Update(dt);
+                if (mission != null && 
+                    mission.CurrentState == MissionState.Continuing &&
+                    _battleController != null)
+                {
+                    _battleController.Update(mission);
+                }
             }
             catch (Exception ex)
             {

@@ -20,9 +20,16 @@ namespace HannibalAI.Battle
 
             AverageHeight = GetAverageHeight(scene);
             Height = AverageHeight;
-            WaterLevel = scene.GetWaterLevel();
-            IsWater = false; // Scene.IsWaterAtPosition is not available in current API
-            HasWater = WaterLevel > float.MinValue;
+            
+            // Get water level at center of map
+            Vec3 min, max;
+            scene.GetBoundingBox(out min, out max);
+            var center = new Vec2((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
+            WaterLevel = scene.GetWaterLevelAtPosition(center);
+            IsWater = WaterLevel > 0f;
+            HasWater = IsWater;
+            
+            // Estimate forest and hills
             HasForest = EstimateHasForest(scene);
             HasHills = EstimateHasHills(scene);
         }
@@ -95,6 +102,15 @@ namespace HannibalAI.Battle
             float heightRange = maxHeight - minHeight;
 
             return heightRange > 5f;
+        }
+
+        public void UpdateTerrainData(Scene scene)
+        {
+            Vec3 min, max;
+            scene.GetBoundingBox(out min, out max);
+            var center = new Vec2((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
+            WaterLevel = scene.GetWaterLevelAtPosition(center);
+            // ... existing code ...
         }
     }
 } 

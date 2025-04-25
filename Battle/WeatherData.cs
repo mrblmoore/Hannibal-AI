@@ -6,17 +6,19 @@ namespace HannibalAI.Battle
 {
     public class WeatherData
     {
-        public float TimeOfDay { get; set; }
-        public float Rain { get; set; }
-        public float Fog { get; set; }
+        public float RainIntensity { get; set; }
+        public float FogDensity { get; set; }
+        public float WindSpeed { get; set; }
+        public float Temperature { get; set; }
+        public bool IsNight { get; set; }
 
-        public WeatherData(Mission mission)
+        public WeatherData()
         {
-            if (mission == null || mission.Scene == null) return;
-
-            TimeOfDay = Mission.Current.MissionTime;
-            Rain = mission.Scene.GetRainDensity();
-            Fog = 0f; // Fog is not directly accessible in current API
+            RainIntensity = 0f;
+            FogDensity = 0f;
+            WindSpeed = 0f;
+            Temperature = 20f;
+            IsNight = false;
         }
     }
 } 
