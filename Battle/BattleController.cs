@@ -69,22 +69,34 @@ namespace HannibalAI.Battle
 
             try
             {
-                if (command is AttackFormationCommand attackCommand)
+                switch (command)
                 {
-                    ExecuteAttackCommand(attackCommand);
-                }
-                else if (command is ChangeFormationCommand changeCommand)
-                {
-                    ExecuteChangeFormationCommand(changeCommand);
-                }
-                else if (command is MoveFormationCommand moveCommand)
-                {
-                    ExecuteMoveCommand(moveCommand);
+                    case AttackFormationCommand attackCommand:
+                        ExecuteAttackCommand(attackCommand);
+                        break;
+                    case ChangeFormationCommand changeCommand:
+                        ExecuteChangeFormationCommand(changeCommand);
+                        break;
+                    case MoveFormationCommand moveCommand:
+                        ExecuteMoveCommand(moveCommand);
+                        break;
+                    case FlankCommand flankCommand:
+                        ExecuteFlankCommand(flankCommand);
+                        break;
+                    case HoldCommand holdCommand:
+                        ExecuteHoldCommand(holdCommand);
+                        break;
+                    case ChargeCommand chargeCommand:
+                        ExecuteChargeCommand(chargeCommand);
+                        break;
+                    case FollowCommand followCommand:
+                        ExecuteFollowCommand(followCommand);
+                        break;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // Log error if needed
+                Logger.LogError($"Error executing command: {ex.Message}");
             }
         }
 
@@ -109,6 +121,41 @@ namespace HannibalAI.Battle
             if (command?.Formation != null)
             {
                 command.Formation.SetMovementOrder(MovementOrder.MovementOrderMove(command.Position));
+            }
+        }
+
+        private void ExecuteFlankCommand(FlankCommand command)
+        {
+            if (command?.Formation != null && command?.TargetFormation != null)
+            {
+                // Calculate flank position
+                var targetPos = command.TargetFormation.OrderPosition;
+                var flankPos = command.FlankPosition;
+                command.Formation.SetMovementOrder(MovementOrder.MovementOrderMove(flankPos));
+            }
+        }
+
+        private void ExecuteHoldCommand(HoldCommand command)
+        {
+            if (command?.Formation != null)
+            {
+                command.Formation.SetMovementOrder(MovementOrder.MovementOrderStop);
+            }
+        }
+
+        private void ExecuteChargeCommand(ChargeCommand command)
+        {
+            if (command?.Formation != null)
+            {
+                command.Formation.SetMovementOrder(MovementOrder.MovementOrderCharge);
+            }
+        }
+
+        private void ExecuteFollowCommand(FollowCommand command)
+        {
+            if (command?.Formation != null && command?.TargetFormation != null)
+            {
+                command.Formation.SetMovementOrder(MovementOrder.MovementOrderFollow(command.TargetFormation));
             }
         }
 
