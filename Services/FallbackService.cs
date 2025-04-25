@@ -6,6 +6,7 @@ using HannibalAI.Battle;
 using TaleWorlds.Library;
 using HannibalAI.Command;
 using TaleWorlds.Core;
+using TaleWorlds.MountAndBlade;
 
 namespace HannibalAI.Services
 {
@@ -13,10 +14,12 @@ namespace HannibalAI.Services
     {
         private static FallbackService _instance;
         private readonly Random _random;
+        private readonly Mission _mission;
 
-        public FallbackService()
+        public FallbackService(Mission mission)
         {
             _random = new Random();
+            _mission = mission;
         }
 
         public static FallbackService Instance
@@ -25,58 +28,57 @@ namespace HannibalAI.Services
             {
                 if (_instance == null)
                 {
-                    _instance = new FallbackService();
+                    _instance = new FallbackService(null);
                 }
                 return _instance;
             }
         }
 
-        public async Task<AIDecision> GetDecisionAsync(BattleSnapshot snapshot)
+        public async Task<AIDecision> GetFallbackDecision(BattleSnapshot snapshot)
         {
-            if (snapshot == null)
-            {
-                return new AIDecision();
-            }
+            if (snapshot == null || _mission == null) return null;
 
             try
             {
-                // Simple fallback logic: move towards the nearest enemy formation
-                var commands = new List<AICommand>();
-                var enemyFormations = snapshot.EnemyTeam?.Formations;
-                var friendlyFormations = snapshot.FriendlyTeam?.Formations;
+                // Get player team formations
+                var playerTeam = _mission.PlayerTeam;
+                if (playerTeam == null) return null;
 
-                if (enemyFormations != null && friendlyFormations != null)
+                var playerFormations = new List<Formation>();
+                foreach (var formation in playerTeam.FormationsIncludingEmpty)
                 {
-                    foreach (var formation in friendlyFormations)
+                    if (formation != null && formation.CountOfUnits > 0)
                     {
-                        var nearestEnemy = enemyFormations
-                            .OrderBy(e => Vec3.Distance(formation.Position, e.Position))
-                            .FirstOrDefault();
-
-                        if (nearestEnemy != null)
-                        {
-                            commands.Add(new MoveFormationCommand(formation.Position, 1.0f));
-                        }
+                        playerFormations.Add(formation);
                     }
                 }
 
-                return new AIDecision
+                // Get enemy team formations
+                var enemyTeam = _mission.PlayerEnemyTeam;
+                if (enemyTeam == null) return null;
+
+                var enemyFormations = new List<Formation>();
+                foreach (var formation in enemyTeam.FormationsIncludingEmpty)
                 {
-                    Action = "fallback_move",
-                    Commands = commands.ToArray(),
-                    Reasoning = "Fallback: Moving towards nearest enemy formation"
-                };
+                    if (formation != null && formation.CountOfUnits > 0)
+                    {
+                        enemyFormations.Add(formation);
+                    }
+                }
+
+                // TODO: Implement fallback decision logic using valid Bannerlord APIs
+                return null;
             }
             catch (Exception ex)
             {
-                Debug.Print($"Error in fallback decision: {ex.Message}");
-                return new AIDecision();
+                System.Diagnostics.Debug.WriteLine($"Error in GetFallbackDecision: {ex.Message}");
+                return null;
             }
         }
 
         public AIDecision GetDecisionSync(BattleSnapshot snapshot)
         {
-            return GetDecisionAsync(snapshot).GetAwaiter().GetResult();
+            return GetFallbackDecision(snapshot).GetAwaiter().GetResult();
         }
 
         private float CalculateTeamStrength(List<UnitData> units)

@@ -1,63 +1,48 @@
 using System;
 using System.Threading.Tasks;
 using TaleWorlds.MountAndBlade;
-using TaleWorlds.Core;
-using HannibalAI.Command;
-using HannibalAI.Services;
-using HannibalAI.Config;
 using TaleWorlds.Library;
+using HannibalAI.Services;
 
 namespace HannibalAI.Battle
 {
     public class AICommander
     {
-        private readonly AIService _aiService;
+        private readonly Mission _mission;
         private readonly FallbackService _fallbackService;
-        private readonly ModConfig _config;
+        private BattleSnapshot _lastSnapshot;
 
-        public int CommanderId { get; private set; }
-        public string Name { get; private set; }
-        public float Experience { get; private set; }
-
-        public AICommander(int commanderId, string name, float experience)
+        public AICommander(Mission mission)
         {
-            CommanderId = commanderId;
-            Name = name;
-            Experience = experience;
-            _config = ModConfig.Instance;
-            _aiService = new AIService(_config.AIEndpoint, _config.APIKey);
-            _fallbackService = new FallbackService();
+            _mission = mission;
+            _fallbackService = new FallbackService(mission);
         }
 
-        public async Task<AIDecision> MakeDecisionAsync(BattleSnapshot snapshot)
+        public async Task<AIDecision> GetDecision(BattleSnapshot snapshot)
         {
-            if (snapshot == null)
-            {
-                return null;
-            }
-
             try
             {
-                // Try to get decision from AI service first
-                var decision = await _aiService.GetDecisionAsync(snapshot);
-                if (decision != null && decision.Commands != null && decision.Commands.Length > 0)
-                {
-                    return decision;
-                }
-
-                // Fall back to local decision making if AI service fails
-                return await _fallbackService.GetDecisionAsync(snapshot);
+                _lastSnapshot = snapshot;
+                return await _fallbackService.GetFallbackDecision(snapshot);
             }
             catch (Exception ex)
             {
-                Debug.Print($"Error making AI decision: {ex.Message}");
-                return await _fallbackService.GetDecisionAsync(snapshot);
+                Debug.Print($"Error getting AI decision: {ex.Message}");
+                return null;
             }
         }
 
-        public AIDecision MakeDecision(BattleSnapshot snapshot)
+        public async Task<AIDecision> GetFallbackDecision()
         {
-            return MakeDecisionAsync(snapshot).GetAwaiter().GetResult();
+            try
+            {
+                return await _fallbackService.GetFallbackDecision(_lastSnapshot);
+            }
+            catch (Exception ex)
+            {
+                Debug.Print($"Error getting fallback decision: {ex.Message}");
+                return null;
+            }
         }
     }
 } 

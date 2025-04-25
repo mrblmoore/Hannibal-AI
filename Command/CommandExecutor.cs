@@ -13,10 +13,14 @@ namespace HannibalAI.Command
     {
         private static readonly string LogFile = "hannibal_ai_errors.log";
         private readonly Mission _mission;
+        private readonly ModConfig _config;
+        private readonly BattleController _battleController;
 
-        public CommandExecutor(Mission mission)
+        public CommandExecutor(Mission mission, BattleController battleController)
         {
             _mission = mission;
+            _config = ModConfig.Instance;
+            _battleController = battleController;
         }
 
         public void ExecuteCommand(AICommand command)
@@ -29,21 +33,12 @@ namespace HannibalAI.Command
 
             try
             {
-                switch (command.Type.ToLower())
+                if (_config.Debug)
                 {
-                    case "movement":
-                        ExecuteMovementCommand(command);
-                        break;
-                    case "formation":
-                        ExecuteFormationCommand(command);
-                        break;
-                    case "targeting":
-                        ExecuteTargetingCommand(command);
-                        break;
-                    default:
-                        Debug.Print($"[HannibalAI] Unknown command type: {command.Type}");
-                        break;
+                    Debug.Print($"Executing command: {command.GetType().Name}");
                 }
+
+                _battleController.ExecuteCommand(command);
 
                 // Log successful execution if debug is enabled
                 if (ModConfig.Instance.Debug.ShowAIDecisions)
@@ -51,9 +46,9 @@ namespace HannibalAI.Command
                     LogInfo($"Executed {command.Type} command on formation {command.FormationIndex}");
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Debug.Print($"[HannibalAI] Error executing command: {e.Message}");
+                Debug.Print($"Error executing command: {ex.Message}");
             }
         }
 

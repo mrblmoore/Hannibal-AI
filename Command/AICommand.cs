@@ -26,6 +26,9 @@ namespace HannibalAI.Command
         public Vec3 TargetPosition { get; set; }
         public object[] Parameters { get; set; }
         public CommandType Decision { get; set; }
+        public Formation Formation { get; protected set; }
+        public Vec3 Position { get; protected set; }
+        public float Priority { get; protected set; }
 
         public AICommand()
         {
@@ -54,10 +57,57 @@ namespace HannibalAI.Command
             Parameters = parameters ?? Array.Empty<object>();
         }
 
+        protected AICommand(Formation formation, Vec3 position, float priority)
+        {
+            Formation = formation;
+            Position = position;
+            Priority = priority;
+        }
+
         public void Execute(Mission mission)
         {
             var executor = new CommandExecutor(mission);
             executor.ExecuteCommand(this);
+        }
+    }
+
+    public class ChangeFormationCommand : AICommand
+    {
+        public ChangeFormationCommand(Formation formation, Vec3 position, float priority)
+            : base(formation, position, priority)
+        {
+        }
+    }
+
+    public class FlankCommand : AICommand
+    {
+        public FlankCommand(Formation formation, Vec3 position, float priority)
+            : base(formation, position, priority)
+        {
+        }
+    }
+
+    public class HoldCommand : AICommand
+    {
+        public HoldCommand(Formation formation, Vec3 position, float priority)
+            : base(formation, position, priority)
+        {
+        }
+    }
+
+    public class ChargeCommand : AICommand
+    {
+        public ChargeCommand(Formation formation, Vec3 position, float priority)
+            : base(formation, position, priority)
+        {
+        }
+    }
+
+    public class FollowCommand : AICommand
+    {
+        public FollowCommand(Formation formation, Vec3 position, float priority)
+            : base(formation, position, priority)
+        {
         }
     }
 } 

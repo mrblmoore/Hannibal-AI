@@ -8,33 +8,33 @@ namespace HannibalAI.UI
 {
     public class ModSettingsView : ViewModel
     {
-        private ModConfig _config;
-        private NumericBox _memoryDurationBox;
-        private NumericBox _memoryDecayBox;
+        private readonly ModConfig _config;
+        private readonly NumericBox _memoryDurationBox;
+        private readonly NumericBox _memoryDecayRateBox;
 
-        public ModSettingsView(ModConfig config)
+        public ModSettingsView()
         {
-            _config = config;
-            _memoryDurationBox = new NumericBox(0f, 60f, config.CommanderMemoryDuration);
-            _memoryDecayBox = new NumericBox(0f, 1f, config.CommanderMemoryDecayRate);
+            _config = ModConfig.Instance;
+            _memoryDurationBox = new NumericBox(_config.CommanderMemoryDuration, 0f, 3600f, 30f);
+            _memoryDecayRateBox = new NumericBox(_config.CommanderMemoryDecayRate, 0f, 1f, 0.1f);
+        }
 
-            _memoryDurationBox.PropertyChanged += (sender, e) =>
+        public void OnMemoryDurationChanged()
+        {
+            if (_config != null)
             {
-                if (e.PropertyName == nameof(NumericBox.Value))
-                {
-                    _config.CommanderMemoryDuration = _memoryDurationBox.Value;
-                    _config.SaveConfig();
-                }
-            };
+                _config.CommanderMemoryDuration = _memoryDurationBox.Value;
+                _config.SaveConfig();
+            }
+        }
 
-            _memoryDecayBox.PropertyChanged += (sender, e) =>
+        public void OnMemoryDecayRateChanged()
+        {
+            if (_config != null)
             {
-                if (e.PropertyName == nameof(NumericBox.Value))
-                {
-                    _config.CommanderMemoryDecayRate = _memoryDecayBox.Value;
-                    _config.SaveConfig();
-                }
-            };
+                _config.CommanderMemoryDecayRate = _memoryDecayRateBox.Value;
+                _config.SaveConfig();
+            }
         }
 
         [DataSourceProperty]
@@ -47,8 +47,8 @@ namespace HannibalAI.UI
         [DataSourceProperty]
         public float MemoryDecay
         {
-            get => _memoryDecayBox.Value;
-            set => _memoryDecayBox.Value = value;
+            get => _memoryDecayRateBox.Value;
+            set => _memoryDecayRateBox.Value = value;
         }
     }
 } 

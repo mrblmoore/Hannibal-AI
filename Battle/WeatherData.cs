@@ -7,24 +7,29 @@ namespace HannibalAI.Battle
 {
     public class WeatherData
     {
-        public float TimeOfDay { get; set; }
-        public float Rain { get; set; }
-        public float Fog { get; set; }
-        public float Temperature { get; set; }
-        public bool IsNight { get; set; }
+        public float RainDensity { get; private set; }
+        public float SnowDensity { get; private set; }
+        public float FogDensity { get; private set; }
+        public float Temperature { get; private set; }
 
         public WeatherData(Scene scene)
         {
             if (scene == null) return;
 
-            // Get time of day from scene
-            TimeOfDay = scene.TimeOfDay;
-            IsNight = TimeOfDay < 6f || TimeOfDay > 18f;
+            // TODO: Implement weather data collection using valid Bannerlord APIs
+            // For now, we'll use default values
+            RainDensity = 0f;
+            SnowDensity = 0f;
+            FogDensity = 0f;
+            Temperature = 20f;
+        }
 
-            // Get weather conditions
-            Rain = scene.GetRainDensity();
-            Fog = scene.GetFogDensity();
-            Temperature = scene.GetTemperature();
+        public WeatherData(float rainDensity, float snowDensity, float fogDensity, float temperature)
+        {
+            RainDensity = rainDensity;
+            SnowDensity = snowDensity;
+            FogDensity = fogDensity;
+            Temperature = temperature;
         }
 
         public WeatherData(BattleSnapshot snapshot)
@@ -34,11 +39,10 @@ namespace HannibalAI.Battle
             // Copy weather data from snapshot if available
             if (snapshot.Weather != null)
             {
-                TimeOfDay = snapshot.Weather.TimeOfDay;
-                Rain = snapshot.Weather.Rain;
-                Fog = snapshot.Weather.Fog;
+                RainDensity = snapshot.Weather.RainDensity;
+                SnowDensity = snapshot.Weather.SnowDensity;
+                FogDensity = snapshot.Weather.FogDensity;
                 Temperature = snapshot.Weather.Temperature;
-                IsNight = TimeOfDay < 6f || TimeOfDay > 18f;
             }
         }
     }

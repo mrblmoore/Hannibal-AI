@@ -21,17 +21,49 @@ using HannibalAI.Utils;
 
 namespace HannibalAI.Patches
 {
-    [HarmonyPatch(typeof(Mission), "Tick")]
+    [HarmonyPatch(typeof(Mission), "OnTick")]
     public class BattleUpdatePatch
     {
+        private static bool _battleStarted;
+        private static string _currentCommanderId;
+        private static readonly AIService _aiService = new AIService("http://localhost:5000", "api/v1");
+        private static readonly FallbackService _fallbackService;
         private static BattleController _battleController;
+        private static AICommander _commander;
         private static AIDecision _lastDecision;
         private static float _lastUpdateTime;
         private static readonly float UPDATE_INTERVAL = 1.0f;
-        private static bool _battleStarted = false;
-        private static string _currentCommanderId = "";
-        private static AIService _aiService;
-        private static readonly string LogFile = "HannibalAI.log";
+
+        static BattleUpdatePatch()
+        {
+            _fallbackService = new FallbackService(Mission.Current);
+        }
+
+        [HarmonyPrefix]
+        public static void Prefix(Mission __instance)
+        {
+            try
+            {
+                if (!_battleStarted)
+                {
+                    _battleStarted = true;
+                    _currentCommanderId = Guid.NewGuid().ToString();
+                    _commander = new AICommander(__instance);
+                    _battleController = new BattleController(__instance);
+                }
+
+                // Create battle snapshot
+                var snapshot = BattleSnapshot.CreateFromMission(__instance, _currentCommanderId);
+                if (snapshot == null) return;
+
+                // TODO: Implement battle processing logic using valid Bannerlord APIs
+                Debug.Print($"Battle update: {snapshot.BattleId} - {snapshot.State}");
+            }
+            catch (Exception ex)
+            {
+                Debug.Print($"Error in battle update: {ex.Message}");
+            }
+        }
 
         public static void Postfix(Mission __instance)
         {

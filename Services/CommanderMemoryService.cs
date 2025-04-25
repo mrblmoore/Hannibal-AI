@@ -18,6 +18,8 @@ namespace HannibalAI.Services
         private readonly ModConfig _config;
         private readonly Dictionary<string, CommanderProfile> _profiles;
         private readonly string _savePath;
+        private readonly Dictionary<string, float> _memories;
+        private readonly Dictionary<string, DateTime> _lastUpdated;
         private const int MAX_BATTLES_PER_COMMANDER = 10;
 
         private CommanderMemoryService()
@@ -26,6 +28,8 @@ namespace HannibalAI.Services
             _config = ModConfig.Instance;
             _profiles = new Dictionary<string, CommanderProfile>();
             _savePath = Path.Combine(BasePath.Name, "Modules", "HannibalAI", "CommanderProfiles");
+            _memories = new Dictionary<string, float>();
+            _lastUpdated = new Dictionary<string, DateTime>();
             LoadProfiles();
         }
 
@@ -44,6 +48,60 @@ namespace HannibalAI.Services
                     }
                 }
                 return _instance;
+            }
+        }
+
+        public float GetMemoryValue(string key)
+        {
+            if (!_memories.ContainsKey(key))
+            {
+                return _config.CommanderMemoryMinValue;
+            }
+
+            var value = _memories[key];
+            var lastUpdate = _lastUpdated[key];
+            var timeSinceUpdate = (DateTime.UtcNow - lastUpdate).TotalSeconds;
+
+            // Apply decay based on time since last update
+            if (timeSinceUpdate > 0)
+            {
+                value = Math.Max(
+                    _config.CommanderMemoryMinValue,
+                    value - (_config.CommanderMemoryDecayRate * (float)timeSinceUpdate)
+                );
+                _memories[key] = value;
+            }
+
+            return value;
+        }
+
+        public void UpdateMemory(string key, float value)
+        {
+            value = Math.Min(_config.CommanderMemoryMaxValue, Math.Max(_config.CommanderMemoryMinValue, value));
+            _memories[key] = value;
+            _lastUpdated[key] = DateTime.UtcNow;
+
+            // Clean up old memories
+            CleanupOldMemories();
+        }
+
+        private void CleanupOldMemories()
+        {
+            var keysToRemove = new List<string>();
+            var now = DateTime.UtcNow;
+
+            foreach (var kvp in _lastUpdated)
+            {
+                if ((now - kvp.Value).TotalSeconds > _config.CommanderMemoryDuration)
+                {
+                    keysToRemove.Add(kvp.Key);
+                }
+            }
+
+            foreach (var key in keysToRemove)
+            {
+                _memories.Remove(key);
+                _lastUpdated.Remove(key);
             }
         }
 

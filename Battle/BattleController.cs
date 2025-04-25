@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Library;
 using TaleWorlds.Engine;
@@ -17,12 +17,16 @@ namespace HannibalAI.Battle
         private readonly FallbackService _fallbackService;
         private BattleSnapshot _lastSnapshot;
         private AIDecision _lastDecision;
+        private readonly Mission _mission;
+        private readonly Dictionary<string, Formation> _formations;
 
-        public BattleController(AICommander commander, AIService aiService, FallbackService fallbackService)
+        public BattleController(AICommander commander, AIService aiService, FallbackService fallbackService, Mission mission)
         {
             _commander = commander;
             _aiService = aiService;
             _fallbackService = fallbackService;
+            _mission = mission;
+            _formations = new Dictionary<string, Formation>();
         }
 
         public void Update(BattleSnapshot snapshot)
@@ -54,16 +58,7 @@ namespace HannibalAI.Battle
             }
         }
 
-        private void HandleFallback()
-        {
-            var fallbackDecision = GetFallbackDecision(_lastSnapshot);
-            if (fallbackDecision != null)
-            {
-                ExecuteDecision(fallbackDecision);
-            }
-        }
-
-        private void ExecuteCommand(AICommand command)
+        public void ExecuteCommand(AICommand command)
         {
             if (command == null) return;
 
@@ -71,91 +66,78 @@ namespace HannibalAI.Battle
             {
                 switch (command)
                 {
-                    case AttackFormationCommand attackCommand:
-                        ExecuteAttackCommand(attackCommand);
+                    case ChangeFormationCommand cmd:
+                        HandleChangeFormation(cmd);
                         break;
-                    case ChangeFormationCommand changeCommand:
-                        ExecuteChangeFormationCommand(changeCommand);
+                    case FlankCommand cmd:
+                        HandleFlank(cmd);
                         break;
-                    case MoveFormationCommand moveCommand:
-                        ExecuteMoveCommand(moveCommand);
+                    case HoldCommand cmd:
+                        HandleHold(cmd);
                         break;
-                    case FlankCommand flankCommand:
-                        ExecuteFlankCommand(flankCommand);
+                    case ChargeCommand cmd:
+                        HandleCharge(cmd);
                         break;
-                    case HoldCommand holdCommand:
-                        ExecuteHoldCommand(holdCommand);
+                    case FollowCommand cmd:
+                        HandleFollow(cmd);
                         break;
-                    case ChargeCommand chargeCommand:
-                        ExecuteChargeCommand(chargeCommand);
-                        break;
-                    case FollowCommand followCommand:
-                        ExecuteFollowCommand(followCommand);
+                    default:
+                        Debug.Print($"Unhandled command type: {command.GetType().Name}");
                         break;
                 }
             }
             catch (Exception ex)
             {
-                Logger.LogError($"Error executing command: {ex.Message}");
+                Debug.Print($"Error executing command: {ex.Message}");
             }
         }
 
-        private void ExecuteAttackCommand(AttackFormationCommand command)
+        private void HandleChangeFormation(ChangeFormationCommand command)
         {
-            if (command?.Formation != null && command?.TargetFormation != null)
-            {
-                command.Formation.SetMovementOrder(MovementOrder.MovementOrderCharge);
-            }
+            if (command.Formation == null) return;
+            
+            // TODO: Implement formation change using valid Bannerlord APIs
+            Debug.Print($"Changing formation {command.Formation.Index}");
         }
 
-        private void ExecuteChangeFormationCommand(ChangeFormationCommand command)
+        private void HandleFlank(FlankCommand command)
         {
-            if (command?.Formation != null)
-            {
-                command.Formation.FormOrder = FormOrder.Line;
-            }
+            if (command.Formation == null) return;
+            
+            // TODO: Implement flanking using valid Bannerlord APIs
+            Debug.Print($"Flanking with formation {command.Formation.Index}");
         }
 
-        private void ExecuteMoveCommand(MoveFormationCommand command)
+        private void HandleHold(HoldCommand command)
         {
-            if (command?.Formation != null)
-            {
-                command.Formation.SetMovementOrder(MovementOrder.MovementOrderMove(command.Position));
-            }
+            if (command.Formation == null) return;
+            
+            // TODO: Implement hold position using valid Bannerlord APIs
+            Debug.Print($"Holding position with formation {command.Formation.Index}");
         }
 
-        private void ExecuteFlankCommand(FlankCommand command)
+        private void HandleCharge(ChargeCommand command)
         {
-            if (command?.Formation != null && command?.TargetFormation != null)
-            {
-                // Calculate flank position
-                var targetPos = command.TargetFormation.OrderPosition;
-                var flankPos = command.FlankPosition;
-                command.Formation.SetMovementOrder(MovementOrder.MovementOrderMove(flankPos));
-            }
+            if (command.Formation == null) return;
+            
+            // TODO: Implement charge using valid Bannerlord APIs
+            Debug.Print($"Charging with formation {command.Formation.Index}");
         }
 
-        private void ExecuteHoldCommand(HoldCommand command)
+        private void HandleFollow(FollowCommand command)
         {
-            if (command?.Formation != null)
-            {
-                command.Formation.SetMovementOrder(MovementOrder.MovementOrderStop);
-            }
+            if (command.Formation == null) return;
+            
+            // TODO: Implement follow using valid Bannerlord APIs
+            Debug.Print($"Following with formation {command.Formation.Index}");
         }
 
-        private void ExecuteChargeCommand(ChargeCommand command)
+        private void HandleFallback()
         {
-            if (command?.Formation != null)
+            var fallbackDecision = GetFallbackDecision(_lastSnapshot);
+            if (fallbackDecision != null)
             {
-                command.Formation.SetMovementOrder(MovementOrder.MovementOrderCharge);
-            }
-        }
-
-        private void ExecuteFollowCommand(FollowCommand command)
-        {
-            if (command?.Formation != null && command?.TargetFormation != null)
-            {
-                command.Formation.SetMovementOrder(MovementOrder.MovementOrderFollow(command.TargetFormation));
+                ExecuteDecision(fallbackDecision);
             }
         }
 
