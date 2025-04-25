@@ -1,48 +1,69 @@
-using System;
-using System.Threading.Tasks;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Library;
-using HannibalAI.Services;
+using HannibalAI.Command;
+using System;
 
 namespace HannibalAI.Battle
 {
     public class AICommander
     {
-        private readonly Mission _mission;
         private readonly FallbackService _fallbackService;
-        private BattleSnapshot _lastSnapshot;
 
-        public AICommander(Mission mission)
+        public AICommander(FallbackService fallbackService)
         {
-            _mission = mission;
-            _fallbackService = new FallbackService(mission);
+            _fallbackService = fallbackService ?? throw new ArgumentNullException(nameof(fallbackService));
         }
 
-        public async Task<AIDecision> GetDecision(BattleSnapshot snapshot)
+        public void MakeDecision(Formation formation, Mission mission)
         {
-            try
-            {
-                _lastSnapshot = snapshot;
-                return await _fallbackService.GetFallbackDecision(snapshot);
-            }
-            catch (Exception ex)
-            {
-                Debug.Print($"Error getting AI decision: {ex.Message}");
-                return null;
-            }
+            if (formation == null || mission == null)
+                return;
+
+            var snapshot = new BattleSnapshot(mission, formation.Team?.Side.ToString() ?? "Unknown");
+            var decision = _fallbackService.GetFallbackDecision(snapshot);
+
+            ExecuteCommand(decision, formation);
         }
 
-        public async Task<AIDecision> GetFallbackDecision()
+        private void ExecuteCommand(AICommand command, Formation formation)
         {
-            try
+            switch (command)
             {
-                return await _fallbackService.GetFallbackDecision(_lastSnapshot);
-            }
-            catch (Exception ex)
-            {
-                Debug.Print($"Error getting fallback decision: {ex.Message}");
-                return null;
+                case MoveFormationCommand moveCommand:
+                    if (formation != null)
+                        formation.SetMovementOrder(MovementOrder.MovementOrderMove(moveCommand.Position));
+                    break;
+
+                case ChangeFormationCommand changeCommand:
+                    if (formation != null)
+                        formation.SetFormOrder(changeCommand.FormOrder);
+                    break;
+
+                case FlankCommand flankCommand:
+                    if (formation != null)
+                        formation.FacingOrder = FacingOrder.FacingOrderLookAtDirection(flankCommand.Direction);
+                    break;
+
+                case HoldCommand holdCommand:
+                    if (formation != null)
+                        formation.SetMovementOrder(MovementOrder.MovementOrderMove(holdCommand.Position));
+                    break;
+
+                case ChargeCommand chargeCommand:
+                    if (formation != null)
+                        formation.SetMovementOrder(MovementOrder.MovementOrderCharge());
+                    break;
+
+                case FollowCommand followCommand:
+                    if (formation != null && followCommand.Target != null)
+                        formation.SetMovementOrder(MovementOrder.MovementOrderFollowEntity(followCommand.Target));
+                    break;
+
+                default:
+                    // If command type is not recognized
+                    InformationManager.DisplayMessage(new InformationMessage("Unknown command received."));
+                    break;
             }
         }
     }
-} 
+}

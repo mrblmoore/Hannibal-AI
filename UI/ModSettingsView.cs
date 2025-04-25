@@ -1,54 +1,65 @@
 using System;
-using System.ComponentModel;
-using HannibalAI.Config;
-using HannibalAI.UI.Components;
-using TaleWorlds.Library;
+using TaleWorlds.Engine.GauntletUI;
+using TaleWorlds.GauntletUI.Data;
+using TaleWorlds.MountAndBlade.View;
+using HannibalAI.Services;
 
 namespace HannibalAI.UI
 {
-    public class ModSettingsView : ViewModel
+    [ViewScript("ModSettingsView")]
+    public class ModSettingsView : View
+    {
+        private ModConfig _modConfig;
+
+        public ModSettingsView(GauntletLayer layer) : base(layer)
+        {
+            _modConfig = new ModConfig();
+
+            // Example of binding data (optional for expansion)
+            var dataSource = new ModSettingsDataSource(_modConfig);
+            layer.LoadMovie("ModSettings", dataSource);
+        }
+
+        // This could be extended later for UI interaction
+    }
+
+    public class ModSettingsDataSource : ViewModel
     {
         private readonly ModConfig _config;
-        private readonly NumericBox _memoryDurationBox;
-        private readonly NumericBox _memoryDecayRateBox;
 
-        public ModSettingsView()
+        public ModSettingsDataSource(ModConfig config)
         {
-            _config = ModConfig.Instance;
-            _memoryDurationBox = new NumericBox(_config.CommanderMemoryDuration, 0f, 3600f, 30f);
-            _memoryDecayRateBox = new NumericBox(_config.CommanderMemoryDecayRate, 0f, 1f, 0.1f);
+            _config = config ?? throw new ArgumentNullException(nameof(config));
         }
 
-        public void OnMemoryDurationChanged()
+        public int CommanderMemoryDuration
         {
-            if (_config != null)
-            {
-                _config.CommanderMemoryDuration = _memoryDurationBox.Value;
-                _config.SaveConfig();
-            }
+            get => _config.CommanderMemoryDuration;
+            set => _config.CommanderMemoryDuration = value;
         }
 
-        public void OnMemoryDecayRateChanged()
+        public float CommanderMemoryDecayRate
         {
-            if (_config != null)
-            {
-                _config.CommanderMemoryDecayRate = _memoryDecayRateBox.Value;
-                _config.SaveConfig();
-            }
+            get => _config.CommanderMemoryDecayRate;
+            set => _config.CommanderMemoryDecayRate = value;
         }
 
-        [DataSourceProperty]
-        public float MemoryDuration
+        public int CommanderMemoryMaxValue
         {
-            get => _memoryDurationBox.Value;
-            set => _memoryDurationBox.Value = value;
+            get => _config.CommanderMemoryMaxValue;
+            set => _config.CommanderMemoryMaxValue = value;
         }
 
-        [DataSourceProperty]
-        public float MemoryDecay
+        public int CommanderMemoryMinValue
         {
-            get => _memoryDecayRateBox.Value;
-            set => _memoryDecayRateBox.Value = value;
+            get => _config.CommanderMemoryMinValue;
+            set => _config.CommanderMemoryMinValue = value;
+        }
+
+        public bool Debug
+        {
+            get => _config.Debug;
+            set => _config.Debug = value;
         }
     }
-} 
+}

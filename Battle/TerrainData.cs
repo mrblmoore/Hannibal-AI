@@ -1,4 +1,3 @@
-using System;
 using TaleWorlds.Engine;
 using TaleWorlds.Library;
 
@@ -6,111 +5,27 @@ namespace HannibalAI.Battle
 {
     public class TerrainData
     {
-        public float Height { get; set; }
-        public float AverageHeight { get; set; }
-        public float WaterLevel { get; set; }
-        public bool IsWater { get; set; }
-        public bool HasWater { get; set; }
-        public bool HasForest { get; set; }
-        public bool HasHills { get; set; }
+        public float Height { get; private set; }
+        public float WaterLevel { get; private set; }
+        public bool IsWater { get; private set; }
 
-        public TerrainData(Scene scene)
+        public TerrainData(Scene scene, Vec2 position)
         {
-            if (scene == null) return;
-
-            AverageHeight = GetAverageHeight(scene);
-            Height = AverageHeight;
-            
-            // Get water level at center of map
-            Vec3 min, max;
-            scene.GetBoundingBox(out min, out max);
-            var center = new Vec2((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
-            WaterLevel = scene.GetWaterLevelAtPosition(center, true);
-            IsWater = WaterLevel > 0f;
-            HasWater = IsWater;
-            
-            // Estimate forest and hills
-            HasForest = EstimateHasForest(scene);
-            HasHills = EstimateHasHills(scene);
-        }
-
-        private float GetAverageHeight(Scene scene)
-        {
-            if (scene == null) return 0f;
-
-            float totalHeight = 0f;
-            int sampleCount = 0;
-            const int gridSize = 10;
-            const float step = 100f;
-
-            for (int x = -gridSize; x <= gridSize; x++)
+            if (scene == null)
             {
-                for (int y = -gridSize; y <= gridSize; y++)
-                {
-                    var pos = new Vec2(x * step, y * step);
-                    float height = 0f;
-                    if (scene.GetHeightAtPoint(pos, BodyFlags.CommonCollisionExcludeFlagsForCombat, ref height))
-                    {
-                        totalHeight += height;
-                        sampleCount++;
-                    }
-                }
+                Height = 0f;
+                WaterLevel = 0f;
+                IsWater = false;
+                return;
             }
 
-            return sampleCount > 0 ? totalHeight / sampleCount : 0f;
-        }
+            // Correct call for Bannerlord 1.2.12
+            Height = scene.GetTerrainHeightAtPosition(position);
 
-        private bool EstimateHasForest(Scene scene)
-        {
-            if (scene == null) return false;
+            // Corrected Scene method call
+            WaterLevel = scene.GetWaterLevelAtPosition(position, checkWaterBodyEntities: true);
 
-            // Since we can't directly check for trees, we'll use a simpler approach
-            // This is a placeholder - you may want to implement a more accurate method
-            return false;
-        }
-
-        private bool EstimateHasHills(Scene scene)
-        {
-            if (scene == null) return false;
-
-            float totalHeight = 0f;
-            float maxHeight = float.MinValue;
-            float minHeight = float.MaxValue;
-            int sampleCount = 0;
-            const int gridSize = 10;
-            const float step = 100f;
-
-            for (int x = -gridSize; x <= gridSize; x++)
-            {
-                for (int y = -gridSize; y <= gridSize; y++)
-                {
-                    var pos = new Vec2(x * step, y * step);
-                    float height = 0f;
-                    if (scene.GetHeightAtPoint(pos, BodyFlags.CommonCollisionExcludeFlagsForCombat, ref height))
-                    {
-                        totalHeight += height;
-                        maxHeight = Math.Max(maxHeight, height);
-                        minHeight = Math.Min(minHeight, height);
-                        sampleCount++;
-                    }
-                }
-            }
-
-            if (sampleCount == 0) return false;
-
-            float averageHeight = totalHeight / sampleCount;
-            float heightRange = maxHeight - minHeight;
-
-            return heightRange > 5f;
-        }
-
-        public void UpdateTerrainData(Scene scene)
-        {
-            Vec3 min, max;
-            scene.GetBoundingBox(out min, out max);
-            var center = new Vec2((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
-            WaterLevel = scene.GetWaterLevelAtPosition(center, true);
-            // ... existing code ...
+            IsWater = Height < WaterLevel;
         }
     }
-} 
+}

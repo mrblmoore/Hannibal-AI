@@ -3,13 +3,13 @@ using TaleWorlds.Library;
 
 namespace HannibalAI.Command
 {
-    public class MoveFormationCommand : AICommand
+    public class HoldCommand : AICommand
     {
         public Formation Formation { get; private set; }
         public Vec2 Position { get; private set; }
 
-        public MoveFormationCommand(Formation formation, Vec2 position)
-            : base("Move Formation", CommandType.MoveFormation)
+        public HoldCommand(Formation formation, Vec2 position)
+            : base("Hold Position", CommandType.Hold)
         {
             Formation = formation;
             Position = position;

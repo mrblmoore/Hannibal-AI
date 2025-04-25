@@ -1,149 +1,63 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using TaleWorlds.MountAndBlade;
-using TaleWorlds.Library;
-using TaleWorlds.Engine;
 using HannibalAI.Command;
 using HannibalAI.Services;
-using HannibalAI.Battle;
+using TaleWorlds.MountAndBlade;
 
 namespace HannibalAI.Battle
 {
     public class BattleController
     {
-        private readonly AICommander _commander;
-        private readonly AIService _aiService;
+        private readonly AICommander _aiCommander;
         private readonly FallbackService _fallbackService;
-        private BattleSnapshot _lastSnapshot;
-        private AIDecision _lastDecision;
-        private readonly Mission _mission;
-        private readonly Dictionary<string, Formation> _formations;
 
-        public BattleController(AICommander commander, AIService aiService, FallbackService fallbackService, Mission mission)
+        public BattleController(AICommander aiCommander, FallbackService fallbackService)
         {
-            _commander = commander;
-            _aiService = aiService;
-            _fallbackService = fallbackService;
-            _mission = mission;
-            _formations = new Dictionary<string, Formation>();
+            _aiCommander = aiCommander ?? throw new ArgumentNullException(nameof(aiCommander));
+            _fallbackService = fallbackService ?? throw new ArgumentNullException(nameof(fallbackService));
         }
 
-        public void Update(BattleSnapshot snapshot)
-        {
-            _lastSnapshot = snapshot;
-            _lastDecision = _aiService.GetDecisionSync(snapshot);
-            ExecuteDecision(_lastDecision);
-        }
-
-        private void ExecuteDecision(AIDecision decision)
+        public void ExecuteAIDecision(AIDecision decision)
         {
             if (decision == null)
-            {
-                HandleFallback();
                 return;
-            }
-
-            foreach (var command in decision.Commands)
-            {
-                try
-                {
-                    ExecuteCommand(command);
-                }
-                catch (Exception ex)
-                {
-                    HandleFallback();
-                    break;
-                }
-            }
-        }
-
-        public void ExecuteCommand(AICommand command)
-        {
-            if (command == null) return;
 
             try
             {
-                switch (command)
+                AICommand command = decision.Command;
+
+                if (command is MoveFormationCommand moveCmd)
                 {
-                    case ChangeFormationCommand cmd:
-                        HandleChangeFormation(cmd);
-                        break;
-                    case FlankCommand cmd:
-                        HandleFlank(cmd);
-                        break;
-                    case HoldCommand cmd:
-                        HandleHold(cmd);
-                        break;
-                    case ChargeCommand cmd:
-                        HandleCharge(cmd);
-                        break;
-                    case FollowCommand cmd:
-                        HandleFollow(cmd);
-                        break;
-                    default:
-                        Debug.Print($"Unhandled command type: {command.GetType().Name}");
-                        break;
+                    _aiCommander.MoveFormation(moveCmd.Formation, moveCmd.Position);
+                }
+                else if (command is ChangeFormationCommand changeCmd)
+                {
+                    _aiCommander.ChangeFormation(changeCmd.Formation, changeCmd.FormOrder);
+                }
+                else if (command is FlankCommand flankCmd)
+                {
+                    _aiCommander.FlankEnemy(flankCmd.Formation, flankCmd.Direction);
+                }
+                else if (command is HoldCommand holdCmd)
+                {
+                    _aiCommander.HoldPosition(holdCmd.Formation, holdCmd.Position);
+                }
+                else if (command is ChargeCommand chargeCmd)
+                {
+                    _aiCommander.ChargeFormation(chargeCmd.Formation);
+                }
+                else if (command is FollowCommand followCmd)
+                {
+                    _aiCommander.FollowTarget(followCmd.Formation, followCmd.Target);
+                }
+                else
+                {
+                    _fallbackService.GetFallbackDecision();
                 }
             }
             catch (Exception ex)
             {
-                Debug.Print($"Error executing command: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error executing AI decision: {ex.Message}");
             }
-        }
-
-        private void HandleChangeFormation(ChangeFormationCommand command)
-        {
-            if (command.Formation == null) return;
-            
-            // TODO: Implement formation change using valid Bannerlord APIs
-            Debug.Print($"Changing formation {command.Formation.Index}");
-        }
-
-        private void HandleFlank(FlankCommand command)
-        {
-            if (command.Formation == null) return;
-            
-            // TODO: Implement flanking using valid Bannerlord APIs
-            Debug.Print($"Flanking with formation {command.Formation.Index}");
-        }
-
-        private void HandleHold(HoldCommand command)
-        {
-            if (command.Formation == null) return;
-            
-            // TODO: Implement hold position using valid Bannerlord APIs
-            Debug.Print($"Holding position with formation {command.Formation.Index}");
-        }
-
-        private void HandleCharge(ChargeCommand command)
-        {
-            if (command.Formation == null) return;
-            
-            // TODO: Implement charge using valid Bannerlord APIs
-            Debug.Print($"Charging with formation {command.Formation.Index}");
-        }
-
-        private void HandleFollow(FollowCommand command)
-        {
-            if (command.Formation == null) return;
-            
-            // TODO: Implement follow using valid Bannerlord APIs
-            Debug.Print($"Following with formation {command.Formation.Index}");
-        }
-
-        private void HandleFallback()
-        {
-            var fallbackDecision = GetFallbackDecision(_lastSnapshot);
-            if (fallbackDecision != null)
-            {
-                ExecuteDecision(fallbackDecision);
-            }
-        }
-
-        private AIDecision GetFallbackDecision(BattleSnapshot snapshot)
-        {
-            return _fallbackService.GetDecisionSync(snapshot);
         }
     }
-} 
+}

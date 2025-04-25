@@ -2,15 +2,14 @@ using TaleWorlds.MountAndBlade;
 
 namespace HannibalAI.Command
 {
-    public class ChargeCommand
+    public class ChargeCommand : AICommand
     {
-        public Formation Formation { get; }
-        public Formation TargetFormation { get; }
+        public Formation Formation { get; private set; }
 
-        public ChargeCommand(Formation formation, Formation targetFormation)
+        public ChargeCommand(Formation formation)
+            : base("Charge", CommandType.Charge)
         {
             Formation = formation;
-            TargetFormation = targetFormation;
         }
     }
-} 
+}

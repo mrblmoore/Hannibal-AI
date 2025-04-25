@@ -1,60 +1,27 @@
-using System;
-using TaleWorlds.MountAndBlade;
 using TaleWorlds.Engine;
-using TaleWorlds.Library;
 
 namespace HannibalAI.Battle
 {
     public class WeatherData
     {
-        public float RainDensity { get; private set; }
-        public float SnowDensity { get; private set; }
         public float FogDensity { get; private set; }
         public float Temperature { get; private set; }
 
         public WeatherData(Scene scene)
         {
-            if (scene == null) return;
-
-            // Get weather state from scene
-            var weatherState = scene.GetWeatherState();
-            if (weatherState != null)
+            if (scene == null)
             {
-                RainDensity = weatherState.RainDensity;
-                SnowDensity = weatherState.SnowDensity;
-                FogDensity = weatherState.FogDensity;
-                Temperature = 20f; // Default temperature since GetTemperature() is not available
-            }
-            else
-            {
-                // Default values if weather state is not available
-                RainDensity = 0f;
-                SnowDensity = 0f;
                 FogDensity = 0f;
-                Temperature = 20f;
+                Temperature = 20f; // Default temperature
+                return;
             }
-        }
 
-        public WeatherData(float rainDensity, float snowDensity, float fogDensity, float temperature)
-        {
-            RainDensity = rainDensity;
-            SnowDensity = snowDensity;
-            FogDensity = fogDensity;
-            Temperature = temperature;
-        }
+            // No direct API exists in 1.2.12 for Fog or Temperature.
+            // Therefore, we assign reasonable defaults or use environmental lighting later if needed.
+            FogDensity = 0f;  // Placeholder (Bannerlord API does not expose fog density anymore)
+            Temperature = 20f; // Placeholder temperature (average)
 
-        public WeatherData(BattleSnapshot snapshot)
-        {
-            if (snapshot == null) return;
-
-            // Copy weather data from snapshot if available
-            if (snapshot.Weather != null)
-            {
-                RainDensity = snapshot.Weather.RainDensity;
-                SnowDensity = snapshot.Weather.SnowDensity;
-                FogDensity = snapshot.Weather.FogDensity;
-                Temperature = snapshot.Weather.Temperature;
-            }
+            // Future Expansion: You can later hook into weather particles, ambient lighting, etc.
         }
     }
-} 
+}
