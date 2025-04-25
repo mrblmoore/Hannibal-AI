@@ -1,5 +1,6 @@
 using System;
 using TaleWorlds.Library;
+using TaleWorlds.MountAndBlade;
 
 namespace HannibalAI.UI.Components
 {
@@ -8,13 +9,7 @@ namespace HannibalAI.UI.Components
         private float _value;
         private float _minValue;
         private float _maxValue;
-
-        public NumericBox(float minValue, float maxValue, float initialValue)
-        {
-            _minValue = minValue;
-            _maxValue = maxValue;
-            _value = Math.Clamp(initialValue, minValue, maxValue);
-        }
+        private float _step;
 
         [DataSourceProperty]
         public float Value
@@ -24,17 +19,71 @@ namespace HannibalAI.UI.Components
             {
                 if (_value != value)
                 {
-                    _value = Math.Clamp(value, _minValue, _maxValue);
-                    OnPropertyChanged(nameof(Value));
+                    _value = value;
+                    OnPropertyChanged();
                 }
             }
         }
 
-        public float GetValue() => _value;
-
-        public void SetValue(float newValue)
+        [DataSourceProperty]
+        public float MinValue
         {
-            Value = newValue;
+            get => _minValue;
+            set
+            {
+                if (_minValue != value)
+                {
+                    _minValue = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        [DataSourceProperty]
+        public float MaxValue
+        {
+            get => _maxValue;
+            set
+            {
+                if (_maxValue != value)
+                {
+                    _maxValue = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        [DataSourceProperty]
+        public float Step
+        {
+            get => _step;
+            set
+            {
+                if (_step != value)
+                {
+                    _step = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        public NumericBox(float initialValue = 0f, float minValue = float.MinValue, float maxValue = float.MaxValue, float step = 1f)
+        {
+            _value = initialValue;
+            _minValue = minValue;
+            _maxValue = maxValue;
+            _step = step;
+        }
+
+        public void Increase()
+        {
+            Value = MathF.Min(_value + _step, _maxValue);
+        }
+
+        public void Decrease()
+        {
+            Value = MathF.Max(_value - _step, _minValue);
         }
     }
+} 
 } 

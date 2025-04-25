@@ -6,17 +6,21 @@ using TaleWorlds.MountAndBlade;
 using TaleWorlds.Library;
 using TaleWorlds.Engine;
 using HannibalAI.Command;
+using HannibalAI.Utils;
 
 namespace HannibalAI.Battle
 {
     public class BattleSnapshot
     {
+        public string BattleId { get; private set; }
+        public string CommanderId { get; private set; }
+        public DateTime Timestamp { get; private set; }
+        public WeatherData Weather { get; private set; }
+        public List<FormationSnapshot> Formations { get; private set; }
+        public BattleState State { get; private set; }
         public float Time { get; set; }
-        public string CommanderId { get; set; }
         public List<UnitData> Units { get; set; }
-        public List<FormationSnapshot> Formations { get; set; }
         public TerrainData Terrain { get; set; }
-        public WeatherData Weather { get; set; }
         public Vec2 MapSize { get; set; }
         public Team FriendlyTeam { get; set; }
         public Team EnemyTeam { get; set; }
@@ -24,56 +28,53 @@ namespace HannibalAI.Battle
         public List<UnitData> PlayerUnits => Units?.Where(u => u.Team?.IsPlayerTeam ?? false).ToList() ?? new List<UnitData>();
         public List<UnitData> EnemyUnits => Units?.Where(u => !(u.Team?.IsPlayerTeam ?? true)).ToList() ?? new List<UnitData>();
 
-        public BattleSnapshot()
+        public BattleSnapshot(string battleId, string commanderId, WeatherData weather, List<FormationSnapshot> formations, BattleState state)
         {
-            Units = new List<UnitData>();
-            Formations = new List<FormationSnapshot>();
+            BattleId = battleId;
+            CommanderId = commanderId;
+            Timestamp = DateTime.UtcNow;
+            Weather = weather;
+            Formations = formations;
+            State = state;
         }
 
         public static BattleSnapshot CreateFromMission(Mission mission, string commanderId)
         {
-            if (mission == null)
-                return null;
-
-            var snapshot = new BattleSnapshot
+            try
             {
-                Time = mission.CurrentTime,
-                CommanderId = commanderId,
-                Units = new List<UnitData>(),
-                Formations = new List<FormationSnapshot>(),
-                FriendlyTeam = mission.PlayerTeam,
-                EnemyTeam = mission.PlayerEnemyTeam,
-                Weather = new WeatherData(mission.Scene)
-            };
+                var weather = new WeatherData(
+                    mission.Scene.GetRainDensity(),
+                    mission.Scene.GetSnowDensity(),
+                    mission.Scene.GetFogDensity()
+                );
 
-            // Get map size from scene bounds
-            Vec3 min, max;
-            mission.Scene.GetBoundingBox(out min, out max);
-            snapshot.MapSize = new Vec2(max.x - min.x, max.y - min.y);
-
-            // Collect units
-            foreach (var agent in mission.Agents)
-            {
-                if (agent == null || !agent.IsActive()) continue;
-                snapshot.Units.Add(new UnitData(agent));
-            }
-
-            // Collect formations
-            foreach (var team in mission.Teams)
-            {
-                if (team == null) continue;
-                foreach (var formation in team.FormationsIncludingEmpty)
+                var formations = new List<FormationSnapshot>();
+                foreach (var formation in mission.Teams)
                 {
-                    if (formation == null) continue;
-                    snapshot.Formations.Add(new FormationSnapshot(formation));
+                    formations.Add(FormationSnapshot.CreateFromFormation(formation));
                 }
+
+                return new BattleSnapshot(
+                    Guid.NewGuid().ToString(),
+                    commanderId,
+                    weather,
+                    formations,
+                    BattleState.InProgress
+                );
             }
-
-            // Get terrain and weather data
-            snapshot.Terrain = new TerrainData(mission.Scene);
-
-            return snapshot;
+            catch (Exception ex)
+            {
+                LogFile.WriteLine($"Error creating battle snapshot: {ex.Message}");
+                return null;
+            }
         }
+    }
+
+    public enum BattleState
+    {
+        NotStarted,
+        InProgress,
+        Completed
     }
 
     public class UnitSnapshot
@@ -114,6 +115,11 @@ namespace HannibalAI.Battle
             Depth = formation.UnitSpacing; // Use UnitSpacing for both since FileSpacing is not available
             UnitCount = formation.CountOfUnits;
             FormationClass = formation.FormationIndex;
+        }
+
+        public static FormationSnapshot CreateFromFormation(Formation formation)
+        {
+            return new FormationSnapshot(formation);
         }
     }
 
