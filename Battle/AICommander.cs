@@ -57,7 +57,6 @@ namespace HannibalAI.Battle
 
         public AIDecision MakeDecision(BattleSnapshot snapshot)
         {
-            // For synchronous calls, we'll wait for the async operation
             return MakeDecisionAsync(snapshot).GetAwaiter().GetResult();
         }
 

@@ -96,9 +96,16 @@
     <Compile Include="Battle\AIDecision.cs" />
     <Compile Include="Battle\WeatherData.cs" />
     <Compile Include="Battle\ArrangementOrderCustom.cs" />
+    <Compile Include="Battle\AICommander.cs" />
     <Compile Include="Command\CommandExecutor.cs" />
     <Compile Include="Command\AICommand.cs" />
     <Compile Include="Command\MoveFormationCommand.cs" />
+    <Compile Include="Command\AttackFormationCommand.cs" />
+    <Compile Include="Command\ChangeFormationCommand.cs" />
+    <Compile Include="Command\FlankCommand.cs" />
+    <Compile Include="Command\HoldCommand.cs" />
+    <Compile Include="Command\ChargeCommand.cs" />
+    <Compile Include="Command\FollowCommand.cs" />
     <Compile Include="Patches\BattleUpdatePatch.cs" />
     <Compile Include="UI\ModSettingsView.cs" />
   </ItemGroup>
