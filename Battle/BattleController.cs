@@ -44,18 +44,7 @@ namespace HannibalAI.Battle
             {
                 try
                 {
-                    switch (command)
-                    {
-                        case AttackFormationCommand attackCommand:
-                            ExecuteAttackCommand(attackCommand);
-                            break;
-                        case ChangeFormationCommand formationCommand:
-                            ExecuteChangeFormationCommand(formationCommand);
-                            break;
-                        case MoveFormationCommand moveCommand:
-                            ExecuteMoveCommand(moveCommand);
-                            break;
-                    }
+                    ExecuteCommand(command);
                 }
                 catch (Exception ex)
                 {
@@ -67,26 +56,65 @@ namespace HannibalAI.Battle
 
         private void HandleFallback()
         {
-            var fallbackDecision = _fallbackService.GetFallbackDecision(_lastSnapshot);
+            var fallbackDecision = GetFallbackDecision(_lastSnapshot);
             if (fallbackDecision != null)
             {
                 ExecuteDecision(fallbackDecision);
             }
         }
 
+        private void ExecuteCommand(AICommand command)
+        {
+            if (command == null) return;
+
+            try
+            {
+                if (command is AttackFormationCommand attackCommand)
+                {
+                    ExecuteAttackCommand(attackCommand);
+                }
+                else if (command is ChangeFormationCommand changeCommand)
+                {
+                    ExecuteChangeFormationCommand(changeCommand);
+                }
+                else if (command is MoveFormationCommand moveCommand)
+                {
+                    ExecuteMoveCommand(moveCommand);
+                }
+            }
+            catch (Exception)
+            {
+                // Log error if needed
+            }
+        }
+
         private void ExecuteAttackCommand(AttackFormationCommand command)
         {
-            _commander.AttackFormation(command.Formation, command.TargetFormation);
+            if (command?.Formation != null && command?.TargetFormation != null)
+            {
+                command.Formation.SetMovementOrder(MovementOrder.MovementOrderCharge);
+            }
         }
 
         private void ExecuteChangeFormationCommand(ChangeFormationCommand command)
         {
-            _commander.ChangeFormation(command.Formation, command.NewFormation);
+            if (command?.Formation != null)
+            {
+                command.Formation.FormOrder = FormOrder.Line;
+            }
         }
 
         private void ExecuteMoveCommand(MoveFormationCommand command)
         {
-            _commander.MoveFormation(command.Formation, command.Position);
+            if (command?.Formation != null)
+            {
+                command.Formation.SetMovementOrder(MovementOrder.MovementOrderMove(command.Position));
+            }
+        }
+
+        private AIDecision GetFallbackDecision(BattleSnapshot snapshot)
+        {
+            return _fallbackService.GetDecisionSync(snapshot);
         }
     }
 } 

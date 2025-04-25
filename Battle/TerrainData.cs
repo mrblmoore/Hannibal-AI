@@ -25,7 +25,7 @@ namespace HannibalAI.Battle
             Vec3 min, max;
             scene.GetBoundingBox(out min, out max);
             var center = new Vec2((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
-            WaterLevel = scene.GetWaterLevelAtPosition(center);
+            WaterLevel = scene.GetWaterLevelAtPosition(center, true);
             IsWater = WaterLevel > 0f;
             HasWater = IsWater;
             
@@ -109,7 +109,7 @@ namespace HannibalAI.Battle
             Vec3 min, max;
             scene.GetBoundingBox(out min, out max);
             var center = new Vec2((min.x + max.x) * 0.5f, (min.y + max.y) * 0.5f);
-            WaterLevel = scene.GetWaterLevelAtPosition(center);
+            WaterLevel = scene.GetWaterLevelAtPosition(center, true);
             // ... existing code ...
         }
     }

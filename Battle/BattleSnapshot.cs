@@ -18,6 +18,8 @@ namespace HannibalAI.Battle
         public TerrainData Terrain { get; set; }
         public WeatherData Weather { get; set; }
         public Vec2 MapSize { get; set; }
+        public Team FriendlyTeam { get; set; }
+        public Team EnemyTeam { get; set; }
 
         public List<UnitData> PlayerUnits => Units?.Where(u => u.Team?.IsPlayerTeam ?? false).ToList() ?? new List<UnitData>();
         public List<UnitData> EnemyUnits => Units?.Where(u => !(u.Team?.IsPlayerTeam ?? true)).ToList() ?? new List<UnitData>();
@@ -30,17 +32,18 @@ namespace HannibalAI.Battle
 
         public static BattleSnapshot CreateFromMission(Mission mission, string commanderId)
         {
-            if (mission == null || mission.Scene == null)
-            {
+            if (mission == null)
                 return null;
-            }
 
             var snapshot = new BattleSnapshot
             {
                 Time = mission.CurrentTime,
                 CommanderId = commanderId,
                 Units = new List<UnitData>(),
-                Formations = new List<FormationSnapshot>()
+                Formations = new List<FormationSnapshot>(),
+                FriendlyTeam = mission.PlayerTeam,
+                EnemyTeam = mission.PlayerEnemyTeam,
+                Weather = new WeatherData(mission.Scene)
             };
 
             // Get map size from scene bounds
@@ -68,7 +71,6 @@ namespace HannibalAI.Battle
 
             // Get terrain and weather data
             snapshot.Terrain = new TerrainData(mission.Scene);
-            snapshot.Weather = new WeatherData(mission);
 
             return snapshot;
         }

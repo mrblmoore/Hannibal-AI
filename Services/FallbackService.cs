@@ -14,7 +14,7 @@ namespace HannibalAI.Services
         private static FallbackService _instance;
         private readonly Random _random;
 
-        private FallbackService()
+        public FallbackService()
         {
             _random = new Random();
         }
@@ -42,8 +42,8 @@ namespace HannibalAI.Services
             {
                 // Simple fallback logic: move towards the nearest enemy formation
                 var commands = new List<AICommand>();
-                var enemyFormations = snapshot.EnemyFormations;
-                var friendlyFormations = snapshot.FriendlyFormations;
+                var enemyFormations = snapshot.EnemyTeam?.Formations;
+                var friendlyFormations = snapshot.FriendlyTeam?.Formations;
 
                 if (enemyFormations != null && friendlyFormations != null)
                 {

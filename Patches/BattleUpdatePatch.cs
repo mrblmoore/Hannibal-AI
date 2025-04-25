@@ -29,6 +29,8 @@ namespace HannibalAI.Patches
         private static readonly float UPDATE_INTERVAL = 1.0f;
         private static bool _battleStarted = false;
         private static string _currentCommanderId = "";
+        private static AIService _aiService;
+        private static readonly string LogFile = "HannibalAI.log";
 
         public static void Postfix(Mission __instance)
         {

@@ -1,53 +1,53 @@
-using TaleWorlds.GauntletUI;
-using TaleWorlds.Library;
+using System;
+using System.ComponentModel;
 using HannibalAI.Config;
+using TaleWorlds.Library;
 
 namespace HannibalAI.UI
 {
     public class ModSettingsView : ViewModel
     {
         private ModConfig _config;
+        private float _memoryDuration;
+        private float _memoryDecay;
 
         public ModSettingsView(ModConfig config)
         {
             _config = config;
+            _memoryDuration = config.CommanderMemoryDuration;
+            _memoryDecay = config.CommanderMemoryDecayRate;
         }
 
         [DataSourceProperty]
-        public float CommanderMemoryDuration
+        public float MemoryDuration
         {
-            get => _config.CommanderMemoryDuration;
+            get => _memoryDuration;
             set
             {
-                if (_config.CommanderMemoryDuration != value)
+                if (_memoryDuration != value)
                 {
+                    _memoryDuration = value;
                     _config.CommanderMemoryDuration = value;
-                    OnPropertyChanged(nameof(CommanderMemoryDuration));
+                    _config.SaveConfig();
+                    OnPropertyChanged(nameof(MemoryDuration));
                 }
             }
         }
 
         [DataSourceProperty]
-        public float CommanderMemoryDecayRate
+        public float MemoryDecay
         {
-            get => _config.CommanderMemoryDecayRate;
+            get => _memoryDecay;
             set
             {
-                if (_config.CommanderMemoryDecayRate != value)
+                if (_memoryDecay != value)
                 {
+                    _memoryDecay = value;
                     _config.CommanderMemoryDecayRate = value;
-                    OnPropertyChanged(nameof(CommanderMemoryDecayRate));
+                    _config.SaveConfig();
+                    OnPropertyChanged(nameof(MemoryDecay));
                 }
             }
-        }
-
-        public override void RefreshValues()
-        {
-            base.RefreshValues();
-            
-            // Notify UI of any changes
-            OnPropertyChanged(nameof(CommanderMemoryDuration));
-            OnPropertyChanged(nameof(CommanderMemoryDecayRate));
         }
     }
 } 
