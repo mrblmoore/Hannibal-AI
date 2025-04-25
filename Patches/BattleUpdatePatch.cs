@@ -17,6 +17,7 @@ using Debug = TaleWorlds.Library.Debug;
 using System.Diagnostics;
 using TaleWorlds.Engine;
 using System.Reflection;
+using HannibalAI.Utils;
 
 namespace HannibalAI.Patches
 {
@@ -232,28 +233,12 @@ namespace HannibalAI.Patches
 
         private static void LogError(string message)
         {
-            try
-            {
-                InformationManager.DisplayMessage(new InformationMessage($"[HannibalAI] {message}", Colors.Red));
-                File.AppendAllText(LogFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} ERROR: {message}\n");
-            }
-            catch (Exception ex)
-            {
-                Debug.Print($"[HannibalAI] Error logging message: {ex.Message}");
-            }
+            Logger.LogError(message);
         }
 
         private static void LogInfo(string message)
         {
-            try
-            {
-                InformationManager.DisplayMessage(new InformationMessage($"[HannibalAI] {message}", Colors.Green));
-                File.AppendAllText(LogFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} INFO: {message}\n");
-            }
-            catch (Exception ex)
-            {
-                Debug.Print($"[HannibalAI] Error logging message: {ex.Message}");
-            }
+            Logger.LogInfo(message);
         }
     }
 } 

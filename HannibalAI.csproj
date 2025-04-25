@@ -112,6 +112,8 @@
     <Compile Include="Command\FollowCommand.cs" />
     <Compile Include="Patches\BattleUpdatePatch.cs" />
     <Compile Include="UI\ModSettingsView.cs" />
+    <Compile Include="UI\Components\NumericBox.cs" />
+    <Compile Include="Utils\Logger.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project> 
