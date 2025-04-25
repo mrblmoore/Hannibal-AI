@@ -1,4 +1,5 @@
 using TaleWorlds.MountAndBlade;
+using TaleWorlds.Library;
 
 namespace HannibalAI.Command
 {

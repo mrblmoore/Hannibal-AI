@@ -59,11 +59,5 @@ namespace HannibalAI.Battle
         {
             return MakeDecisionAsync(snapshot).GetAwaiter().GetResult();
         }
-
-        public AICommand MakeDecision(BattleSnapshot snapshot)
-        {
-            // TODO: Implement decision-making logic
-            return new MoveFormationCommand(new Vec3(0, 0, 0), 1.0f);
-        }
     }
 } 
