@@ -8,11 +8,12 @@ namespace HannibalAI.Command
         public new Vec3 TargetPosition { get; set; }
         public float Speed { get; set; }
 
-        public MoveFormationCommand(Vec3 targetPosition, float speed) 
-            : base(targetPosition, CommandType.Move)
+        public MoveFormationCommand(Vec3 targetPosition, float speed)
         {
+            Type = "move";
             TargetPosition = targetPosition;
             Speed = speed;
+            Decision = CommandType.Move;
         }
 
         public override string ToString()
