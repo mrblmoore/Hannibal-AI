@@ -15,6 +15,9 @@
     <GameFolder>$(BANNERLORD_GAME_DIR)</GameFolder>
     <GameVersion>v1.2.12</GameVersion>
     <ModuleName>HannibalAI</ModuleName>
+    <TargetFramework>net472</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
     <DebugSymbols>true</DebugSymbols>

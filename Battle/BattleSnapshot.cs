@@ -1,194 +1,131 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TaleWorlds.MountAndBlade;
 using TaleWorlds.Core;
+using TaleWorlds.MountAndBlade;
 using TaleWorlds.Library;
+using TaleWorlds.Engine;
+using HannibalAI.Command;
 
 namespace HannibalAI.Battle
 {
     public class BattleSnapshot
     {
+        public float Time { get; set; }
         public string CommanderId { get; set; }
-        public float BattleTime { get; set; }
-        public Vec3 BattlefieldCenter { get; set; }
-        public float BattlefieldRadius { get; set; }
-        public List<UnitData> PlayerUnits { get; set; }
-        public List<UnitData> EnemyUnits { get; set; }
+        public List<UnitData> Units { get; set; }
+        public List<FormationSnapshot> Formations { get; set; }
         public TerrainData Terrain { get; set; }
         public WeatherData Weather { get; set; }
-        public List<FormationData> PlayerFormations { get; set; }
-        public List<FormationData> EnemyFormations { get; set; }
+        public Vec2 MapSize { get; set; }
 
-        public static BattleSnapshot CreateFromMission(Mission mission)
+        public List<UnitData> PlayerUnits => Units?.Where(u => u.Team?.IsPlayerTeam ?? false).ToList() ?? new List<UnitData>();
+        public List<UnitData> EnemyUnits => Units?.Where(u => !(u.Team?.IsPlayerTeam ?? true)).ToList() ?? new List<UnitData>();
+
+        public BattleSnapshot()
         {
-            try
+            Units = new List<UnitData>();
+            Formations = new List<FormationSnapshot>();
+        }
+
+        public static BattleSnapshot CreateFromMission(Mission mission, string commanderId)
+        {
+            if (mission == null || mission.Scene == null)
             {
-                if (mission == null || !mission.IsFieldBattle)
-                    return null;
-
-                var playerTeam = mission.PlayerTeam;
-                var enemyTeam = mission.PlayerEnemyTeam;
-
-                if (playerTeam == null || enemyTeam == null)
-                    return null;
-
-                return new BattleSnapshot
-                {
-                    CommanderId = enemyTeam.Leader?.Id.ToString() ?? "unknown",
-                    BattleTime = mission.CurrentTime,
-                    BattlefieldCenter = mission.Scene.GetBoundingBox().Center,
-                    BattlefieldRadius = mission.Scene.GetBoundingBox().GetMaxDimension() / 2f,
-                    PlayerUnits = GetUnitsData(playerTeam),
-                    EnemyUnits = GetUnitsData(enemyTeam),
-                    Terrain = GetTerrainData(mission),
-                    Weather = GetWeatherData(mission),
-                    PlayerFormations = GetFormationsData(playerTeam),
-                    EnemyFormations = GetFormationsData(enemyTeam)
-                };
-            }
-            catch (Exception ex)
-            {
-                Debug.Print($"[HannibalAI] Error creating battle snapshot: {ex.Message}");
                 return null;
             }
-        }
 
-        private static List<UnitData> GetUnitsData(Team team)
-        {
-            return team.ActiveAgents
-                .Where(a => a.IsHuman && !a.IsRunningAway)
-                .Select(a => new UnitData
-                {
-                    Id = a.Index,
-                    Position = a.Position.ToVec3(),
-                    Health = a.Health,
-                    MaxHealth = a.HealthLimit,
-                    IsRanged = HasRangedWeapon(a),
-                    IsMounted = a.IsMount || a.HasMount,
-                    FormationIndex = (int)a.Formation?.FormationIndex ?? -1,
-                    Class = GetUnitClass(a)
-                })
-                .ToList();
-        }
-
-        private static List<FormationData> GetFormationsData(Team team)
-        {
-            return team.FormationsIncludingEmpty
-                .Where(f => f != null && f.CountOfUnits > 0)
-                .Select(f => new FormationData
-                {
-                    FormationIndex = (int)f.FormationIndex,
-                    UnitCount = f.CountOfUnits,
-                    Position = f.CurrentPosition,
-                    Direction = f.Direction,
-                    FormationType = f.FormOrderType.ToString(),
-                    Width = f.Width,
-                    Depth = f.Depth,
-                    IsRanged = f.QuerySystem.IsRangedFormation,
-                    IsMounted = f.QuerySystem.IsCavalryFormation
-                })
-                .ToList();
-        }
-
-        private static TerrainData GetTerrainData(Mission mission)
-        {
-            var scene = mission.Scene;
-            return new TerrainData
+            var snapshot = new BattleSnapshot
             {
-                HeightMap = GetHeightMapSample(scene),
-                HasForest = scene.HasForest(),
-                HasHills = scene.GetTerrainHeight(Vec2.Zero) > 1.5f,
-                HasWater = scene.HasWater()
+                Time = Mission.Current.MissionTime,
+                CommanderId = commanderId,
+                Units = new List<UnitData>(),
+                Formations = new List<FormationSnapshot>()
             };
-        }
 
-        private static WeatherData GetWeatherData(Mission mission)
-        {
-            return new WeatherData
+            // Get map size from scene bounds
+            Vec3 min, max;
+            mission.Scene.GetBoundingBox(out min, out max);
+            snapshot.MapSize = new Vec2(max.x - min.x, max.y - min.y);
+
+            // Collect units
+            foreach (var agent in mission.Agents)
             {
-                TimeOfDay = mission.TimeOfDay,
-                IsNight = mission.Scene.IsNight(),
-                IsRaining = mission.Scene.IsRaining(),
-                IsFoggy = mission.Scene.IsFoggy()
-            };
-        }
+                if (agent == null || !agent.IsActive()) continue;
+                snapshot.Units.Add(new UnitData(agent));
+            }
 
-        private static float[,] GetHeightMapSample(Scene scene)
-        {
-            const int sampleSize = 10;
-            var heightMap = new float[sampleSize, sampleSize];
-            var bounds = scene.GetBoundingBox();
-            var stepX = bounds.Width / (sampleSize - 1);
-            var stepY = bounds.Height / (sampleSize - 1);
-
-            for (int x = 0; x < sampleSize; x++)
+            // Collect formations
+            foreach (var team in mission.Teams)
             {
-                for (int y = 0; y < sampleSize; y++)
+                if (team == null) continue;
+                foreach (var formation in team.FormationsIncludingEmpty)
                 {
-                    var position = new Vec2(
-                        bounds.min.x + x * stepX,
-                        bounds.min.y + y * stepY
-                    );
-                    heightMap[x, y] = scene.GetTerrainHeight(position);
+                    if (formation == null) continue;
+                    snapshot.Formations.Add(new FormationSnapshot(formation));
                 }
             }
 
-            return heightMap;
-        }
+            // Get terrain and weather data
+            snapshot.Terrain = new TerrainData(mission.Scene);
+            snapshot.Weather = new WeatherData(mission);
 
-        private static bool HasRangedWeapon(Agent agent)
-        {
-            return agent.WieldedWeapon.CurrentUsageItem?.WeaponClass.ToString().Contains("Ranged") ?? false;
-        }
-
-        private static string GetUnitClass(Agent agent)
-        {
-            if (agent.IsMount) return "Mount";
-            if (agent.HasMount) return "Cavalry";
-            if (HasRangedWeapon(agent)) return "Ranged";
-            return "Infantry";
+            return snapshot;
         }
     }
 
-    public class UnitData
+    public class UnitSnapshot
     {
         public int Id { get; set; }
         public Vec3 Position { get; set; }
+        public Vec3 Direction { get; set; }
         public float Health { get; set; }
         public float MaxHealth { get; set; }
-        public bool IsRanged { get; set; }
-        public bool IsMounted { get; set; }
-        public int FormationIndex { get; set; }
-        public string Class { get; set; }
+        public int Team { get; set; }
+        public int Formation { get; set; }
+        public bool IsMount { get; set; }
+        public bool IsRider { get; set; }
+        public int MountId { get; set; }
+        public int RiderId { get; set; }
     }
 
-    public class FormationData
+    public class FormationSnapshot
     {
-        public int FormationIndex { get; set; }
-        public int UnitCount { get; set; }
-        public Vec3 Position { get; set; }
+        public int Id { get; set; }
+        public int TeamId { get; set; }
+        public Vec2 Position { get; set; }
         public Vec2 Direction { get; set; }
-        public string FormationType { get; set; }
         public float Width { get; set; }
         public float Depth { get; set; }
-        public bool IsRanged { get; set; }
-        public bool IsMounted { get; set; }
+        public int UnitCount { get; set; }
+        public FormationClass FormationClass { get; set; }
+
+        public FormationSnapshot(Formation formation)
+        {
+            if (formation == null) return;
+
+            Id = formation.Index;
+            TeamId = formation.Team?.TeamIndex ?? -1;
+            Position = new Vec2(formation.OrderPosition.x, formation.OrderPosition.y);
+            Direction = new Vec2(formation.Direction.x, formation.Direction.y);
+            Width = formation.UnitSpacing;
+            Depth = formation.UnitSpacing; // Use UnitSpacing for both since FileSpacing is not available
+            UnitCount = formation.CountOfUnits;
+            FormationClass = formation.FormationIndex;
+        }
     }
 
-    public class TerrainData
+    public class TerrainSnapshot
     {
-        public float[,] HeightMap { get; set; }
-        public bool HasForest { get; set; }
-        public bool HasHills { get; set; }
-        public bool HasWater { get; set; }
+        public float Height { get; set; }
+        public float WaterLevel { get; set; }
+        public bool IsWater { get; set; }
     }
 
-    public class WeatherData
+    public class WeatherSnapshot
     {
         public float TimeOfDay { get; set; }
-        public bool IsNight { get; set; }
-        public bool IsRaining { get; set; }
-        public bool IsFoggy { get; set; }
+        public float Rain { get; set; }
+        public float Fog { get; set; }
     }
-} 
+}

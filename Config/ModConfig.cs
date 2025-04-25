@@ -18,7 +18,8 @@ namespace HannibalAI.Config
         );
 
         public bool Enabled { get; set; } = true;
-
+        public string AIEndpoint { get; set; } = "https://api.openai.com/v1/chat/completions";
+        public string APIKey { get; set; } = "";
         public AIServiceConfig AIService { get; set; } = new AIServiceConfig();
         public BattleAnalysisConfig BattleAnalysis { get; set; } = new BattleAnalysisConfig();
         public CommanderLearningConfig CommanderLearning { get; set; } = new CommanderLearningConfig();
@@ -62,7 +63,7 @@ namespace HannibalAI.Config
             }
             catch (Exception ex)
             {
-                Debug.Print($"Error loading HannibalAI config: {ex.Message}");
+                InformationManager.DisplayMessage(new InformationMessage($"Error loading HannibalAI config: {ex.Message}"));
             }
 
             return new ModConfig();
@@ -81,7 +82,7 @@ namespace HannibalAI.Config
             }
             catch (Exception ex)
             {
-                Debug.Print($"Error saving HannibalAI config: {ex.Message}");
+                InformationManager.DisplayMessage(new InformationMessage($"Error saving HannibalAI config: {ex.Message}"));
             }
         }
     }
@@ -98,7 +99,6 @@ namespace HannibalAI.Config
     public class BattleAnalysisConfig
     {
         public float UpdateIntervalSeconds { get; set; } = 1.0f;
-        public float AnalysisThresholdDistance { get; set; } = 100f;
         public int MinimumUnitCountForAnalysis { get; set; } = 5;
     }
 

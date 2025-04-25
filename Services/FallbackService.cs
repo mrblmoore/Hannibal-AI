@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using HannibalAI.Battle;
 using TaleWorlds.Library;
+using HannibalAI.Command;
+using TaleWorlds.Core;
 
 namespace HannibalAI.Services
 {
@@ -29,10 +31,22 @@ namespace HannibalAI.Services
             }
         }
 
-        public async Task<AIDecision> GetDecision(BattleSnapshot snapshot)
+        public async Task<AIDecision> GetDecisionAsync(BattleSnapshot snapshot)
+        {
+            // For now, we'll just return a synchronous decision
+            // In the future, you might want to make this truly asynchronous
+            return GetDecision(snapshot);
+        }
+
+        private AIDecision GetDecision(BattleSnapshot snapshot)
         {
             try
             {
+                if (snapshot == null)
+                {
+                    return null;
+                }
+
                 // Simple strength comparison
                 float playerStrength = CalculateTeamStrength(snapshot.PlayerUnits);
                 float enemyStrength = CalculateTeamStrength(snapshot.EnemyUnits);

@@ -7,10 +7,20 @@ using System.Linq;
 using Newtonsoft.Json;
 using HannibalAI.Battle;
 using HannibalAI.Config;
+using HannibalAI.Command;
 using TaleWorlds.Library;
+using Newtonsoft.Json.Linq;
 
 namespace HannibalAI.Services
 {
+    public class CommanderContext
+    {
+        public string CommanderId { get; set; }
+        public Dictionary<string, float> Traits { get; set; }
+        public List<string> RecentTactics { get; set; }
+        public float BattleExperience { get; set; }
+    }
+
     public class AIService
     {
         private readonly HttpClient _httpClient;
@@ -18,6 +28,7 @@ namespace HannibalAI.Services
         private readonly string _apiKey;
         private readonly ModConfig _config;
         private readonly CommanderMemoryService _memoryService;
+        private readonly CommanderContext _context;
 
         public AIService(string endpoint, string apiKey)
         {
@@ -26,6 +37,7 @@ namespace HannibalAI.Services
             _apiKey = apiKey;
             _config = ModConfig.Instance;
             _memoryService = new CommanderMemoryService();
+            _context = new CommanderContext();
         }
 
         public async Task<AIDecision> ProcessBattleSnapshot(BattleSnapshot snapshot)
@@ -40,38 +52,19 @@ namespace HannibalAI.Services
                 var commanderProfile = _memoryService.GetCommanderProfile(snapshot.CommanderId);
                 var recentBattles = _memoryService.GetRecentBattles(snapshot.CommanderId, 3);
 
-                var request = new
+                var request = new AIRequest
                 {
-                    model = _config.AIService.ModelVersion,
-                    messages = new[]
-                    {
-                        new
-                        {
-                            role = "system",
-                            content = BuildSystemPrompt(commanderProfile)
-                        },
-                        new
-                        {
-                            role = "user",
-                            content = JsonConvert.SerializeObject(new
-                            {
-                                battle_state = snapshot,
-                                commander_traits = commanderProfile.Traits,
-                                recent_battles = recentBattles,
-                                terrain = snapshot.Terrain,
-                                weather = snapshot.Weather
-                            })
-                        }
-                    },
-                    max_tokens = _config.AIService.MaxTokens,
-                    temperature = _config.AIService.Temperature
+                    BattleSnapshot = snapshot,
+                    CommanderContext = _context
                 };
 
-                var content = new StringContent(
-                    JsonConvert.SerializeObject(request),
-                    Encoding.UTF8,
-                    "application/json"
-                );
+                var json = JsonConvert.SerializeObject(request, new JsonSerializerSettings 
+                {
+                    TypeNameHandling = TypeNameHandling.Auto,
+                    Converters = new List<JsonConverter> { new Vec3Converter() }
+                });
+
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
 
                 _httpClient.DefaultRequestHeaders.Authorization = 
                     new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _apiKey);
@@ -80,7 +73,11 @@ namespace HannibalAI.Services
                 response.EnsureSuccessStatusCode();
 
                 var responseContent = await response.Content.ReadAsStringAsync();
-                var aiResponse = JsonConvert.DeserializeObject<AIResponse>(responseContent);
+                var aiResponse = JsonConvert.DeserializeObject<AIResponse>(responseContent, new JsonSerializerSettings 
+                {
+                    TypeNameHandling = TypeNameHandling.Auto,
+                    Converters = new List<JsonConverter> { new Vec3Converter() }
+                });
 
                 var decision = ParseAIResponse(aiResponse);
                 
@@ -102,6 +99,66 @@ namespace HannibalAI.Services
             {
                 Debug.Print($"[HannibalAI] Error in AI processing: {ex.Message}");
                 return await FallbackService.Instance.GetDecision(snapshot);
+            }
+        }
+
+        public AIDecision ProcessBattleSnapshotSync(BattleSnapshot snapshot)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(_apiKey))
+                {
+                    return FallbackService.Instance.GetDecisionSync(snapshot);
+                }
+
+                var commanderProfile = _memoryService.GetCommanderProfile(snapshot.CommanderId);
+                var recentBattles = _memoryService.GetRecentBattles(snapshot.CommanderId, 3);
+
+                var request = new AIRequest
+                {
+                    BattleSnapshot = snapshot,
+                    CommanderContext = _context
+                };
+
+                var json = JsonConvert.SerializeObject(request, new JsonSerializerSettings 
+                {
+                    TypeNameHandling = TypeNameHandling.Auto,
+                    Converters = new List<JsonConverter> { new Vec3Converter() }
+                });
+
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                _httpClient.DefaultRequestHeaders.Authorization = 
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _apiKey);
+
+                var response = _httpClient.PostAsync(_endpoint, content).Result;
+                response.EnsureSuccessStatusCode();
+
+                var responseContent = response.Content.ReadAsStringAsync().Result;
+                var aiResponse = JsonConvert.DeserializeObject<AIResponse>(responseContent, new JsonSerializerSettings 
+                {
+                    TypeNameHandling = TypeNameHandling.Auto,
+                    Converters = new List<JsonConverter> { new Vec3Converter() }
+                });
+
+                var decision = ParseAIResponse(aiResponse);
+                
+                if (decision != null && decision.Commands != null)
+                {
+                    var tacticsUsed = decision.Commands
+                        .Where(c => !string.IsNullOrEmpty(c.Value))
+                        .Select(c => c.Value.ToLower())
+                        .ToList();
+
+                    decision.TacticsUsed = tacticsUsed;
+                }
+
+                return decision;
+            }
+            catch (Exception ex)
+            {
+                Debug.Print($"[HannibalAI] Error in AI processing: {ex.Message}");
+                return FallbackService.Instance.GetDecisionSync(snapshot);
             }
         }
 
@@ -168,26 +225,35 @@ namespace HannibalAI.Services
         {
             return units?.Count(u => u.Health <= 0) ?? 0;
         }
-    }
 
-    public class AIDecision
-    {
-        public string Action { get; set; }
-        public AICommand[] Commands { get; set; }
-        public string Reasoning { get; set; }
-        public List<string> TacticsUsed { get; set; }
-    }
+        public async Task<AIDecision> GetDecisionAsync(BattleSnapshot snapshot)
+        {
+            if (snapshot == null)
+            {
+                return null;
+            }
 
-    public class AICommand
-    {
-        public string Type { get; set; }
-        public string Value { get; set; }
-        public object[] Parameters { get; set; }
+            try
+            {
+                // This is a placeholder - implement your AI service call here
+                // For now, we'll return a basic decision
+                return new AIDecision
+                {
+                    Action = "Default",
+                    Reasoning = "Using default strategy",
+                    Commands = Array.Empty<AICommand>()
+                };
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
     }
 
     internal class AIResponse
     {
-        public Choice[] choices { get; set; }
+        public List<Choice> choices { get; set; }
     }
 
     internal class Choice
@@ -199,5 +265,44 @@ namespace HannibalAI.Services
     {
         public string role { get; set; }
         public string content { get; set; }
+    }
+
+    public class Vec3Converter : JsonConverter<Vec3>
+    {
+        public override Vec3 ReadJson(JsonReader reader, Type objectType, Vec3 existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            var obj = JObject.Load(reader);
+            return new Vec3(
+                obj["X"].Value<float>(),
+                obj["Y"].Value<float>(),
+                obj["Z"].Value<float>()
+            );
+        }
+
+        public override void WriteJson(JsonWriter writer, Vec3 value, JsonSerializer serializer)
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName("X");
+            writer.WriteValue(value.X);
+            writer.WritePropertyName("Y");
+            writer.WriteValue(value.Y);
+            writer.WritePropertyName("Z");
+            writer.WriteValue(value.Z);
+            writer.WriteEndObject();
+        }
+    }
+
+    public class AIRequest
+    {
+        public BattleSnapshot BattleSnapshot { get; set; }
+        public CommanderContext CommanderContext { get; set; }
+    }
+
+    public class BattleCommand
+    {
+        public string Type { get; set; }
+        public int FormationIndex { get; set; }
+        public Vec3 TargetPosition { get; set; }
+        public string AdditionalData { get; set; }
     }
 } 

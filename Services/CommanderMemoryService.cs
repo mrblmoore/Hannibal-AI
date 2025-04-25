@@ -85,7 +85,7 @@ namespace HannibalAI.Services
             }
             catch (Exception ex)
             {
-                Debug.Print($"[HannibalAI] Error recording battle outcome: {ex.Message}");
+                InformationManager.DisplayMessage(new InformationMessage($"[HannibalAI] Error recording battle outcome: {ex.Message}"));
             }
         }
 
@@ -98,30 +98,24 @@ namespace HannibalAI.Services
                 if (outcome.TacticsUsed.Contains("charge") || outcome.TacticsUsed.Contains("flank"))
                 {
                     AdjustTrait(profile.Traits, "Aggression", 0.1f);
-                    AdjustTrait(profile.Traits, "Innovation", 0.05f);
                 }
-
                 // Successful defensive tactics increase caution
-                if (outcome.TacticsUsed.Contains("shield_wall") || outcome.TacticsUsed.Contains("hold"))
+                else if (outcome.TacticsUsed.Contains("hold") || outcome.TacticsUsed.Contains("shield_wall"))
                 {
                     AdjustTrait(profile.Traits, "Caution", 0.1f);
-                    AdjustTrait(profile.Traits, "Adaptability", 0.05f);
                 }
             }
-            else
+            else if (outcome.Result == "Defeat")
             {
                 // Failed aggressive tactics decrease aggression
                 if (outcome.TacticsUsed.Contains("charge") || outcome.TacticsUsed.Contains("flank"))
                 {
                     AdjustTrait(profile.Traits, "Aggression", -0.1f);
-                    AdjustTrait(profile.Traits, "Caution", 0.1f);
                 }
-
                 // Failed defensive tactics decrease caution
-                if (outcome.TacticsUsed.Contains("shield_wall") || outcome.TacticsUsed.Contains("hold"))
+                else if (outcome.TacticsUsed.Contains("hold") || outcome.TacticsUsed.Contains("shield_wall"))
                 {
                     AdjustTrait(profile.Traits, "Caution", -0.1f);
-                    AdjustTrait(profile.Traits, "Innovation", 0.1f);
                 }
             }
         }
@@ -130,7 +124,7 @@ namespace HannibalAI.Services
         {
             if (traits.ContainsKey(trait))
             {
-                traits[trait] = Math.Clamp(traits[trait] + adjustment, 0f, 1f);
+                traits[trait] = Math.Max(0f, Math.Min(1f, traits[trait] + adjustment));
             }
         }
 

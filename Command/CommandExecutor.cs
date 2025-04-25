@@ -5,70 +5,71 @@ using TaleWorlds.MountAndBlade;
 using TaleWorlds.Library;
 using TaleWorlds.Core;
 using HannibalAI.Battle;
+using HannibalAI.Config;
 
 namespace HannibalAI.Command
 {
     public class CommandExecutor
     {
         private static readonly string LogFile = "hannibal_ai_errors.log";
-        private static readonly BattleController _controller = BattleController.Instance;
+        private readonly Mission _mission;
 
-        public static void ExecuteCommand(string command, Mission mission, object[] parameters = null)
+        public CommandExecutor(Mission mission)
         {
+            _mission = mission;
+        }
+
+        public void ExecuteCommand(AICommand command)
+        {
+            if (command == null)
+            {
+                Debug.Print("[HannibalAI] Cannot execute null command");
+                return;
+            }
+
             try
             {
-                var team = mission.PlayerEnemyTeam;
-                if (team == null) return;
-
-                // Default to infantry if no formation type specified
-                var formationType = parameters?.Length > 0 ? parameters[0].ToString() : "infantry";
-                var formation = _controller.GetFormation(team, formationType);
-
-                if (formation == null)
+                switch (command.Type.ToLower())
                 {
-                    LogError($"Could not find formation of type {formationType}");
-                    return;
-                }
-
-                switch (command.ToLower())
-                {
-                    case "flank":
-                    case "charge":
-                    case "retreat":
-                    case "hold":
-                    case "advance":
-                        _controller.ExecuteMovementCommand(formation, command, parameters);
+                    case "movement":
+                        ExecuteMovementCommand(command);
                         break;
-
-                    case "line":
-                    case "shield_wall":
-                    case "loose":
-                    case "circle":
-                    case "square":
-                    case "column":
-                        _controller.ExecuteFormationCommand(formation, command, parameters);
+                    case "formation":
+                        ExecuteFormationCommand(command);
                         break;
-
-                    case "focus_fire":
-                    case "hold_fire":
-                        _controller.ExecuteTargetingCommand(formation, command, parameters);
+                    case "targeting":
+                        ExecuteTargetingCommand(command);
                         break;
-
                     default:
-                        LogError($"Unknown command: {command}");
+                        Debug.Print($"[HannibalAI] Unknown command type: {command.Type}");
                         break;
                 }
 
                 // Log successful execution if debug is enabled
-                if (SubModule.GetConfig().Debug)
+                if (ModConfig.Instance.Debug.ShowAIDecisions)
                 {
-                    LogInfo($"Executed command {command} on {formationType} formation");
+                    LogInfo($"Executed {command.Type} command on formation {command.FormationIndex}");
                 }
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                LogError($"Error executing command {command}: {ex.Message}");
+                Debug.Print($"[HannibalAI] Error executing command: {e.Message}");
             }
+        }
+
+        private void ExecuteMovementCommand(AICommand command)
+        {
+            // Implementation
+        }
+
+        private void ExecuteFormationCommand(AICommand command)
+        {
+            // Implementation
+        }
+
+        private void ExecuteTargetingCommand(AICommand command)
+        {
+            // Implementation
         }
 
         private static void LogError(string message)

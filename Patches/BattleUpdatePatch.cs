@@ -8,20 +8,26 @@ using TaleWorlds.MountAndBlade.Source.Missions.Handlers;
 using HannibalAI.Battle;
 using HannibalAI.Services;
 using HannibalAI.Command;
+using HannibalAI.Config;
 using System.IO;
 using System.Linq;
 using TaleWorlds.Library;
 using TaleWorlds.Core;
+using Debug = TaleWorlds.Library.Debug;
+using System.Diagnostics;
+using TaleWorlds.Engine;
+using System.Reflection;
 
 namespace HannibalAI.Patches
 {
-    [HarmonyPatch(typeof(Mission), "OnTick")]
+    [HarmonyPatch(typeof(Mission))]
     public class BattleUpdatePatch
     {
+        private static BattleController _battleController;
+        private static float _lastUpdateTime;
+        private const float UPDATE_INTERVAL = 1.0f; // Update every second
         private static readonly AIService _aiService;
-        private static float _lastUpdateTime = 0f;
-        private static readonly float UPDATE_INTERVAL = 1.0f;
-        private static AIDecision _lastDecision;
+        private static Command.AIDecision _lastDecision;
         private static bool _battleStarted = false;
         private static string _currentCommanderId;
         private static readonly string LogFile = "hannibal_ai_errors.log";
@@ -30,176 +36,257 @@ namespace HannibalAI.Patches
         {
             try
             {
-                var config = SubModule.GetConfig();
+                var config = ModConfig.Instance;
+                if (config == null)
+                {
+                    throw new InvalidOperationException("Failed to load mod configuration");
+                }
+
                 _aiService = new AIService(config.AIEndpoint, config.APIKey);
             }
             catch (Exception ex)
             {
-                LogError($"Error initializing BattleUpdatePatch: {ex.Message}");
+                Debug.Print($"[HannibalAI] Error initializing BattleUpdatePatch: {ex.Message}");
                 throw;
             }
         }
 
+        [HarmonyPatch("Tick")]
         [HarmonyPostfix]
-        public static async void Postfix(Mission __instance, float dt)
+        public static void TickPostfix(Mission __instance, float dt)
+        {
+            if (__instance == null)
+            {
+                return;
+            }
+
+            try
+            {
+                if (_battleController == null)
+                {
+                    _battleController = new BattleController(__instance);
+                    _lastUpdateTime = 0f;
+                }
+
+                _lastUpdateTime += dt;
+                if (_lastUpdateTime < UPDATE_INTERVAL)
+                {
+                    return;
+                }
+
+                _lastUpdateTime = 0f;
+                _battleController.Update(dt);
+            }
+            catch (Exception ex)
+            {
+                Debug.Print($"[HannibalAI] Error in battle update: {ex.Message}");
+                LogError($"Error in battle update: {ex.Message}");
+            }
+        }
+
+        [HarmonyPatch("OnMissionResult")]
+        public static void Postfix()
         {
             try
             {
-                if (!__instance.IsFieldBattle || !__instance.IsActive)
-                    return;
-
-                // Track battle start
-                if (!_battleStarted && IsBattleActive(__instance))
+                if (_battleController != null)
                 {
-                    _battleStarted = true;
-                    _currentCommanderId = __instance.PlayerEnemyTeam?.Leader?.Id.ToString() ?? "unknown";
-                    LogInfo($"Battle started with commander: {_currentCommanderId}");
-                }
-
-                // Update AI decision making
-                _lastUpdateTime += dt;
-                if (_lastUpdateTime >= UPDATE_INTERVAL)
-                {
-                    _lastUpdateTime = 0f;
-                    await UpdateAI(__instance);
-                }
-
-                // Check for battle end
-                if (_battleStarted && !IsBattleActive(__instance))
-                {
-                    HandleBattleEnd(__instance);
-                    ResetBattleState();
+                    _battleController.Cleanup();
+                    _battleController = null;
+                    Debug.Print("[HannibalAI] Battle controller cleaned up");
                 }
             }
             catch (Exception ex)
             {
-                LogError($"Error in battle update: {ex.Message}");
+                Debug.Print($"[HannibalAI] Error cleaning up battle controller: {ex.Message}");
+                LogError($"Error cleaning up battle controller: {ex.Message}");
             }
         }
 
         private static async Task UpdateAI(Mission mission)
         {
+            if (mission == null)
+            {
+                return;
+            }
+
             try
             {
                 var snapshot = BattleSnapshot.CreateFromMission(mission);
-                if (snapshot == null) return;
+                if (snapshot == null)
+                {
+                    Debug.Print("[HannibalAI] Failed to create battle snapshot");
+                    return;
+                }
 
                 var decision = await _aiService.ProcessBattleSnapshot(snapshot);
-                if (decision == null) return;
+                if (decision == null)
+                {
+                    Debug.Print("[HannibalAI] No decision received from AI service");
+                    return;
+                }
 
                 _lastDecision = decision;
 
                 foreach (var command in decision.Commands)
                 {
+                    if (command == null)
+                    {
+                        continue;
+                    }
+
                     try
                     {
-                        // Extract formation type and other parameters
                         var parameters = new List<object>();
                         
-                        // First parameter is always the formation type
                         if (command.Parameters?.Length > 0)
                         {
                             parameters.Add(command.Parameters[0]);
-                            
-                            // Add any additional parameters
-                            for (int i = 1; i < command.Parameters.Length; i++)
-                            {
-                                parameters.Add(command.Parameters[i]);
-                            }
-                        }
-                        else
-                        {
-                            // Default to infantry if no formation specified
-                            parameters.Add("infantry");
                         }
 
-                        CommandExecutor.ExecuteCommand(command.Value, mission, parameters.ToArray());
+                        if (command.Parameters?.Length > 1)
+                        {
+                            parameters.AddRange(command.Parameters.Skip(1));
+                        }
+
+                        var formation = mission.PlayerEnemyTeam?.GetFormation((FormationClass)command.FormationIndex);
+                        if (formation == null)
+                        {
+                            Debug.Print($"[HannibalAI] Formation {command.FormationIndex} not found");
+                            continue;
+                        }
+
+                        switch (command.Type.ToLower())
+                        {
+                            case "move":
+                                formation.SetMovementOrder(MovementOrder.MovementOrderMove(command.TargetPosition));
+                                break;
+                            case "charge":
+                                formation.SetMovementOrder(MovementOrder.MovementOrderCharge);
+                                break;
+                            case "retreat":
+                                formation.SetMovementOrder(MovementOrder.MovementOrderRetreat);
+                                break;
+                            case "hold":
+                                formation.SetMovementOrder(MovementOrder.MovementOrderStop);
+                                break;
+                            default:
+                                Debug.Print($"[HannibalAI] Unknown command type: {command.Type}");
+                                break;
+                        }
                     }
                     catch (Exception ex)
                     {
-                        LogError($"Error executing command {command.Value}: {ex.Message}");
+                        Debug.Print($"[HannibalAI] Error executing command: {ex.Message}");
+                        LogError($"Error executing command: {ex.Message}");
                     }
-                }
-
-                if (SubModule.GetConfig().Debug)
-                {
-                    LogInfo($"Executed decision: {decision.Action} - {decision.Reasoning}");
                 }
             }
             catch (Exception ex)
             {
+                Debug.Print($"[HannibalAI] Error in AI update: {ex.Message}");
                 LogError($"Error in AI update: {ex.Message}");
             }
         }
 
         private static void HandleBattleEnd(Mission mission)
         {
+            if (mission == null)
+            {
+                return;
+            }
+
             try
             {
-                var snapshot = BattleSnapshot.CreateFromMission(mission);
-                if (snapshot == null) return;
-
-                bool victory = DetermineBattleOutcome(mission);
-                _aiService.RecordBattleOutcome(_currentCommanderId, snapshot, _lastDecision, victory);
-
-                LogInfo($"Battle ended. Commander {_currentCommanderId} {(victory ? "won" : "lost")}");
+                var outcome = DetermineBattleOutcome(mission);
+                LogInfo($"Battle ended. Outcome: {outcome}");
             }
             catch (Exception ex)
             {
+                Debug.Print($"[HannibalAI] Error handling battle end: {ex.Message}");
                 LogError($"Error handling battle end: {ex.Message}");
             }
         }
 
         private static bool IsBattleActive(Mission mission)
         {
-            return mission.PlayerTeam != null && 
-                   mission.PlayerEnemyTeam != null && 
-                   mission.PlayerTeam.ActiveAgents.Any() && 
-                   mission.PlayerEnemyTeam.ActiveAgents.Any();
+            if (mission == null)
+            {
+                return false;
+            }
+
+            try
+            {
+                return mission.IsFieldBattle && 
+                       mission.MissionStarted &&
+                       mission.PlayerEnemyTeam != null && 
+                       mission.PlayerTeam != null &&
+                       mission.PlayerEnemyTeam.ActiveAgents.Count > 0 && 
+                       mission.PlayerTeam.ActiveAgents.Count > 0;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
-        private static bool DetermineBattleOutcome(Mission mission)
+        private static string DetermineBattleOutcome(Mission mission)
         {
-            var playerTeam = mission.PlayerTeam;
-            var enemyTeam = mission.PlayerEnemyTeam;
+            if (mission?.PlayerTeam == null || mission?.PlayerEnemyTeam == null)
+            {
+                return "Unknown";
+            }
 
-            if (playerTeam == null || enemyTeam == null)
-                return false;
-
-            // Victory if enemy team has no active agents or is retreating
-            return !enemyTeam.ActiveAgents.Any() || 
-                   enemyTeam.ActiveAgents.All(a => a.IsRunningAway);
+            try
+            {
+                if (mission.PlayerTeam.ActiveAgents.Count == 0)
+                {
+                    return "Defeat";
+                }
+                if (mission.PlayerEnemyTeam.ActiveAgents.Count == 0)
+                {
+                    return "Victory";
+                }
+                return "Ongoing";
+            }
+            catch
+            {
+                return "Unknown";
+            }
         }
 
         private static void ResetBattleState()
         {
             _battleStarted = false;
+            _lastUpdateTime = 0f;
             _lastDecision = null;
             _currentCommanderId = null;
-            _lastUpdateTime = 0f;
         }
 
         private static void LogError(string message)
         {
             try
             {
-                File.AppendAllText(LogFile, $"[ERROR {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}] {message}\n");
-                Debug.Print($"[HannibalAI] {message}");
+                InformationManager.DisplayMessage(new InformationMessage($"[HannibalAI] {message}", Colors.Red));
+                File.AppendAllText(LogFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} ERROR: {message}\n");
             }
-            catch { /* Ignore logging errors */ }
+            catch (Exception ex)
+            {
+                Debug.Print($"[HannibalAI] Error logging message: {ex.Message}");
+            }
         }
 
         private static void LogInfo(string message)
         {
             try
             {
-                if (SubModule.GetConfig().Debug)
-                {
-                    File.AppendAllText(LogFile, $"[INFO {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}] {message}\n");
-                    Debug.Print($"[HannibalAI] {message}");
-                }
+                InformationManager.DisplayMessage(new InformationMessage($"[HannibalAI] {message}", Colors.Green));
+                File.AppendAllText(LogFile, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} INFO: {message}\n");
             }
-            catch { /* Ignore logging errors */ }
+            catch (Exception ex)
+            {
+                Debug.Print($"[HannibalAI] Error logging message: {ex.Message}");
+            }
         }
     }
 } 
