@@ -13,6 +13,8 @@
     <Deterministic>true</Deterministic>
     <GamePath>G:\SteamLibrary\steamapps\common\Mount &amp; Blade II Bannerlord</GamePath>
     <LangVersion>7.3</LangVersion>
+    <TargetFrameworkProfile />
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x64' ">
     <DebugSymbols>true</DebugSymbols>
@@ -87,6 +89,9 @@
     <Compile Include="Battle\BattleSnapshot.cs" />
     <Compile Include="Battle\TerrainData.cs" />
     <Compile Include="Battle\UnitData.cs" />
+    <Compile Include="Battle\AIDecision.cs" />
+    <Compile Include="Battle\WeatherData.cs" />
+    <Compile Include="Battle\ArrangementOrderCustom.cs" />
     <Compile Include="Command\CommandExecutor.cs" />
     <Compile Include="Command\AICommand.cs" />
     <Compile Include="Command\MoveFormationCommand.cs" />
