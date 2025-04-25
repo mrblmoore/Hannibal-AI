@@ -31,102 +31,15 @@ namespace HannibalAI.Services
             }
         }
 
-        public async Task<AIDecision> GetDecisionAsync(BattleSnapshot snapshot)
+        public async Task<AIDecision> GetDecision(BattleSnapshot snapshot)
         {
-            // For now, we'll just return a synchronous decision
-            // In the future, you might want to make this truly asynchronous
-            return GetDecision(snapshot);
+            // TODO: Implement fallback decision-making logic
+            return await Task.FromResult(new AIDecision());
         }
 
-        private AIDecision GetDecision(BattleSnapshot snapshot)
+        public AIDecision GetDecisionSync(BattleSnapshot snapshot)
         {
-            try
-            {
-                if (snapshot == null)
-                {
-                    return null;
-                }
-
-                // Simple strength comparison
-                float playerStrength = CalculateTeamStrength(snapshot.PlayerUnits);
-                float enemyStrength = CalculateTeamStrength(snapshot.EnemyUnits);
-                float strengthRatio = enemyStrength / playerStrength;
-
-                var commands = new List<AICommand>();
-
-                // Basic decision making based on strength ratio
-                if (strengthRatio > 1.2f)
-                {
-                    // Stronger - aggressive approach
-                    commands.Add(new AICommand
-                    {
-                        Type = "formation",
-                        Value = "line",
-                        Parameters = new object[] { "main_force" }
-                    });
-                    commands.Add(new AICommand
-                    {
-                        Type = "movement",
-                        Value = "advance",
-                        Parameters = new object[] { "aggressive" }
-                    });
-                }
-                else if (strengthRatio < 0.8f)
-                {
-                    // Weaker - defensive approach
-                    commands.Add(new AICommand
-                    {
-                        Type = "formation",
-                        Value = "shield_wall",
-                        Parameters = new object[] { "main_force" }
-                    });
-                    commands.Add(new AICommand
-                    {
-                        Type = "movement",
-                        Value = "hold",
-                        Parameters = new object[] { "defensive" }
-                    });
-                }
-                else
-                {
-                    // Even match - balanced approach
-                    commands.Add(new AICommand
-                    {
-                        Type = "formation",
-                        Value = "line",
-                        Parameters = new object[] { "main_force" }
-                    });
-                    commands.Add(new AICommand
-                    {
-                        Type = "movement",
-                        Value = "advance",
-                        Parameters = new object[] { "cautious" }
-                    });
-                }
-
-                // Add targeting command if ranged units present
-                if (HasRangedUnits(snapshot.EnemyUnits))
-                {
-                    commands.Add(new AICommand
-                    {
-                        Type = "targeting",
-                        Value = "focus_fire",
-                        Parameters = new object[] { "enemy_infantry" }
-                    });
-                }
-
-                return new AIDecision
-                {
-                    Action = strengthRatio > 1.2f ? "aggressive" : (strengthRatio < 0.8f ? "defensive" : "balanced"),
-                    Commands = commands.ToArray(),
-                    Reasoning = $"Fallback decision based on strength ratio: {strengthRatio:F2}"
-                };
-            }
-            catch (Exception ex)
-            {
-                TaleWorlds.Library.Debug.Print($"[HannibalAI] Error in fallback service: {ex.Message}");
-                return CreateEmergencyFallback();
-            }
+            return GetDecision(snapshot).GetAwaiter().GetResult();
         }
 
         private float CalculateTeamStrength(List<UnitData> units)

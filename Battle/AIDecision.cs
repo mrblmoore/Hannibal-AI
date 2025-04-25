@@ -1,19 +1,26 @@
-using TaleWorlds.Library;
+using System;
+using System.Collections.Generic;
+using HannibalAI.Command;
 
 namespace HannibalAI.Battle
 {
     public class AIDecision
     {
-        public string DecisionType { get; set; }
-        public Vec3 TargetPosition { get; set; }
-        public float Confidence { get; set; }
+        public string Action { get; set; }
+        public AICommand[] Commands { get; set; }
         public string Reasoning { get; set; }
 
-        public AIDecision(string decisionType, Vec3 targetPosition, float confidence, string reasoning)
+        public AIDecision()
         {
-            DecisionType = decisionType;
-            TargetPosition = targetPosition;
-            Confidence = confidence;
+            Action = "none";
+            Commands = Array.Empty<AICommand>();
+            Reasoning = string.Empty;
+        }
+
+        public AIDecision(string action, AICommand[] commands, string reasoning)
+        {
+            Action = action;
+            Commands = commands;
             Reasoning = reasoning;
         }
     }

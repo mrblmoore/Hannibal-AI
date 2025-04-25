@@ -5,6 +5,7 @@ using TaleWorlds.Core;
 using HannibalAI.Command;
 using HannibalAI.Services;
 using HannibalAI.Config;
+using TaleWorlds.Library;
 
 namespace HannibalAI.Battle
 {
@@ -14,8 +15,15 @@ namespace HannibalAI.Battle
         private readonly FallbackService _fallbackService;
         private readonly ModConfig _config;
 
-        public AICommander()
+        public int CommanderId { get; private set; }
+        public string Name { get; private set; }
+        public float Experience { get; private set; }
+
+        public AICommander(int commanderId, string name, float experience)
         {
+            CommanderId = commanderId;
+            Name = name;
+            Experience = experience;
             _config = ModConfig.Instance;
             _aiService = new AIService(_config.AIEndpoint, _config.APIKey);
             _fallbackService = new FallbackService();
@@ -51,6 +59,12 @@ namespace HannibalAI.Battle
         {
             // For synchronous calls, we'll wait for the async operation
             return MakeDecisionAsync(snapshot).GetAwaiter().GetResult();
+        }
+
+        public AICommand MakeDecision(BattleSnapshot snapshot)
+        {
+            // TODO: Implement decision-making logic
+            return new MoveFormationCommand(new Vec3(0, 0, 0), 1.0f);
         }
     }
 } 

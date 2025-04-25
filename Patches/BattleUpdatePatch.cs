@@ -20,92 +20,48 @@ using System.Reflection;
 
 namespace HannibalAI.Patches
 {
-    [HarmonyPatch(typeof(Mission))]
+    [HarmonyPatch(typeof(Mission), "Tick")]
     public class BattleUpdatePatch
     {
         private static BattleController _battleController;
+        private static AIDecision _lastDecision;
         private static float _lastUpdateTime;
-        private const float UPDATE_INTERVAL = 1.0f; // Update every second
-        private static readonly AIService _aiService;
-        private static Command.AIDecision _lastDecision;
-        private static bool _battleStarted = false;
-        private static string _currentCommanderId;
-        private static readonly string LogFile = "hannibal_ai_errors.log";
+        private static readonly float UPDATE_INTERVAL = 1.0f;
 
-        static BattleUpdatePatch()
+        public static void Postfix(Mission __instance)
         {
-            try
+            if (__instance?.CurrentState == Mission.State.Continuing)
             {
-                var config = ModConfig.Instance;
-                if (config == null)
+                var currentTime = __instance.CurrentTime;
+                if (currentTime - _lastUpdateTime >= UPDATE_INTERVAL)
                 {
-                    throw new InvalidOperationException("Failed to load mod configuration");
+                    _lastUpdateTime = currentTime;
+                    UpdateBattle(__instance);
                 }
-
-                _aiService = new AIService(config.AIEndpoint, config.APIKey);
-            }
-            catch (Exception ex)
-            {
-                Debug.Print($"[HannibalAI] Error initializing BattleUpdatePatch: {ex.Message}");
-                throw;
             }
         }
 
-        [HarmonyPatch("Tick")]
+        private static void UpdateBattle(Mission mission)
+        {
+            if (_battleController == null)
+            {
+                // Initialize controller if needed
+                var aiService = new AIService(ModConfig.Instance.AIEndpoint, ModConfig.Instance.APIKey);
+                var fallbackService = new FallbackService();
+                var commander = new AICommander(1, "AI Commander", 1.0f);
+                _battleController = new BattleController(commander, aiService, fallbackService);
+            }
+
+            var snapshot = BattleSnapshot.CreateFromMission(mission);
+            _battleController.Update(snapshot);
+        }
+
+        [HarmonyPatch("OnMissionEnd")]
         [HarmonyPostfix]
-        public static void TickPostfix(Mission __instance, float dt)
+        public static void OnMissionEndPostfix()
         {
-            if (__instance == null)
-            {
-                return;
-            }
-
-            try
-            {
-                if (_battleController == null)
-                {
-                    _battleController = new BattleController(__instance);
-                    _lastUpdateTime = 0f;
-                }
-
-                _lastUpdateTime += dt;
-                if (_lastUpdateTime < UPDATE_INTERVAL)
-                {
-                    return;
-                }
-
-                _lastUpdateTime = 0f;
-                if (mission != null && 
-                    mission.CurrentState == MissionState.Continuing &&
-                    _battleController != null)
-                {
-                    _battleController.Update(mission);
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.Print($"[HannibalAI] Error in battle update: {ex.Message}");
-                LogError($"Error in battle update: {ex.Message}");
-            }
-        }
-
-        [HarmonyPatch("OnMissionResult")]
-        public static void Postfix()
-        {
-            try
-            {
-                if (_battleController != null)
-                {
-                    _battleController.Cleanup();
-                    _battleController = null;
-                    Debug.Print("[HannibalAI] Battle controller cleaned up");
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.Print($"[HannibalAI] Error cleaning up battle controller: {ex.Message}");
-                LogError($"Error cleaning up battle controller: {ex.Message}");
-            }
+            _battleController = null;
+            _lastUpdateTime = 0f;
         }
 
         private static async Task UpdateAI(Mission mission)

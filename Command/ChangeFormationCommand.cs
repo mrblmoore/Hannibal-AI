@@ -1,21 +1,26 @@
 using System;
+using TaleWorlds.Library;
+using TaleWorlds.MountAndBlade;
 
 namespace HannibalAI.Command
 {
     public class ChangeFormationCommand : AICommand
     {
-        public int FormationId { get; set; }
-        public float Width { get; set; }
+        public string NewFormationType { get; set; }
+        public Formation Formation { get; }
+        public Formation NewFormation { get; }
 
-        public ChangeFormationCommand(int formationId, float width)
+        public ChangeFormationCommand(Vec3 targetPosition, string newFormationType, Formation formation, Formation newFormation) 
+            : base(targetPosition, CommandType.ChangeFormation)
         {
-            FormationId = formationId;
-            Width = width;
+            NewFormationType = newFormationType;
+            Formation = formation;
+            NewFormation = newFormation;
         }
 
         public override string ToString()
         {
-            return $"ChangeFormationCommand: Formation {FormationId} width to {Width}";
+            return $"ChangeFormationCommand: New Formation Type {NewFormationType}";
         }
     }
 } 

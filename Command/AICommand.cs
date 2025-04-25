@@ -5,7 +5,18 @@ using TaleWorlds.MountAndBlade;
 
 namespace HannibalAI.Command
 {
-    public class AICommand
+    public enum CommandType
+    {
+        None,
+        Attack,
+        Defend,
+        Retreat,
+        Regroup,
+        ChangeFormation,
+        Move
+    }
+
+    public abstract class AICommand
     {
         public string Type { get; set; }
         public string Value { get; set; }
@@ -14,6 +25,7 @@ namespace HannibalAI.Command
         public int? TargetFormationIndex { get; set; }
         public Vec3 TargetPosition { get; set; }
         public object[] Parameters { get; set; }
+        public CommandType Decision { get; set; }
 
         public AICommand()
         {
@@ -46,26 +58,6 @@ namespace HannibalAI.Command
         {
             var executor = new CommandExecutor(mission);
             executor.ExecuteCommand(this);
-        }
-    }
-
-    public class AIDecision
-    {
-        public string Action { get; set; }
-        public AICommand[] Commands { get; set; }
-        public string Reasoning { get; set; }
-        public List<string> TacticsUsed { get; set; }
-
-        public AIDecision()
-        {
-            Commands = Array.Empty<AICommand>();
-        }
-
-        public AIDecision(string action, string reasoning, AICommand[] commands)
-        {
-            Action = action;
-            Reasoning = reasoning;
-            Commands = commands ?? Array.Empty<AICommand>();
         }
     }
 } 

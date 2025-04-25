@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <GamePath>G:\SteamLibrary\steamapps\common\Mount &amp; Blade II Bannerlord</GamePath>
+  </PropertyGroup>
+  <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
     <ProjectGuid>{31275C99-E17B-4BD5-9F51-87E1B9D82086}</ProjectGuid>
@@ -11,7 +16,6 @@
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
-    <GamePath>G:\SteamLibrary\steamapps\common\Mount &amp; Blade II Bannerlord</GamePath>
     <LangVersion>7.3</LangVersion>
     <TargetFrameworkProfile />
     <PlatformTarget>x64</PlatformTarget>

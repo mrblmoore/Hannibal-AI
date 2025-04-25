@@ -97,6 +97,11 @@ namespace HannibalAI.Services
                 throw;
             }
         }
+
+        public AIDecision GetDecisionSync(BattleSnapshot snapshot)
+        {
+            return GetDecisionAsync(snapshot).GetAwaiter().GetResult();
+        }
     }
 
     internal class AIResponse

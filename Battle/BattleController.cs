@@ -6,85 +6,38 @@ using TaleWorlds.Library;
 using TaleWorlds.Engine;
 using HannibalAI.Command;
 using HannibalAI.Services;
+using HannibalAI.Battle;
+using HannibalAI.AI;
 
 namespace HannibalAI.Battle
 {
     public class BattleController
     {
-        private readonly AICommander _aiCommander;
-        private float _lastUpdateTime;
-        private const float UPDATE_INTERVAL = 1.0f;
-        private bool _missionStarted = false;
+        private readonly AICommander _commander;
+        private readonly AIService _aiService;
+        private readonly FallbackService _fallbackService;
+        private BattleSnapshot _lastSnapshot;
+        private AIDecision _lastDecision;
 
-        public BattleController()
+        public BattleController(AICommander commander, AIService aiService, FallbackService fallbackService)
         {
-            _aiCommander = new AICommander();
+            _commander = commander;
+            _aiService = aiService;
+            _fallbackService = fallbackService;
         }
 
-        public void Update(float dt)
+        public void Update(BattleSnapshot snapshot)
         {
-            if (!_missionStarted && Mission.Current != null)
-            {
-                _missionStarted = true;
-                InitializeBattle();
-            }
-
-            if (_missionStarted && Mission.Current != null)
-            {
-                _lastUpdateTime += dt;
-                if (_lastUpdateTime >= UPDATE_INTERVAL)
-                {
-                    UpdateBattleState();
-                    _lastUpdateTime = 0f;
-                }
-            }
+            _lastSnapshot = snapshot;
+            _lastDecision = _aiService.GetDecisionSync(snapshot);
+            ExecuteDecision(_lastDecision);
         }
 
-        private void InitializeBattle()
+        private void ExecuteDecision(AIDecision decision)
         {
-            try
+            if (decision == null)
             {
-                // Initialize battle state
-                var snapshot = BattleSnapshot.CreateFromMission(Mission.Current, "player");
-                if (snapshot != null)
-                {
-                    var decision = _aiCommander.MakeDecision(snapshot);
-                    if (decision != null)
-                    {
-                        ExecuteAIDecision(decision);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                TaleWorlds.Library.Debug.Print($"Error initializing battle: {ex.Message}");
-            }
-        }
-
-        private void UpdateBattleState()
-        {
-            try
-            {
-                var snapshot = BattleSnapshot.CreateFromMission(Mission.Current, "player");
-                if (snapshot != null)
-                {
-                    var decision = _aiCommander.MakeDecision(snapshot);
-                    if (decision != null)
-                    {
-                        ExecuteAIDecision(decision);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                TaleWorlds.Library.Debug.Print($"Error updating battle state: {ex.Message}");
-            }
-        }
-
-        private void ExecuteAIDecision(AIDecision decision)
-        {
-            if (decision?.Commands == null || decision.Commands.Length == 0)
-            {
+                HandleFallback();
                 return;
             }
 
@@ -92,74 +45,49 @@ namespace HannibalAI.Battle
             {
                 try
                 {
-                    if (command == null) continue;
-
                     switch (command)
                     {
-                        case MoveFormationCommand moveCommand:
-                            ExecuteMoveFormation(moveCommand);
-                            break;
                         case AttackFormationCommand attackCommand:
-                            ExecuteAttackFormation(attackCommand);
+                            ExecuteAttackCommand(attackCommand);
                             break;
-                        case ChangeFormationCommand changeCommand:
-                            ExecuteChangeFormation(changeCommand);
+                        case ChangeFormationCommand formationCommand:
+                            ExecuteChangeFormationCommand(formationCommand);
                             break;
-                        default:
-                            TaleWorlds.Library.Debug.Print($"Unknown command type: {command.GetType().Name}");
+                        case MoveFormationCommand moveCommand:
+                            ExecuteMoveCommand(moveCommand);
                             break;
                     }
                 }
                 catch (Exception ex)
                 {
-                    TaleWorlds.Library.Debug.Print($"Error executing command: {ex.Message}");
+                    HandleFallback();
+                    break;
                 }
             }
         }
 
-        private void ExecuteMoveFormation(MoveFormationCommand command)
+        private void HandleFallback()
         {
-            var formation = GetFormation(command.FormationId);
-            if (formation != null)
+            var fallbackDecision = _fallbackService.GetFallbackDecision(_lastSnapshot);
+            if (fallbackDecision != null)
             {
-                var targetPos = new Vec2(command.TargetPosition.X, command.TargetPosition.Y);
-                formation.SetMovementOrder(MovementOrder.MovementOrderMove(targetPos));
+                ExecuteDecision(fallbackDecision);
             }
         }
 
-        private void ExecuteAttackFormation(AttackFormationCommand command)
+        private void ExecuteAttackCommand(AttackFormationCommand command)
         {
-            var formation = GetFormation(command.FormationId);
-            var targetFormation = GetFormation(command.TargetFormationId);
-            if (formation != null && targetFormation != null)
-            {
-                formation.SetMovementOrder(MovementOrder.MovementOrderCharge);
-                formation.SetTargetFormation(targetFormation);
-            }
+            _commander.AttackFormation(command.Formation, command.TargetFormation);
         }
 
-        private void ExecuteChangeFormation(ChangeFormationCommand command)
+        private void ExecuteChangeFormationCommand(ChangeFormationCommand command)
         {
-            var formation = GetFormation(command.FormationId);
-            if (formation != null)
-            {
-                formation.SetWidth(command.Width);
-            }
+            _commander.ChangeFormation(command.Formation, command.NewFormation);
         }
 
-        private Formation GetFormation(int formationId)
+        private void ExecuteMoveCommand(MoveFormationCommand command)
         {
-            if (Mission.Current == null) return null;
-
-            foreach (var team in Mission.Current.Teams)
-            {
-                var formation = team.FormationsIncludingEmpty.FirstOrDefault(f => f.Index == formationId);
-                if (formation != null)
-                {
-                    return formation;
-                }
-            }
-            return null;
+            _commander.MoveFormation(command.Formation, command.Position);
         }
     }
 } 

@@ -5,18 +5,19 @@ namespace HannibalAI.Command
 {
     public class MoveFormationCommand : AICommand
     {
-        public int FormationId { get; set; }
-        public Vec3 TargetPosition { get; set; }
+        public new Vec3 TargetPosition { get; set; }
+        public float Speed { get; set; }
 
-        public MoveFormationCommand(int formationId, Vec3 targetPosition)
+        public MoveFormationCommand(Vec3 targetPosition, float speed) 
+            : base(targetPosition, CommandType.Move)
         {
-            FormationId = formationId;
             TargetPosition = targetPosition;
+            Speed = speed;
         }
 
         public override string ToString()
         {
-            return $"MoveFormationCommand: Formation {FormationId} to {TargetPosition}";
+            return $"MoveFormationCommand: Target {TargetPosition} with speed {Speed}";
         }
     }
 } 
