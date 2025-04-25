@@ -31,15 +31,52 @@ namespace HannibalAI.Services
             }
         }
 
-        public async Task<AIDecision> GetDecision(BattleSnapshot snapshot)
+        public async Task<AIDecision> GetDecisionAsync(BattleSnapshot snapshot)
         {
-            // TODO: Implement fallback decision-making logic
-            return await Task.FromResult(new AIDecision());
+            if (snapshot == null)
+            {
+                return new AIDecision();
+            }
+
+            try
+            {
+                // Simple fallback logic: move towards the nearest enemy formation
+                var commands = new List<AICommand>();
+                var enemyFormations = snapshot.EnemyFormations;
+                var friendlyFormations = snapshot.FriendlyFormations;
+
+                if (enemyFormations != null && friendlyFormations != null)
+                {
+                    foreach (var formation in friendlyFormations)
+                    {
+                        var nearestEnemy = enemyFormations
+                            .OrderBy(e => Vec3.Distance(formation.Position, e.Position))
+                            .FirstOrDefault();
+
+                        if (nearestEnemy != null)
+                        {
+                            commands.Add(new MoveFormationCommand(formation.Position, 1.0f));
+                        }
+                    }
+                }
+
+                return new AIDecision
+                {
+                    Action = "fallback_move",
+                    Commands = commands.ToArray(),
+                    Reasoning = "Fallback: Moving towards nearest enemy formation"
+                };
+            }
+            catch (Exception ex)
+            {
+                Debug.Print($"Error in fallback decision: {ex.Message}");
+                return new AIDecision();
+            }
         }
 
         public AIDecision GetDecisionSync(BattleSnapshot snapshot)
         {
-            return GetDecision(snapshot).GetAwaiter().GetResult();
+            return GetDecisionAsync(snapshot).GetAwaiter().GetResult();
         }
 
         private float CalculateTeamStrength(List<UnitData> units)
@@ -63,18 +100,7 @@ namespace HannibalAI.Services
                 Action = "emergency_defensive",
                 Commands = new[]
                 {
-                    new AICommand
-                    {
-                        Type = "formation",
-                        Value = "shield_wall",
-                        Parameters = new object[] { "main_force" }
-                    },
-                    new AICommand
-                    {
-                        Type = "movement",
-                        Value = "hold",
-                        Parameters = new object[] { "defensive" }
-                    }
+                    new MoveFormationCommand(new Vec3(0, 0, 0), 1.0f)
                 },
                 Reasoning = "Emergency fallback - defaulting to defensive stance"
             };

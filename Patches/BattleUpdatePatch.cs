@@ -27,6 +27,8 @@ namespace HannibalAI.Patches
         private static AIDecision _lastDecision;
         private static float _lastUpdateTime;
         private static readonly float UPDATE_INTERVAL = 1.0f;
+        private static bool _battleStarted = false;
+        private static string _currentCommanderId = "";
 
         public static void Postfix(Mission __instance)
         {
@@ -52,7 +54,7 @@ namespace HannibalAI.Patches
                 _battleController = new BattleController(commander, aiService, fallbackService);
             }
 
-            var snapshot = BattleSnapshot.CreateFromMission(mission);
+            var snapshot = BattleSnapshot.CreateFromMission(mission, _currentCommanderId);
             _battleController.Update(snapshot);
         }
 
@@ -62,6 +64,8 @@ namespace HannibalAI.Patches
         {
             _battleController = null;
             _lastUpdateTime = 0f;
+            _battleStarted = false;
+            _currentCommanderId = "";
         }
 
         private static async Task UpdateAI(Mission mission)
@@ -73,7 +77,7 @@ namespace HannibalAI.Patches
 
             try
             {
-                var snapshot = BattleSnapshot.CreateFromMission(mission);
+                var snapshot = BattleSnapshot.CreateFromMission(mission, _currentCommanderId);
                 if (snapshot == null)
                 {
                     Debug.Print("[HannibalAI] Failed to create battle snapshot");
@@ -221,7 +225,7 @@ namespace HannibalAI.Patches
             _battleStarted = false;
             _lastUpdateTime = 0f;
             _lastDecision = null;
-            _currentCommanderId = null;
+            _currentCommanderId = "";
         }
 
         private static void LogError(string message)

@@ -10,16 +10,12 @@ namespace HannibalAI.Command
         public Formation Formation { get; }
         public Formation TargetFormation { get; }
 
-        public AttackFormationCommand(Vec3 targetPosition, int targetFormationId) 
-            : base(targetPosition, CommandType.Attack)
-        {
-            TargetFormationId = targetFormationId;
-        }
-
         public AttackFormationCommand(Formation formation, Formation targetFormation)
+            : base("attack", (int)CommandType.Attack)
         {
             Formation = formation;
             TargetFormation = targetFormation;
+            TargetFormationId = targetFormation?.Index ?? -1;
         }
 
         public override string ToString()
