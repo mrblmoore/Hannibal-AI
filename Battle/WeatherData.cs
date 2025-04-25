@@ -16,12 +16,23 @@ namespace HannibalAI.Battle
         {
             if (scene == null) return;
 
-            // TODO: Implement weather data collection using valid Bannerlord APIs
-            // For now, we'll use default values
-            RainDensity = 0f;
-            SnowDensity = 0f;
-            FogDensity = 0f;
-            Temperature = 20f;
+            // Get weather state from scene
+            var weatherState = scene.GetWeatherState();
+            if (weatherState != null)
+            {
+                RainDensity = weatherState.RainDensity;
+                SnowDensity = weatherState.SnowDensity;
+                FogDensity = weatherState.FogDensity;
+                Temperature = 20f; // Default temperature since GetTemperature() is not available
+            }
+            else
+            {
+                // Default values if weather state is not available
+                RainDensity = 0f;
+                SnowDensity = 0f;
+                FogDensity = 0f;
+                Temperature = 20f;
+            }
         }
 
         public WeatherData(float rainDensity, float snowDensity, float fogDensity, float temperature)

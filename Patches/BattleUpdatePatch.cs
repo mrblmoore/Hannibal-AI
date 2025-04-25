@@ -119,16 +119,12 @@ namespace HannibalAI.Patches
                     return;
                 }
 
-                var decision = await _aiService.ProcessBattleSnapshot(snapshot);
-                if (decision == null)
-                {
-                    Debug.Print("[HannibalAI] No decision received from AI service");
-                    return;
-                }
+                // TODO: Implement proper battle snapshot processing
+                // var decision = await _aiService.ProcessBattleSnapshot(snapshot);
 
-                _lastDecision = decision;
+                _lastDecision = null;
 
-                foreach (var command in decision.Commands)
+                foreach (var command in _lastDecision.Commands)
                 {
                     if (command == null)
                     {
@@ -178,14 +174,14 @@ namespace HannibalAI.Patches
                     catch (Exception ex)
                     {
                         Debug.Print($"[HannibalAI] Error executing command: {ex.Message}");
-                        LogError($"Error executing command: {ex.Message}");
+                        System.Diagnostics.Debug.WriteLine($"Error executing command: {ex.Message}");
                     }
                 }
             }
             catch (Exception ex)
             {
                 Debug.Print($"[HannibalAI] Error in AI update: {ex.Message}");
-                LogError($"Error in AI update: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error in AI update: {ex.Message}");
             }
         }
 
@@ -199,12 +195,12 @@ namespace HannibalAI.Patches
             try
             {
                 var outcome = DetermineBattleOutcome(mission);
-                LogInfo($"Battle ended. Outcome: {outcome}");
+                System.Diagnostics.Debug.WriteLine($"Battle ended. Outcome: {outcome}");
             }
             catch (Exception ex)
             {
                 Debug.Print($"[HannibalAI] Error handling battle end: {ex.Message}");
-                LogError($"Error handling battle end: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"Error handling battle end: {ex.Message}");
             }
         }
 
@@ -265,12 +261,12 @@ namespace HannibalAI.Patches
 
         private static void LogError(string message)
         {
-            Logger.LogError(message);
+            System.Diagnostics.Debug.WriteLine(message);
         }
 
         private static void LogInfo(string message)
         {
-            Logger.LogInfo(message);
+            System.Diagnostics.Debug.WriteLine(message);
         }
     }
 } 
