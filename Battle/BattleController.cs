@@ -7,7 +7,6 @@ using TaleWorlds.Engine;
 using HannibalAI.Command;
 using HannibalAI.Services;
 using HannibalAI.Battle;
-using HannibalAI.AI;
 
 namespace HannibalAI.Battle
 {
