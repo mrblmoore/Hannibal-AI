@@ -5,13 +5,11 @@ namespace HannibalAI.Command
     public class ChangeFormationCommand : AICommand
     {
         public Formation Formation { get; private set; }
-        public FormOrder FormOrder { get; private set; }
 
-        public ChangeFormationCommand(Formation formation, FormOrder formOrder)
-            : base("Change Formation", CommandType.ChangeFormation)
+        public ChangeFormationCommand(Formation formation)
+            : base(CommandType.FormationChange)
         {
             Formation = formation;
-            FormOrder = formOrder;
         }
     }
 }

@@ -27,7 +27,7 @@ namespace HannibalAI.Battle
 
                 if (command is MoveFormationCommand moveCmd)
                 {
-                    _aiCommander.MoveFormation(moveCmd.Formation, moveCmd.Position);
+                    _aiCommander.MoveFormation(moveCmd.Formation, moveCmd.TargetPosition);
                 }
                 else if (command is ChangeFormationCommand changeCmd)
                 {
@@ -35,11 +35,11 @@ namespace HannibalAI.Battle
                 }
                 else if (command is FlankCommand flankCmd)
                 {
-                    _aiCommander.FlankEnemy(flankCmd.Formation, flankCmd.Direction);
+                    _aiCommander.FlankEnemy(flankCmd.Formation, flankCmd.TargetPosition);
                 }
                 else if (command is HoldCommand holdCmd)
                 {
-                    _aiCommander.HoldPosition(holdCmd.Formation, holdCmd.Position);
+                    _aiCommander.HoldPosition(holdCmd.Formation, holdCmd.HoldPosition);
                 }
                 else if (command is ChargeCommand chargeCmd)
                 {
@@ -47,7 +47,7 @@ namespace HannibalAI.Battle
                 }
                 else if (command is FollowCommand followCmd)
                 {
-                    _aiCommander.FollowTarget(followCmd.Formation, followCmd.Target);
+                    _aiCommander.FollowTarget(followCmd.Follower, followCmd.Leader);
                 }
                 else
                 {

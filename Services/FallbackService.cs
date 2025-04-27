@@ -1,46 +1,43 @@
-using System.Collections.Generic;
-using HannibalAI.Battle;
+using System;
 using TaleWorlds.MountAndBlade;
+using HannibalAI.Battle;
+using HannibalAI.Command;
 
 namespace HannibalAI.Services
 {
     public class FallbackService
     {
-        public FallbackService()
+        private readonly Mission _mission;
+
+        public FallbackService(Mission mission)
         {
-            // Intentionally empty or you can add basic initialization if needed later
+            _mission = mission ?? throw new ArgumentNullException(nameof(mission));
         }
 
-        public void GetFallbackDecision()
+        public AICommand GetFallbackDecision()
         {
-            // Basic fallback logic if AI cannot make a decision
-            System.Diagnostics.Debug.WriteLine("FallbackService: No valid AI decision available. Executing fallback behavior.");
-        }
+            if (_mission == null)
+                return null;
 
-        public List<Formation> GetEnemyFormations(Mission mission)
-        {
-            if (mission?.PlayerTeam?.EnemyTeams == null)
-                return new List<Formation>();
+            var playerTeam = _mission.PlayerTeam;
+            if (playerTeam == null)
+                return null;
 
-            var enemyFormations = new List<Formation>();
-
-            foreach (var team in mission.PlayerTeam.EnemyTeams)
+            // Example fallback: move all formations to a defensive line
+            foreach (var formation in playerTeam.FormationsIncludingEmpty)
             {
-                if (team?.FormationsIncludingEmpty == null)
-                    continue;
-
-                enemyFormations.AddRange(team.FormationsIncludingEmpty);
+                if (formation.CountOfUnits > 0)
+                {
+                    var fallbackPosition = formation.GetMedianPosition();
+                    return new HoldCommand
+                    {
+                        Formation = formation,
+                        HoldPosition = fallbackPosition
+                    };
+                }
             }
 
-            return enemyFormations;
-        }
-
-        public List<Formation> GetFriendlyFormations(Mission mission)
-        {
-            if (mission?.PlayerTeam?.FormationsIncludingEmpty == null)
-                return new List<Formation>();
-
-            return new List<Formation>(mission.PlayerTeam.FormationsIncludingEmpty);
+            return null;
         }
     }
 }

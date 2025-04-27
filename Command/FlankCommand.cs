@@ -6,13 +6,13 @@ namespace HannibalAI.Command
     public class FlankCommand : AICommand
     {
         public Formation Formation { get; private set; }
-        public Vec2 Direction { get; private set; }
+        public Vec3 TargetPosition { get; private set; }
 
-        public FlankCommand(Formation formation, Vec2 direction)
-            : base("Flank", CommandType.Flank)
+        public FlankCommand(Formation formation, Vec3 targetPosition)
+            : base(CommandType.Movement)
         {
             Formation = formation;
-            Direction = direction;
+            TargetPosition = targetPosition;
         }
     }
 }

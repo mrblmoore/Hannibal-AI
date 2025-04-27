@@ -1,26 +1,17 @@
-using System;
-using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
 
 namespace HannibalAI.Command
 {
     public class AttackFormationCommand : AICommand
     {
-        public int TargetFormationId { get; set; }
-        public Formation Formation { get; }
-        public Formation TargetFormation { get; }
+        public Formation Attacker { get; private set; }
+        public Formation Target { get; private set; }
 
-        public AttackFormationCommand(Formation formation, Formation targetFormation)
-            : base("attack", (int)CommandType.Attack)
+        public AttackFormationCommand(Formation attacker, Formation target)
+            : base(CommandType.Engagement)
         {
-            Formation = formation;
-            TargetFormation = targetFormation;
-            TargetFormationId = targetFormation?.Index ?? -1;
-        }
-
-        public override string ToString()
-        {
-            return $"AttackFormationCommand: Target Formation {TargetFormationId}";
+            Attacker = attacker;
+            Target = target;
         }
     }
-} 
+}

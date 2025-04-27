@@ -6,13 +6,13 @@ namespace HannibalAI.Command
     public class MoveFormationCommand : AICommand
     {
         public Formation Formation { get; private set; }
-        public Vec2 Position { get; private set; }
+        public Vec3 TargetPosition { get; private set; }
 
-        public MoveFormationCommand(Formation formation, Vec2 position)
-            : base("Move Formation", CommandType.MoveFormation)
+        public MoveFormationCommand(Formation formation, Vec3 targetPosition)
+            : base(CommandType.Movement)
         {
             Formation = formation;
-            Position = position;
+            TargetPosition = targetPosition;
         }
     }
 }

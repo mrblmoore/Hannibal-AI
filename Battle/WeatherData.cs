@@ -1,27 +1,33 @@
+using TaleWorlds.Library;
 using TaleWorlds.Engine;
 
 namespace HannibalAI.Battle
 {
     public class WeatherData
     {
-        public float FogDensity { get; private set; }
-        public float Temperature { get; private set; }
+        public bool IsRaining { get; set; }
+        public bool IsFoggy { get; set; }
+        public float Temperature { get; set; }
 
         public WeatherData(Scene scene)
         {
             if (scene == null)
-            {
-                FogDensity = 0f;
-                Temperature = 20f; // Default temperature
                 return;
+
+            // These methods don't exist directly anymore; you'll simulate weather manually
+            var atmosphere = scene.GetAtmosphere();
+            if (atmosphere != null)
+            {
+                IsRaining = atmosphere.RainDensity > 0.5f;
+                IsFoggy = atmosphere.FogDensity > 0.5f;
+                Temperature = atmosphere.Temperature;
             }
-
-            // No direct API exists in 1.2.12 for Fog or Temperature.
-            // Therefore, we assign reasonable defaults or use environmental lighting later if needed.
-            FogDensity = 0f;  // Placeholder (Bannerlord API does not expose fog density anymore)
-            Temperature = 20f; // Placeholder temperature (average)
-
-            // Future Expansion: You can later hook into weather particles, ambient lighting, etc.
+            else
+            {
+                IsRaining = false;
+                IsFoggy = false;
+                Temperature = 20.0f; // default temp
+            }
         }
     }
 }

@@ -1,80 +1,61 @@
 using System.Collections.Generic;
 using HannibalAI.Battle;
 using HannibalAI.Config;
-using TaleWorlds.MountAndBlade;
 
 namespace HannibalAI.Services
 {
     public class CommanderMemoryService
     {
-        private readonly Dictionary<string, float> _commanderMemories;
+        private readonly Dictionary<string, float> _commanderMemory;
         private readonly ModConfig _config;
 
-        public CommanderMemoryService(ModConfig config)
+        public CommanderMemoryService()
         {
-            _config = config ?? new ModConfig();
-            _commanderMemories = new Dictionary<string, float>();
+            _commanderMemory = new Dictionary<string, float>();
+            _config = ModConfig.Instance;
         }
 
-        public void UpdateMemory(string commanderId, float memoryValue)
+        public void RecordCommanderInteraction(string commanderId)
         {
             if (string.IsNullOrEmpty(commanderId))
                 return;
 
-            if (!_commanderMemories.ContainsKey(commanderId))
+            if (!_commanderMemory.ContainsKey(commanderId))
             {
-                _commanderMemories[commanderId] = memoryValue;
+                _commanderMemory[commanderId] = 0f;
             }
-            else
-            {
-                _commanderMemories[commanderId] += memoryValue;
-                _commanderMemories[commanderId] = ClampMemory(_commanderMemories[commanderId]);
-            }
+
+            _commanderMemory[commanderId] += 1f;
+            CapMemoryValue(commanderId);
         }
 
-        public float GetMemory(string commanderId)
+        public float GetCommanderMemory(string commanderId)
         {
-            if (string.IsNullOrEmpty(commanderId))
+            if (string.IsNullOrEmpty(commanderId) || !_commanderMemory.ContainsKey(commanderId))
                 return 0f;
 
-            return _commanderMemories.TryGetValue(commanderId, out var memory) ? memory : 0f;
+            return _commanderMemory[commanderId];
         }
 
-        public void DecayMemory(string commanderId, float deltaTime)
+        public void DecayMemoryOverTime()
         {
-            if (string.IsNullOrEmpty(commanderId) || !_commanderMemories.ContainsKey(commanderId))
-                return;
-
-            float decayAmount = _config.CommanderMemoryDecayRate * deltaTime;
-            _commanderMemories[commanderId] -= decayAmount;
-            _commanderMemories[commanderId] = ClampMemory(_commanderMemories[commanderId]);
-        }
-
-        private float ClampMemory(float memory)
-        {
-            if (memory > _config.CommanderMemoryMaxValue)
-                return _config.CommanderMemoryMaxValue;
-
-            if (memory < _config.CommanderMemoryMinValue)
-                return _config.CommanderMemoryMinValue;
-
-            return memory;
-        }
-
-        public void ResetMemory(string commanderId)
-        {
-            if (string.IsNullOrEmpty(commanderId))
-                return;
-
-            if (_commanderMemories.ContainsKey(commanderId))
+            var keys = new List<string>(_commanderMemory.Keys);
+            foreach (var commanderId in keys)
             {
-                _commanderMemories[commanderId] = _config.CommanderMemoryMinValue;
+                _commanderMemory[commanderId] -= _config.CommanderMemoryDecayRate;
+                if (_commanderMemory[commanderId] < _config.CommanderMemoryMinValue)
+                {
+                    _commanderMemory[commanderId] = _config.CommanderMemoryMinValue;
+                }
             }
         }
 
-        public Dictionary<string, float> GetAllMemories()
+        private void CapMemoryValue(string commanderId)
         {
-            return _commanderMemories;
+            if (_commanderMemory[commanderId] > _config.CommanderMemoryMaxValue)
+            {
+                _commanderMemory[commanderId] = _config.CommanderMemoryMaxValue;
+            }
         }
     }
 }

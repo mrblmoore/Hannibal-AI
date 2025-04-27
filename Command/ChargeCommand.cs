@@ -7,7 +7,7 @@ namespace HannibalAI.Command
         public Formation Formation { get; private set; }
 
         public ChargeCommand(Formation formation)
-            : base("Charge", CommandType.Charge)
+            : base(CommandType.Engagement)
         {
             Formation = formation;
         }

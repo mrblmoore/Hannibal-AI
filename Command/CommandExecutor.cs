@@ -1,95 +1,137 @@
-using System;
-using System.Linq;
-using System.IO;
+using HannibalAI.Command;
+using HannibalAI.Utils;
 using TaleWorlds.MountAndBlade;
-using TaleWorlds.Library;
-using TaleWorlds.Core;
-using HannibalAI.Battle;
-using HannibalAI.Config;
 
 namespace HannibalAI.Command
 {
     public class CommandExecutor
     {
-        private static readonly string LogFile = "hannibal_ai_errors.log";
         private readonly Mission _mission;
-        private readonly ModConfig _config;
-        private readonly BattleController _battleController;
 
-        public CommandExecutor(Mission mission, BattleController battleController)
+        public CommandExecutor(Mission mission)
         {
             _mission = mission;
-            _config = ModConfig.Instance;
-            _battleController = battleController;
         }
 
-        public void ExecuteCommand(AICommand command)
+        public void Execute(AICommand command)
         {
             if (command == null)
             {
-                Debug.Print("[HannibalAI] Cannot execute null command");
+                Logger.LogError("CommandExecutor: Command is null.");
                 return;
             }
 
-            try
+            switch (command)
             {
-                if (_config.Debug)
-                {
-                    Debug.Print($"Executing command: {command.GetType().Name}");
-                }
+                case MoveFormationCommand moveCommand:
+                    ExecuteMoveCommand(moveCommand);
+                    break;
 
-                _battleController.ExecuteCommand(command);
+                case AttackFormationCommand attackCommand:
+                    ExecuteAttackCommand(attackCommand);
+                    break;
 
-                // Log successful execution if debug is enabled
-                if (ModConfig.Instance.Debug.ShowAIDecisions)
-                {
-                    LogInfo($"Executed {command.Type} command on formation {command.FormationIndex}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.Print($"Error executing command: {ex.Message}");
-            }
-        }
+                case ChangeFormationCommand changeCommand:
+                    ExecuteChangeFormationCommand(changeCommand);
+                    break;
 
-        private void ExecuteMovementCommand(AICommand command)
-        {
-            // Implementation
-        }
+                case FlankCommand flankCommand:
+                    ExecuteFlankCommand(flankCommand);
+                    break;
 
-        private void ExecuteFormationCommand(AICommand command)
-        {
-            // Implementation
-        }
+                case HoldCommand holdCommand:
+                    ExecuteHoldCommand(holdCommand);
+                    break;
 
-        private void ExecuteTargetingCommand(AICommand command)
-        {
-            // Implementation
-        }
+                case ChargeCommand chargeCommand:
+                    ExecuteChargeCommand(chargeCommand);
+                    break;
 
-        private static void LogError(string message)
-        {
-            try
-            {
-                File.AppendAllText(LogFile, $"[ERROR {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}] {message}\n");
-                Debug.Print($"[HannibalAI] {message}");
-            }
-            catch (Exception ex)
-            {
-                // If we can't log to file, at least write to debug output
-                Debug.Print($"Error logging to file: {ex.Message}");
-                Debug.Print($"Original error: {message}");
+                case FollowCommand followCommand:
+                    ExecuteFollowCommand(followCommand);
+                    break;
+
+                default:
+                    Logger.LogError($"CommandExecutor: Unknown command type {command.GetType().Name}.");
+                    break;
             }
         }
 
-        private static void LogInfo(string message)
+        private void ExecuteMoveCommand(MoveFormationCommand moveCommand)
         {
-            try
+            if (moveCommand?.Formation == null)
             {
-                File.AppendAllText(LogFile, $"[INFO {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}] {message}\n");
-                Debug.Print($"[HannibalAI] {message}");
+                Logger.LogError("MoveFormationCommand: Formation is null.");
+                return;
             }
-            catch { /* Ignore logging errors */ }
+
+            moveCommand.Formation.SetMovementOrder(MovementOrder.MovementOrderMove(moveCommand.TargetPosition));
+        }
+
+        private void ExecuteAttackCommand(AttackFormationCommand attackCommand)
+        {
+            if (attackCommand?.Attacker == null || attackCommand?.Target == null)
+            {
+                Logger.LogError("AttackFormationCommand: Attacker or Target is null.");
+                return;
+            }
+
+            attackCommand.Attacker.SetMovementOrder(MovementOrder.MovementOrderChargeToTarget(attackCommand.Target));
+        }
+
+        private void ExecuteChangeFormationCommand(ChangeFormationCommand changeCommand)
+        {
+            if (changeCommand?.Formation == null)
+            {
+                Logger.LogError("ChangeFormationCommand: Formation is null.");
+                return;
+            }
+
+            changeCommand.Formation.SetFormationOrder(FormOrder.FormOrderLine);
+        }
+
+        private void ExecuteFlankCommand(FlankCommand flankCommand)
+        {
+            if (flankCommand?.Formation == null)
+            {
+                Logger.LogError("FlankCommand: Formation is null.");
+                return;
+            }
+
+            flankCommand.Formation.SetMovementOrder(MovementOrder.MovementOrderMove(flankCommand.TargetPosition));
+        }
+
+        private void ExecuteHoldCommand(HoldCommand holdCommand)
+        {
+            if (holdCommand?.Formation == null)
+            {
+                Logger.LogError("HoldCommand: Formation is null.");
+                return;
+            }
+
+            holdCommand.Formation.SetMovementOrder(MovementOrder.MovementOrderStop());
+        }
+
+        private void ExecuteChargeCommand(ChargeCommand chargeCommand)
+        {
+            if (chargeCommand?.Formation == null)
+            {
+                Logger.LogError("ChargeCommand: Formation is null.");
+                return;
+            }
+
+            chargeCommand.Formation.SetMovementOrder(MovementOrder.MovementOrderCharge());
+        }
+
+        private void ExecuteFollowCommand(FollowCommand followCommand)
+        {
+            if (followCommand?.Formation == null)
+            {
+                Logger.LogError("FollowCommand: Formation is null.");
+                return;
+            }
+
+            followCommand.Formation.SetMovementOrder(MovementOrder.MovementOrderFollow());
         }
     }
-} 
+}

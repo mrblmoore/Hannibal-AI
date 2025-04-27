@@ -1,31 +1,25 @@
-using TaleWorlds.Engine;
 using TaleWorlds.Library;
+using TaleWorlds.MountAndBlade;
 
 namespace HannibalAI.Battle
 {
     public class TerrainData
     {
-        public float Height { get; private set; }
-        public float WaterLevel { get; private set; }
-        public bool IsWater { get; private set; }
+        public float AverageHeight { get; private set; }
+        public bool HasWater { get; private set; }
 
-        public TerrainData(Scene scene, Vec2 position)
+        public TerrainData(Mission mission)
         {
-            if (scene == null)
-            {
-                Height = 0f;
-                WaterLevel = 0f;
-                IsWater = false;
+            if (mission == null || mission.Scene == null)
                 return;
-            }
 
-            // Correct call for Bannerlord 1.2.12
-            Height = scene.GetTerrainHeightAtPosition(position);
+            // Sample terrain height at the center of the map
+            Vec2 center = new Vec2(mission.Scene.Width * 0.5f, mission.Scene.Height * 0.5f);
+            AverageHeight = mission.Scene.GetTerrainHeightAtPosition(center);
 
-            // Corrected Scene method call
-            WaterLevel = scene.GetWaterLevelAtPosition(position, checkWaterBodyEntities: true);
-
-            IsWater = Height < WaterLevel;
+            // Check for water near the center
+            float waterLevel = mission.Scene.GetWaterLevelAtPosition(center, false);
+            HasWater = waterLevel > 0.1f; // Threshold: minimal water level
         }
     }
 }

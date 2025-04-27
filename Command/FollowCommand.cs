@@ -4,14 +4,14 @@ namespace HannibalAI.Command
 {
     public class FollowCommand : AICommand
     {
-        public Formation Formation { get; private set; }
-        public Agent Target { get; private set; }
+        public Formation Follower { get; private set; }
+        public Formation Leader { get; private set; }
 
-        public FollowCommand(Formation formation, Agent target)
-            : base("Follow", CommandType.Follow)
+        public FollowCommand(Formation follower, Formation leader)
+            : base(CommandType.Movement)
         {
-            Formation = formation;
-            Target = target;
+            Follower = follower;
+            Leader = leader;
         }
     }
 }
