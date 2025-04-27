@@ -1,17 +1,14 @@
-using TaleWorlds.MountAndBlade;
 using TaleWorlds.Library;
 
 namespace HannibalAI.Command
 {
     public class FlankCommand : AICommand
     {
-        public Formation Formation { get; private set; }
-        public Vec3 TargetPosition { get; private set; }
+        public Vec3 TargetPosition { get; set; }
 
-        public FlankCommand(Formation formation, Vec3 targetPosition)
-            : base(CommandType.Movement)
+        public FlankCommand(int formationIndex, Vec3 targetPosition)
         {
-            Formation = formation;
+            FormationIndex = formationIndex;
             TargetPosition = targetPosition;
         }
     }

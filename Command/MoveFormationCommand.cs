@@ -1,18 +1,16 @@
-using TaleWorlds.MountAndBlade;
 using TaleWorlds.Library;
 
 namespace HannibalAI.Command
 {
     public class MoveFormationCommand : AICommand
     {
-        public Formation Formation { get; private set; }
-        public Vec3 TargetPosition { get; private set; }
+        public Vec3 Destination { get; set; }
 
-        public MoveFormationCommand(Formation formation, Vec3 targetPosition)
-            : base(CommandType.Movement)
+        public MoveFormationCommand(int formationIndex, Vec3 destination)
         {
-            Formation = formation;
-            TargetPosition = targetPosition;
+            FormationIndex = formationIndex;
+            TargetPosition = destination;
+            Destination = destination;
         }
     }
 }

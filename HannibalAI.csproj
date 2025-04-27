@@ -97,7 +97,7 @@
     <Compile Include="Battle\BattleSnapshot.cs" />
     <Compile Include="Battle\TerrainData.cs" />
     <Compile Include="Battle\UnitData.cs" />
-    <Compile Include="Battle\AIDecision.cs" />
+    <Compile Include="Command\AIDecision.cs" />
     <Compile Include="Battle\WeatherData.cs" />
     <Compile Include="Battle\ArrangementOrderCustom.cs" />
     <Compile Include="Battle\AICommander.cs" />
