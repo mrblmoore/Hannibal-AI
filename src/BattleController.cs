@@ -119,6 +119,16 @@ namespace HannibalAI
                 // Log initialization
                 Logger.Instance.Info("HannibalAI Controller initialized for battle");
                 
+                // Display enemy AI control status
+                string aiControlStatus = ModConfig.Instance.AIControlsEnemies ? 
+                    "HannibalAI is controlling both friendly and enemy formations" : 
+                    "HannibalAI is controlling friendly formations only";
+                Logger.Instance.Info(aiControlStatus);
+                
+                // Show information message to player
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"HannibalAI Active: {(ModConfig.Instance.AIControlsEnemies ? "Controlling All Forces" : "Friendly Forces Only")}"));
+                
                 // Log terrain features if in debug mode
                 if (ModConfig.Instance.Debug && terrainFeatures.Count > 0)
                 {
@@ -150,6 +160,20 @@ namespace HannibalAI
                         // Process AI decisions for enemy formations
                         var enemyOrders = _aiService.ProcessBattleSnapshot(_enemyTeam, _playerTeam);
                         ExecuteAIDecisions(enemyOrders);
+                        
+                        // Show enemy AI control status periodically (every 30 seconds)
+                        if (ModConfig.Instance.Debug && Mission.Current.CurrentTime % 30 < 1.0f)
+                        {
+                            string enemyCommanderInfo = "";
+                            if (ModConfig.Instance.UseCommanderMemory)
+                            {
+                                float aggression = CommanderMemoryService.Instance.AggressivenessScore;
+                                enemyCommanderInfo = $" (Commander: {(aggression > 0.7f ? "Aggressive" : 
+                                                                    aggression < 0.3f ? "Cautious" : "Balanced")})";
+                            }
+                            
+                            Logger.Instance.Info($"HannibalAI is controlling enemy formations{enemyCommanderInfo}");
+                        }
                     }
                 }
             }

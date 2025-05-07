@@ -36,12 +36,18 @@ namespace HannibalAI.UI
             // For now, just show the current settings in the log/message system
             var config = ModConfig.Instance;
             string settings = $"HannibalAI Settings:\n" +
-                              $"- AI Controls Enemies: {config.AIControlsEnemies}\n" +
-                              $"- Use Commander Memory: {config.UseCommanderMemory}\n" +
-                              $"- Debug Mode: {config.Debug}\n" +
+                              $"- AI Controls Enemies: {(config.AIControlsEnemies ? "ENABLED" : "disabled")}\n" +
+                              $"- Use Commander Memory: {(config.UseCommanderMemory ? "ENABLED" : "disabled")}\n" +
+                              $"- Debug Mode: {(config.Debug ? "ENABLED" : "disabled")}\n" +
                               $"- Aggressiveness: {config.Aggressiveness}%";
             
             Logger.Instance.Info(settings);
+            
+            // Show abbreviated settings as an immediate message
+            InformationManager.DisplayMessage(new InformationMessage(
+                $"HannibalAI: Enemy AI Control {(config.AIControlsEnemies ? "ON" : "OFF")} | " +
+                $"Commander Memory {(config.UseCommanderMemory ? "ON" : "OFF")} | " +
+                $"Aggression {config.Aggressiveness}%"));
             
             // Display an informational message to the player
             InformationManager.DisplayMessage(new InformationMessage("HannibalAI settings opened. Use console for detailed view."));
