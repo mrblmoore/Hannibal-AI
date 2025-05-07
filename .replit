@@ -1,0 +1,40 @@
+modules = ["dotnet"]
+
+[nix]
+channel = "stable-24_05"
+packages = ["dotnet-sdk", "wget"]
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Build and Verify HannibalAI"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "hannibal_ai_build"
+
+[[workflows.workflow]]
+name = "Build and Verify HannibalAI"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "chmod +x download-dependencies.sh build.sh verify-mod.sh && ./download-dependencies.sh && ./build.sh && ./verify-mod.sh"
+
+[[workflows.workflow]]
+name = "hannibal_ai_build"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "chmod +x build.sh download-dependencies.sh verify-mod.sh && ./build.sh"
+
+[deployment]
+run = ["sh", "-c", "chmod +x download-dependencies.sh build.sh verify-mod.sh && ./download-dependencies.sh && ./build.sh && ./verify-mod.sh"]
