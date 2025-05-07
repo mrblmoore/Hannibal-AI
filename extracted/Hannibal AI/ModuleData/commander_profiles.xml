@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CommanderProfiles>
+  <Profile id="aggressive">
+    <Traits>
+      <Trait name="aggression" value="0.8" />
+      <Trait name="caution" value="0.2" />
+      <Trait name="innovation" value="0.6" />
+      <Trait name="discipline" value="0.5" />
+    </Traits>
+    <PreferredTactics>
+      <Tactic id="aggressive_advance" weight="1.5" />
+      <Tactic id="flanking_maneuver" weight="1.2" />
+      <Tactic id="defensive_hold" weight="0.5" />
+    </PreferredTactics>
+    <LearningParams>
+      <Param name="adaptation_rate" value="0.15" />
+      <Param name="memory_weight" value="0.7" />
+      <Param name="exploration_factor" value="0.3" />
+    </LearningParams>
+  </Profile>
+  <Profile id="defensive">
+    <Traits>
+      <Trait name="aggression" value="0.3" />
+      <Trait name="caution" value="0.8" />
+      <Trait name="innovation" value="0.4" />
+      <Trait name="discipline" value="0.7" />
+    </Traits>
+    <PreferredTactics>
+      <Tactic id="defensive_hold" weight="1.5" />
+      <Tactic id="aggressive_advance" weight="0.6" />
+      <Tactic id="flanking_maneuver" weight="0.8" />
+    </PreferredTactics>
+    <LearningParams>
+      <Param name="adaptation_rate" value="0.1" />
+      <Param name="memory_weight" value="0.8" />
+      <Param name="exploration_factor" value="0.2" />
+    </LearningParams>
+  </Profile>
+</CommanderProfiles> 

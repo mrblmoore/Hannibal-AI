@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Module>
+  <Name value="HannibalAI" />
+  <Id value="HannibalAI" />
+  <Version value="v1.0.0" />
+  <DefaultModule value="false" />
+  <SingleplayerModule value="true" />
+  <MultiplayerModule value="false" />
+  <DependedModules>
+    <DependedModule Id="Native" />
+    <DependedModule Id="SandBox" />
+    <DependedModule Id="SandBoxCore" />
+    <DependedModule Id="StoryMode" />
+  </DependedModules>
+  <SubModules>
+    <SubModule>
+      <Name value="HannibalAI" />
+      <DLLName value="HannibalAI.dll" />
+      <SubModuleClassType value="HannibalAI.SubModule" />
+      <Tags>
+        <Tag key="DedicatedServerType" value="none" />
+        <Tag key="IsNoRenderModeElement" value="false" />
+      </Tags>
+    </SubModule>
+  </SubModules>
+  <Xmls>
+    <XmlNode>
+      <XmlName value="HannibalAI" />
+      <IncludedVersion value="e1.0.0" />
+      <ModuleCategory value="all" />
+    </XmlNode>
+  </Xmls>
+</Module> 

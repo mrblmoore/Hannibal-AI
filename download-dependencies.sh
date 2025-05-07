@@ -24,6 +24,7 @@ declare -a DEPENDENCIES=(
     "TaleWorlds.GauntletUI.dll"
     "TaleWorlds.InputSystem.dll"
     "TaleWorlds.CampaignSystem.dll"
+    "TaleWorlds.DotNet.dll"
 )
 
 # Download dependencies

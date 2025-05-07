@@ -50,8 +50,8 @@ namespace HannibalAI
             base.OnMissionBehaviorInitialize(mission);
             try
             {
-                // Only add our controller to battle missions
-                if (mission.IsBattleMission)
+                // Only add our controller to field battle missions
+                if (mission.CombatType == Mission.MissionCombatType.Combat)
                 {
                     mission.AddMissionBehavior(new BattleController(_aiService));
                     

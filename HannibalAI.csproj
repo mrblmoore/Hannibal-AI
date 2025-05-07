@@ -12,13 +12,12 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
 
-  <!-- Include the stub implementations for development/compilation -->
+  <!-- Only include source files, not stubs since we have real DLLs -->
   <PropertyGroup>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="src/**/*.cs" />
-    <Compile Include="stubs/**/*.cs" />
     <Compile Include="Properties/**/*.cs" />
   </ItemGroup>
   
@@ -50,6 +49,10 @@
     </Reference>
     <Reference Include="TaleWorlds.CampaignSystem" Condition="Exists('lib/TaleWorlds.CampaignSystem.dll')">
       <HintPath>lib/TaleWorlds.CampaignSystem.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="TaleWorlds.DotNet" Condition="Exists('lib/TaleWorlds.DotNet.dll')">
+      <HintPath>lib/TaleWorlds.DotNet.dll</HintPath>
       <Private>False</Private>
     </Reference>
   </ItemGroup>

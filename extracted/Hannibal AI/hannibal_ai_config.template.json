@@ -1,0 +1,46 @@
+{
+  "AIEndpoint": "https://api.example.com/v1/analyze",
+  "APIKey": "your-api-key-here",
+  "LogLevel": "Info",
+  "Preferences": {
+    "PreferredFormations": {
+      "Infantry": "Line",
+      "Ranged": "Loose",
+      "Cavalry": "Column",
+      "HorseArcher": "Scatter"
+    },
+    "UnitTypePreferences": {
+      "Infantry": {
+        "MinimumUnitCount": 20,
+        "PreferredPosition": "Center",
+        "AggressivenessLevel": 0.7
+      },
+      "Ranged": {
+        "MinimumUnitCount": 15,
+        "PreferredPosition": "Rear",
+        "AggressivenessLevel": 0.3
+      },
+      "Cavalry": {
+        "MinimumUnitCount": 10,
+        "PreferredPosition": "Flanks",
+        "AggressivenessLevel": 0.8
+      },
+      "HorseArcher": {
+        "MinimumUnitCount": 8,
+        "PreferredPosition": "Flanks",
+        "AggressivenessLevel": 0.5
+      }
+    }
+  },
+  "BattleAnalysis": {
+    "UpdateIntervalSeconds": 5,
+    "TerrainAnalysisEnabled": true,
+    "WeatherAnalysisEnabled": true,
+    "FormationAnalysisEnabled": true
+  },
+  "Debug": {
+    "SaveBattleSnapshots": false,
+    "DetailedLogging": false,
+    "SaveReplayData": false
+  }
+} 

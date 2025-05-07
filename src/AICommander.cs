@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Library;
 using TaleWorlds.Engine;
+// Use TaleWorlds.Library.Vec3 rather than TaleWorlds.Engine.Vec3
+using Vec3 = TaleWorlds.Library.Vec3;
 
 namespace HannibalAI
 {
@@ -503,7 +505,7 @@ namespace HannibalAI
             
             foreach (var formation in _playerFormations)
             {
-                if (formation.FormationIndex == (int)formationClass)
+                if ((int)formation.FormationIndex == (int)formationClass)
                 {
                     result.Add(formation);
                 }
@@ -525,7 +527,9 @@ namespace HannibalAI
             Vec3 sum = new Vec3(0, 0, 0);
             foreach (var formation in _enemyFormations)
             {
-                sum += formation.CurrentPosition;
+                // Convert Vec2 to Vec3 using Z=0
+                Vec2 pos = formation.CurrentPosition;
+                sum += new Vec3(pos.X, pos.Y, 0);
             }
             
             return sum / _enemyFormations.Count;
@@ -544,7 +548,9 @@ namespace HannibalAI
             Vec3 sum = new Vec3(0, 0, 0);
             foreach (var formation in _playerFormations)
             {
-                sum += formation.CurrentPosition;
+                // Convert Vec2 to Vec3 using Z=0
+                Vec2 pos = formation.CurrentPosition;
+                sum += new Vec3(pos.X, pos.Y, 0);
             }
             
             return sum / _playerFormations.Count;
@@ -563,7 +569,9 @@ namespace HannibalAI
             Vec3 sum = new Vec3(0, 0, 0);
             foreach (var formation in formations)
             {
-                sum += formation.CurrentPosition;
+                // Convert Vec2 to Vec3 using Z=0
+                Vec2 pos = formation.CurrentPosition;
+                sum += new Vec3(pos.X, pos.Y, 0);
             }
             
             return sum / formations.Count;
@@ -689,7 +697,9 @@ namespace HannibalAI
             
             foreach (var formation in formations)
             {
-                if (formation.FormationIndex == (int)formationClass)
+                // Compare formation class index to our enum values
+                // FormationClass enum must match game's Formation.FormationIndex values
+                if ((int)formation.FormationIndex == (int)formationClass)
                 {
                     count += formation.CountOfUnits;
                 }

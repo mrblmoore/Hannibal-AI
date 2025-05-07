@@ -1,64 +1,85 @@
 using System;
-using TaleWorlds.MountAndBlade;
+using System.Collections.Generic;
 using TaleWorlds.Library;
+using TaleWorlds.MountAndBlade;
 using TaleWorlds.Core;
 using TaleWorlds.Engine;
 
 namespace HannibalAI
 {
     /// <summary>
-    /// Executes AI commands by interfacing with Bannerlord's formation system
+    /// Executes formation orders in the game
     /// </summary>
     public class CommandExecutor
     {
+        private static CommandExecutor _instance;
+        
+        public static CommandExecutor Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = new CommandExecutor();
+                }
+                return _instance;
+            }
+        }
+        
+        private CommandExecutor()
+        {
+            // Private constructor to enforce singleton
+        }
+        
         /// <summary>
         /// Execute a formation order
         /// </summary>
         public void ExecuteOrder(FormationOrder order)
         {
-            if (order == null || order.TargetFormation == null)
+            try
             {
-                return;
+                switch (order.OrderType)
+                {
+                    case FormationOrderType.Move:
+                        ExecuteMoveOrder(order);
+                        break;
+                    case FormationOrderType.Advance:
+                        ExecuteAdvanceOrder(order);
+                        break;
+                    case FormationOrderType.Charge:
+                        ExecuteChargeOrder(order);
+                        break;
+                    case FormationOrderType.Retreat:
+                        ExecuteRetreatOrder(order);
+                        break;
+                    case FormationOrderType.FireAt:
+                        ExecuteFireAtOrder(order);
+                        break;
+                    case FormationOrderType.FormLine:
+                        ExecuteFormLineOrder(order);
+                        break;
+                    case FormationOrderType.FormCircle:
+                        ExecuteFormCircleOrder(order);
+                        break;
+                    case FormationOrderType.FormWedge:
+                        ExecuteFormWedgeOrder(order);
+                        break;
+                    case FormationOrderType.FormColumn:
+                        ExecuteFormColumnOrder(order);
+                        break;
+                    case FormationOrderType.FormShieldWall:
+                        ExecuteFormShieldWallOrder(order);
+                        break;
+                    case FormationOrderType.FormLoose:
+                        ExecuteFormLooseOrder(order);
+                        break;
+                    default:
+                        throw new NotImplementedException($"Order type {order.OrderType} not implemented");
+                }
             }
-            
-            switch (order.OrderType)
+            catch (Exception ex)
             {
-                case FormationOrderType.Move:
-                    ExecuteMoveOrder(order);
-                    break;
-                case FormationOrderType.Advance:
-                    ExecuteAdvanceOrder(order);
-                    break;
-                case FormationOrderType.Charge:
-                    ExecuteChargeOrder(order);
-                    break;
-                case FormationOrderType.Retreat:
-                    ExecuteRetreatOrder(order);
-                    break;
-                case FormationOrderType.FireAt:
-                    ExecuteFireAtOrder(order);
-                    break;
-                case FormationOrderType.FormLine:
-                    ExecuteFormLineOrder(order);
-                    break;
-                case FormationOrderType.FormCircle:
-                    ExecuteFormCircleOrder(order);
-                    break;
-                case FormationOrderType.FormWedge:
-                    ExecuteFormWedgeOrder(order);
-                    break;
-                case FormationOrderType.FormColumn:
-                    ExecuteFormColumnOrder(order);
-                    break;
-                case FormationOrderType.FormShieldWall:
-                    ExecuteFormShieldWallOrder(order);
-                    break;
-                case FormationOrderType.FormLoose:
-                    ExecuteFormLooseOrder(order);
-                    break;
-                default:
-                    // Unrecognized order type
-                    break;
+                InformationManager.DisplayMessage(new InformationMessage($"Error executing order: {ex.Message}"));
             }
         }
         
@@ -72,6 +93,7 @@ namespace HannibalAI
                 Formation formation = order.TargetFormation;
                 Vec3 position = order.TargetPosition;
                 
+                // Standard movement order to position
                 WorldPosition worldPosition = new WorldPosition(Mission.Current.Scene, position);
                 formation.SetMovementOrder(MovementOrder.MovementOrderMove(worldPosition));
                 
@@ -95,10 +117,9 @@ namespace HannibalAI
             try
             {
                 Formation formation = order.TargetFormation;
-                Vec3 position = order.TargetPosition;
                 
-                WorldPosition worldPosition = new WorldPosition(Mission.Current.Scene, position);
-                formation.SetMovementOrder(MovementOrder.MovementOrderAdvance(worldPosition.AsVec2));
+                // Use the most basic form of advance order
+                formation.SetMovementOrder(MovementOrder.MovementOrderAdvance);
                 
                 // Apply formation type if specified
                 if (!string.IsNullOrEmpty(order.AdditionalData))
@@ -121,17 +142,8 @@ namespace HannibalAI
             {
                 Formation formation = order.TargetFormation;
                 
-                // If we have a specific target position, charge toward that direction
-                if (order.TargetPosition != Vec3.Zero)
-                {
-                    WorldPosition worldPosition = new WorldPosition(Mission.Current.Scene, order.TargetPosition);
-                    formation.SetMovementOrder(MovementOrder.MovementOrderCharge(worldPosition.AsVec2));
-                }
-                else
-                {
-                    // General charge order
-                    formation.SetMovementOrder(MovementOrder.MovementOrderChargeProperty);
-                }
+                // Standard charge command
+                formation.SetMovementOrder(MovementOrder.MovementOrderCharge);
             }
             catch (Exception ex)
             {
@@ -147,10 +159,9 @@ namespace HannibalAI
             try
             {
                 Formation formation = order.TargetFormation;
-                Vec3 position = order.TargetPosition;
                 
-                WorldPosition worldPosition = new WorldPosition(Mission.Current.Scene, position);
-                formation.SetMovementOrder(MovementOrder.MovementOrderRetreat(worldPosition.AsVec2));
+                // Standard retreat command
+                formation.SetMovementOrder(MovementOrder.MovementOrderRetreat);
             }
             catch (Exception ex)
             {
@@ -168,15 +179,13 @@ namespace HannibalAI
                 Formation formation = order.TargetFormation;
                 Vec3 targetPosition = order.TargetPosition;
                 
-                WorldPosition worldPosition = new WorldPosition(Mission.Current.Scene, targetPosition);
-                formation.SetFireOrder(FireOrder.FireAtWill);
-                
                 // Set the target position by moving slightly toward it
-                Vec3 formationPos = formation.CurrentPosition;
-                Vec3 direction = targetPosition - formationPos;
+                Vec2 formationPos = formation.CurrentPosition;
+                Vec3 formationPos3D = new Vec3(formationPos.X, formationPos.Y, 0);
+                Vec3 direction = targetPosition - formationPos3D;
                 direction.Normalize();
                 
-                Vec3 newPos = formationPos + direction * 5f;
+                Vec3 newPos = formationPos3D + direction * 5f;
                 WorldPosition formationWorldPosition = new WorldPosition(Mission.Current.Scene, newPos);
                 formation.SetMovementOrder(MovementOrder.MovementOrderMove(formationWorldPosition));
                 

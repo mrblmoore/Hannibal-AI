@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
+// Use TaleWorlds.Core.MissionMode instead of TaleWorlds.MountAndBlade.MissionMode
+using MissionMode = TaleWorlds.Core.MissionMode;
 
 namespace HannibalAI
 {
@@ -173,8 +175,12 @@ namespace HannibalAI
         {
             base.OnMissionModeChange(oldMissionMode, atStart);
             
-            // Check if mission is ending
-            if (Mission.Current.Mode == MissionMode.End)
+            // Check if mission is ending (using enum value instead of End property)
+            if (Mission.Current.Mode == MissionMode.Battle)
+            {
+                // Mission is in battle mode, continue
+            }
+            else
             {
                 _isBattleOver = true;
             }

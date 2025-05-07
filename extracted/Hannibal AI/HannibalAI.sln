@@ -1,0 +1,21 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HannibalAI", "HannibalAI.csproj", "{31275C99-E17B-4BD5-9F51-87E1B9D82086}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{31275C99-E17B-4BD5-9F51-87E1B9D82086}.Debug|x64.ActiveCfg = Debug|x64
+		{31275C99-E17B-4BD5-9F51-87E1B9D82086}.Debug|x64.Build.0 = Debug|x64
+		{31275C99-E17B-4BD5-9F51-87E1B9D82086}.Release|x64.ActiveCfg = Release|x64
+		{31275C99-E17B-4BD5-9F51-87E1B9D82086}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

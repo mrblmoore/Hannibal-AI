@@ -4,3 +4,4 @@
 /home/runner/workspace/bin/HannibalAI.pdb
 /home/runner/workspace/obj/Release/HannibalAI.dll
 /home/runner/workspace/obj/Release/HannibalAI.pdb
+/home/runner/workspace/obj/Release/HannibalAI.csproj.AssemblyReference.cache
