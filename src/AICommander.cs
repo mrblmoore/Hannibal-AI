@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Library;
 using TaleWorlds.Engine;
+using TaleWorlds.Core;
 // Use TaleWorlds.Library.Vec3 rather than TaleWorlds.Engine.Vec3
 using Vec3 = TaleWorlds.Library.Vec3;
 
@@ -691,7 +692,7 @@ namespace HannibalAI
         /// <summary>
         /// Count units in formations of a specific class
         /// </summary>
-        private int CountUnitsInFormationsOfClass(TaleWorlds.MountAndBlade.FormationClass formationClass, List<Formation> formations)
+        private int CountUnitsInFormationsOfClass(FormationClass formationClass, List<Formation> formations)
         {
             int count = 0;
             

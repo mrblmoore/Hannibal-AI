@@ -105,7 +105,7 @@ namespace HannibalAI
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error executing move order: {ex.Message}"));
+                Logger.Instance.Error($"Error executing move order: {ex.Message}");
             }
         }
         
@@ -129,7 +129,7 @@ namespace HannibalAI
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error executing advance order: {ex.Message}"));
+                Logger.Instance.Error($"Error executing advance order: {ex.Message}");
             }
         }
         
@@ -147,7 +147,7 @@ namespace HannibalAI
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error executing charge order: {ex.Message}"));
+                Logger.Instance.Error($"Error executing charge order: {ex.Message}");
             }
         }
         
@@ -165,7 +165,7 @@ namespace HannibalAI
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error executing retreat order: {ex.Message}"));
+                Logger.Instance.Error($"Error executing retreat order: {ex.Message}");
             }
         }
         
@@ -201,7 +201,7 @@ namespace HannibalAI
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error executing fire at order: {ex.Message}"));
+                Logger.Instance.Error($"Error executing fire at order: {ex.Message}");
             }
         }
         
@@ -224,7 +224,7 @@ namespace HannibalAI
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error executing form line order: {ex.Message}"));
+                Logger.Instance.Error($"Error executing form line order: {ex.Message}");
             }
         }
         
@@ -247,7 +247,7 @@ namespace HannibalAI
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error executing form circle order: {ex.Message}"));
+                Logger.Instance.Error($"Error executing form circle order: {ex.Message}");
             }
         }
         
@@ -270,7 +270,7 @@ namespace HannibalAI
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error executing form wedge order: {ex.Message}"));
+                Logger.Instance.Error($"Error executing form wedge order: {ex.Message}");
             }
         }
         
@@ -293,7 +293,7 @@ namespace HannibalAI
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error executing form column order: {ex.Message}"));
+                Logger.Instance.Error($"Error executing form column order: {ex.Message}");
             }
         }
         
@@ -317,7 +317,7 @@ namespace HannibalAI
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error executing form shield wall order: {ex.Message}"));
+                Logger.Instance.Error($"Error executing form shield wall order: {ex.Message}");
             }
         }
         
@@ -340,7 +340,7 @@ namespace HannibalAI
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error executing form loose order: {ex.Message}"));
+                Logger.Instance.Error($"Error executing form loose order: {ex.Message}");
             }
         }
         
