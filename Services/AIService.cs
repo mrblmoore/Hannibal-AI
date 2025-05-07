@@ -1,7 +1,7 @@
-using System;
 using HannibalAI.Battle;
 using HannibalAI.Command;
 using HannibalAI.Utils;
+using System;
 
 namespace HannibalAI.Services
 {
@@ -11,9 +11,14 @@ namespace HannibalAI.Services
 
         public AIService(BattleController battleController)
         {
-            _battleController = battleController ?? throw new ArgumentNullException(nameof(battleController));
+            _battleController = battleController;
         }
 
+        /// <summary>
+        /// [Future Feature]
+        /// Process a real-time battle snapshot and generate an AI decision dynamically.
+        /// Currently unused — will be connected to battlefield monitoring later.
+        /// </summary>
         public void ProcessBattleSnapshot(BattleSnapshot snapshot)
         {
             if (snapshot == null)
@@ -21,12 +26,11 @@ namespace HannibalAI.Services
 
             try
             {
-                // Example decision-making logic based on the battle snapshot
                 var decision = new AIDecision
                 {
                     Command = new MoveFormationCommand
                     {
-                        Formation = 0, // First friendly formation as a placeholder
+                        Formation = 0, // Placeholder formation
                         TargetPosition = snapshot.FriendlyFormations?[0].Position ?? default
                     }
                 };

@@ -14,9 +14,9 @@ namespace HannibalAI.Utils
             {
                 var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 var logMessage = $"[{timestamp}] {(isError ? "ERROR" : "INFO")}: {message}";
-                
+
                 File.AppendAllText(LogFile, logMessage + Environment.NewLine);
-                
+
                 if (isError)
                 {
                     Debug.Print($"[HannibalAI] ERROR: {message}");
@@ -42,4 +42,4 @@ namespace HannibalAI.Utils
             Log(message, false);
         }
     }
-} 
+}

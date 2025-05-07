@@ -1,5 +1,5 @@
 using TaleWorlds.MountAndBlade;
-using TaleWorlds.Library;
+using HannibalAI.Services;
 using HannibalAI.Command;
 using System;
 
@@ -11,9 +11,41 @@ namespace HannibalAI.Battle
 
         public AICommander(FallbackService fallbackService)
         {
-            _fallbackService = fallbackService ?? throw new ArgumentNullException(nameof(fallbackService));
+            _fallbackService = fallbackService;
         }
 
+        public void MoveFormation(int formationIndex, Vec3 position)
+        {
+            // Implementation for moving formation
+        }
+
+        public void ChangeFormation(int formationIndex, FormationOrder formOrder)
+        {
+            // Implementation for changing formation
+        }
+
+        public void FlankEnemy(int formationIndex, Vec3 targetPosition)
+        {
+            // Implementation for flanking
+        }
+
+        public void HoldPosition(int formationIndex, Vec3 position)
+        {
+            // Implementation for holding position
+        }
+
+        public void ChargeFormation(int formationIndex)
+        {
+            // Implementation for charging
+        }
+
+        public void FollowTarget(int followerIndex, int leaderIndex)
+        {
+            // Implementation for following target
+        }
+
+        // [Future Feature] Dynamic AI per formation — currently unused.
+        /*
         public void MakeDecision(Formation formation, Mission mission)
         {
             if (formation == null || mission == null)
@@ -24,46 +56,11 @@ namespace HannibalAI.Battle
 
             ExecuteCommand(decision, formation);
         }
+        */
 
-        private void ExecuteCommand(AICommand command, Formation formation)
+        private void ExecuteCommand(AIDecision decision, Formation formation)
         {
-            switch (command)
-            {
-                case MoveFormationCommand moveCommand:
-                    if (formation != null)
-                        formation.SetMovementOrder(MovementOrder.MovementOrderMove(moveCommand.Position));
-                    break;
-
-                case ChangeFormationCommand changeCommand:
-                    if (formation != null)
-                        formation.SetFormOrder(changeCommand.FormOrder);
-                    break;
-
-                case FlankCommand flankCommand:
-                    if (formation != null)
-                        formation.FacingOrder = FacingOrder.FacingOrderLookAtDirection(flankCommand.Direction);
-                    break;
-
-                case HoldCommand holdCommand:
-                    if (formation != null)
-                        formation.SetMovementOrder(MovementOrder.MovementOrderMove(holdCommand.Position));
-                    break;
-
-                case ChargeCommand chargeCommand:
-                    if (formation != null)
-                        formation.SetMovementOrder(MovementOrder.MovementOrderCharge());
-                    break;
-
-                case FollowCommand followCommand:
-                    if (formation != null && followCommand.Target != null)
-                        formation.SetMovementOrder(MovementOrder.MovementOrderFollowEntity(followCommand.Target));
-                    break;
-
-                default:
-                    // If command type is not recognized
-                    InformationManager.DisplayMessage(new InformationMessage("Unknown command received."));
-                    break;
-            }
+            // Placeholder for executing a fallback decision
         }
     }
 }
