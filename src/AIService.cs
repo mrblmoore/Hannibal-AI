@@ -28,6 +28,53 @@ namespace HannibalAI
         }
         
         /// <summary>
+        /// Helper method to get position of a formation as Vec3
+        /// </summary>
+        private Vec3 GetFormationPosition(Formation formation)
+        {
+            if (formation == null)
+            {
+                return Vec3.Zero;
+            }
+            
+            // Extract 2D position directly without conversion to avoid compatibility issues
+            WorldPosition worldPos = formation.CurrentPosition;
+            Vec2 pos2d = worldPos.AsVec2;
+            return new Vec3(pos2d.x, pos2d.y, 0f);
+        }
+        
+        /// <summary>
+        /// Helper method to get position of an agent as Vec3
+        /// </summary>
+        private Vec3 GetAgentPosition(Agent agent)
+        {
+            if (agent == null)
+            {
+                return Vec3.Zero;
+            }
+            
+            // Extract 2D position directly without conversion to avoid compatibility issues
+            WorldPosition worldPos = agent.Position;
+            Vec2 pos2d = worldPos.AsVec2;
+            return new Vec3(pos2d.x, pos2d.y, 0f);
+        }
+        
+        /// <summary>
+        /// Helper method for backwards compatibility
+        /// </summary>
+        private Vec3 GetVec3(WorldPosition position)
+        {
+            // WorldPosition is a struct, so it can't be null
+            // But we can check if it's uninitialized
+            if (position.AsVec2 == Vec2.Zero)
+            {
+                return Vec3.Zero;
+            }
+            
+            return new Vec3(position.AsVec2.x, position.AsVec2.y, 0f);
+        }
+        
+        /// <summary>
         /// Process the current battle situation and generate AI decisions
         /// </summary>
         public List<FormationOrder> ProcessBattleSnapshot(Team playerTeam, Team enemyTeam)
@@ -63,7 +110,7 @@ namespace HannibalAI
                     // Check tactical situation for this formation
                     bool isEnemyNearby = IsEnemyNearby(formation, enemyTeam);
                     bool isFormationWeak = IsFormationWeak(formation);
-                    bool isTerrainAdvantageous = IsTerrainAdvantageous(formation.CurrentPosition.ToVec3());
+                    bool isTerrainAdvantageous = IsTerrainAdvantageous(GetFormationPosition(formation));
                     
                     // Apply nemesis system logic if enabled
                     if (_config.UseCommanderMemory && CommanderMemoryService.Instance.HasVendettaAgainstPlayer)
@@ -106,7 +153,7 @@ namespace HannibalAI
                             {
                                 OrderType = FormationOrderType.Move,
                                 TargetFormation = formation,
-                                TargetPosition = formation.CurrentPosition.ToVec3(),
+                                TargetPosition = GetFormationPosition(formation),
                                 AdditionalData = GetDefensiveFormationType(formation)
                             };
                         }
@@ -154,7 +201,7 @@ namespace HannibalAI
                                 {
                                     OrderType = FormationOrderType.FormShieldWall,
                                     TargetFormation = formation,
-                                    TargetPosition = formation.CurrentPosition.ToVec3(),
+                                    TargetPosition = GetFormationPosition(formation),
                                     AdditionalData = "ShieldWall"
                                 };
                             }
@@ -214,7 +261,7 @@ namespace HannibalAI
                 return false;
             }
             
-            Vec3 formationPosition = formation.CurrentPosition.ToVec3();
+            Vec3 formationPosition = GetFormationPosition(formation);
             
             foreach (Formation enemyFormation in enemyTeam.FormationsIncludingEmpty)
             {
@@ -223,7 +270,7 @@ namespace HannibalAI
                     continue;
                 }
                 
-                Vec3 enemyPosition = enemyFormation.CurrentPosition.ToVec3();
+                Vec3 enemyPosition = GetFormationPosition(enemyFormation);
                 float distance = formationPosition.Distance(enemyPosition);
                 
                 if (distance < NEARBY_DISTANCE_THRESHOLD)
@@ -340,7 +387,7 @@ namespace HannibalAI
             {
                 if (formation.CountOfUnits > 0)
                 {
-                    sum += formation.CurrentPosition.ToVec3();
+                    sum += GetFormationPosition(formation);
                     count++;
                 }
             }
@@ -359,7 +406,7 @@ namespace HannibalAI
             }
             
             Vec3 enemyCenter = GetEnemyCenterPosition(enemyTeam);
-            Vec3 currentPos = formation.CurrentPosition.ToVec3();
+            Vec3 currentPos = GetFormationPosition(formation);
             
             // Get a position perpendicular to the line between current pos and enemy
             Vec3 direction = enemyCenter - currentPos;
@@ -489,7 +536,7 @@ namespace HannibalAI
                         {
                             OrderType = FormationOrderType.Move,
                             TargetFormation = formation,
-                            TargetPosition = formation.CurrentPosition.ToVec3(),
+                            TargetPosition = GetFormationPosition(formation),
                             AdditionalData = "Line"
                         };
                     }
@@ -821,7 +868,7 @@ namespace HannibalAI
             {
                 if (formation.CountOfUnits > 0)
                 {
-                    sum += formation.CurrentPosition.ToVec3();
+                    sum += GetFormationPosition(formation);
                     count++;
                 }
             }
@@ -835,7 +882,7 @@ namespace HannibalAI
         private Vec3 GetDefensivePosition(Formation formation, Team team, Team enemyTeam)
         {
             // Just use current position for now - could be enhanced with terrain analysis
-            return formation.CurrentPosition.ToVec3();
+            return GetFormationPosition(formation);
         }
         
         /// <summary>
@@ -844,7 +891,7 @@ namespace HannibalAI
         private Vec3 GetControlledAdvancePosition(Formation formation, Team team, Team enemyTeam)
         {
             Vec3 enemyCenter = GetEnemyCenterPosition(enemyTeam);
-            Vec3 formationPos = formation.CurrentPosition.ToVec3();
+            Vec3 formationPos = GetFormationPosition(formation);
             Vec3 direction = enemyCenter - formationPos;
             
             if (direction.Length == 0)
@@ -872,7 +919,7 @@ namespace HannibalAI
                 
                 if (formation.FormationIndex == FormationClass.Ranged)
                 {
-                    return formation.CurrentPosition.ToVec3();
+                    return GetFormationPosition(formation);
                 }
             }
             
@@ -895,7 +942,7 @@ namespace HannibalAI
                 if (formation.FormationIndex == FormationClass.Cavalry || 
                     formation.FormationIndex == FormationClass.HorseArcher)
                 {
-                    return formation.CurrentPosition.ToVec3();
+                    return GetFormationPosition(formation);
                 }
             }
             
@@ -917,7 +964,7 @@ namespace HannibalAI
                     // Check if ranged formation is isolated
                     if (IsFormationIsolated(formation, team))
                     {
-                        return formation.CurrentPosition.ToVec3();
+                        return GetFormationPosition(formation);
                     }
                 }
             }
@@ -940,7 +987,7 @@ namespace HannibalAI
             
             if (smallestInfantry != null)
             {
-                return smallestInfantry.CurrentPosition.ToVec3();
+                return GetFormationPosition(smallestInfantry);
             }
             
             // Third priority: player's position if available
@@ -949,7 +996,7 @@ namespace HannibalAI
                 if (Mission.Current?.MainAgent != null && team.IsEnemyOf(Mission.Current.MainAgent.Team))
                 {
                     // Target player directly - vendetta targeting
-                    return Mission.Current.MainAgent.Position.ToVec3();
+                    return GetAgentPosition(Mission.Current.MainAgent);
                 }
             }
             catch
@@ -971,7 +1018,7 @@ namespace HannibalAI
                 return false;
             }
             
-            Vec3 formationPos = formation.CurrentPosition.ToVec3();
+            Vec3 formationPos = GetFormationPosition(formation);
             
             // Check distance to other friendly formations
             foreach (Formation otherFormation in team.FormationsIncludingEmpty)
@@ -981,7 +1028,7 @@ namespace HannibalAI
                     continue;
                 }
                 
-                Vec3 otherPos = otherFormation.CurrentPosition.ToVec3();
+                Vec3 otherPos = GetFormationPosition(otherFormation);
                 float distance = formationPos.Distance(otherPos);
                 
                 // If any friendly formation is nearby, not isolated
@@ -1008,7 +1055,7 @@ namespace HannibalAI
             
             if (direction.Length == 0)
             {
-                return archerFormation.CurrentPosition.ToVec3();
+                return GetFormationPosition(archerFormation);
             }
             
             direction.Normalize();
@@ -1023,7 +1070,7 @@ namespace HannibalAI
         private Vec3 GetHorseArcherHarassPosition(Formation formation, Team enemyTeam)
         {
             Vec3 enemyCenter = GetEnemyCenterPosition(enemyTeam);
-            Vec3 formationPos = formation.CurrentPosition.ToVec3();
+            Vec3 formationPos = GetFormationPosition(formation);
             
             Vec3 direction = formationPos - enemyCenter;
             
@@ -1411,7 +1458,7 @@ namespace HannibalAI
                             (formationClass == FormationClass.Infantry && !approach.HasHighGround))
                         {
                             // Direct some forces at player
-                            order.TargetPosition = Mission.Current.MainAgent.Position.ToVec3();
+                            order.TargetPosition = GetAgentPosition(Mission.Current.MainAgent);
                             
                             // Keep track of last order to player for debugging
                             if (_config.Debug)
