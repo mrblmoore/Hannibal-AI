@@ -2,7 +2,13 @@
 <Module>
     <Name value="HannibalAI"/>
     <Id value="HannibalAI"/>
-    <Version value="v1.0.0"/>
+    <Version value="v1.2.12"/>
+    <DependedModuleMetadatas>
+        <DependedModuleMetadata id="Native" order="1" version="v1.2.12"/>
+        <DependedModuleMetadata id="SandBoxCore" order="2" version="v1.2.12"/>
+        <DependedModuleMetadata id="Sandbox" order="3" version="v1.2.12"/>
+        <DependedModuleMetadata id="StoryMode" order="4" version="v1.2.12"/>
+    </DependedModuleMetadatas>
     <SingleplayerModule value="true"/>
     <MultiplayerModule value="false"/>
     <DependedModules>
