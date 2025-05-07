@@ -424,9 +424,22 @@ namespace HannibalAI
                     return commands;
                 }
                 
+                // Get tactical advice from commander memory if enabled
+                TacticalAdvice tacticalAdvice = null;
+                if (_config.UseCommanderMemory)
+                {
+                    tacticalAdvice = CommanderMemoryService.Instance.GetTacticalAdvice();
+                    
+                    // Debug output if relevant
+                    if (_config.Debug && tacticalAdvice.HasLearningData)
+                    {
+                        Logger.Instance.Debug($"Using tactical advice from commander memory: {tacticalAdvice}");
+                    }
+                }
+                
                 // Variables that influence enemy AI behavior
                 float aggressivenessFactor = _config.UseCommanderMemory ? 
-                    CommanderMemoryService.Instance.AggressivenessScore : 0.5f;
+                    (tacticalAdvice?.SuggestedAggression ?? CommanderMemoryService.Instance.AggressivenessScore) : 0.5f;
                 
                 // Determine if player's cavalry is a significant threat
                 bool playerHasStrongCavalry = DoesTeamHaveStrongCavalry(playerTeam);
@@ -434,6 +447,12 @@ namespace HannibalAI
                 // Has this enemy defeated the player before? If so, they may have adapted
                 bool hasAdaptedToPlayer = _config.UseCommanderMemory && 
                     CommanderMemoryService.Instance.TimesDefeatedPlayer > 0;
+                
+                // Tactical information from memory system
+                bool hasVendettaAgainstPlayer = tacticalAdvice?.HasVendettaAgainstPlayer ?? false;
+                string preferredFormationType = tacticalAdvice?.PreferredFormationType ?? "Line";
+                string recommendedTactic = tacticalAdvice?.RecommendedTactic ?? "Balanced";
+                string preferredTerrain = tacticalAdvice?.PreferredTerrain ?? "Open";
                 
                 // Step 1: Categorize formations
                 List<Formation> infantryFormations = GetFormationsByClass(enemyTeam, FormationClass.Infantry);
@@ -547,32 +566,103 @@ namespace HannibalAI
                 {
                     FormationOrder order;
                     
-                    if (hasAdaptedToPlayer && _config.UseCommanderMemory)
+                    if (_config.UseCommanderMemory && tacticalAdvice != null && tacticalAdvice.HasLearningData)
                     {
-                        // If enemy has adapted to player, use preferred approach
-                        string preferredFormation = CommanderMemoryService.Instance.PreferredFormation;
+                        // If enemy has tactical advice from past battles, use it
+                        string tacticToUse = recommendedTactic;
+                        string formationToUse = preferredFormationType;
                         
-                        if (aggressivenessFactor > 0.6f)
+                        // Apply tactical advice based on recommended tactic
+                        switch (tacticToUse)
                         {
-                            // Aggressive charge
-                            order = new FormationOrder
-                            {
-                                OrderType = FormationOrderType.Charge,
-                                TargetFormation = formation,
-                                TargetPosition = GetEnemyCenterPosition(playerTeam),
-                                AdditionalData = preferredFormation
-                            };
-                        }
-                        else
-                        {
-                            // Strategic positioning
-                            order = new FormationOrder
-                            {
-                                OrderType = FormationOrderType.Move,
-                                TargetFormation = formation,
-                                TargetPosition = GetFlankPosition(formation, playerTeam),
-                                AdditionalData = preferredFormation
-                            };
+                            case "Offensive":
+                                // Aggressive direct charge
+                                order = new FormationOrder
+                                {
+                                    OrderType = FormationOrderType.Charge,
+                                    TargetFormation = formation,
+                                    TargetPosition = GetEnemyCenterPosition(playerTeam),
+                                    AdditionalData = formationToUse
+                                };
+                                break;
+                                
+                            case "Flanking":
+                                // Strategic flanking
+                                order = new FormationOrder
+                                {
+                                    OrderType = FormationOrderType.Move,
+                                    TargetFormation = formation,
+                                    TargetPosition = GetFlankPosition(formation, playerTeam),
+                                    AdditionalData = "Wedge"
+                                };
+                                break;
+                                
+                            case "CavalryCharge":
+                                // Focus on weak points
+                                order = new FormationOrder
+                                {
+                                    OrderType = FormationOrderType.Charge,
+                                    TargetFormation = formation,
+                                    TargetPosition = GetVulnerableTargetPosition(playerTeam),
+                                    AdditionalData = "Wedge"
+                                };
+                                break;
+                                
+                            case "Defensive":
+                                // Hold back cavalry for counter-attacks
+                                order = new FormationOrder
+                                {
+                                    OrderType = FormationOrderType.Move,
+                                    TargetFormation = formation,
+                                    TargetPosition = GetDefensivePosition(formation, enemyTeam, playerTeam),
+                                    AdditionalData = formationToUse
+                                };
+                                break;
+                                
+                            default:
+                                // Special handling for vendetta commanders (more aggressive and unpredictable)
+                                if (hasVendettaAgainstPlayer)
+                                {
+                                    // Nemesis with vendetta makes more aggressive, unexpected moves
+                                    if (_config.Debug)
+                                    {
+                                        string title = tacticalAdvice.CommanderTitle;
+                                        Logger.Instance.Debug($"Nemesis commander '{title}' is executing vendetta tactics");
+                                    }
+                                    
+                                    order = new FormationOrder
+                                    {
+                                        OrderType = FormationOrderType.Charge,
+                                        TargetFormation = formation,
+                                        TargetPosition = GetEnemyCenterPosition(playerTeam),
+                                        AdditionalData = "Wedge"
+                                    };
+                                }
+                                else
+                                {
+                                    // Default balanced approach based on aggressiveness
+                                    if (aggressivenessFactor > 0.6f)
+                                    {
+                                        order = new FormationOrder
+                                        {
+                                            OrderType = FormationOrderType.Charge,
+                                            TargetFormation = formation,
+                                            TargetPosition = GetEnemyCenterPosition(playerTeam),
+                                            AdditionalData = formationToUse
+                                        };
+                                    }
+                                    else
+                                    {
+                                        order = new FormationOrder
+                                        {
+                                            OrderType = FormationOrderType.Move,
+                                            TargetFormation = formation,
+                                            TargetPosition = GetFlankPosition(formation, playerTeam),
+                                            AdditionalData = formationToUse
+                                        };
+                                    }
+                                }
+                                break;
                         }
                     }
                     else if (isOutnumbered)
@@ -814,6 +904,98 @@ namespace HannibalAI
         }
         
         /// <summary>
+        /// Get the position of the most vulnerable target in a team
+        /// Used by nemesis system for targeted attacks
+        /// </summary>
+        private Vec3 GetVulnerableTargetPosition(Team team)
+        {
+            // First priority: isolated ranged units
+            foreach (Formation formation in team.FormationsIncludingEmpty)
+            {
+                if (formation.CountOfUnits > 0 && formation.FormationIndex == FormationClass.Ranged)
+                {
+                    // Check if ranged formation is isolated
+                    if (IsFormationIsolated(formation, team))
+                    {
+                        return formation.CurrentPosition.ToVec3();
+                    }
+                }
+            }
+            
+            // Second priority: smallest infantry formation
+            Formation smallestInfantry = null;
+            int smallestCount = int.MaxValue;
+            
+            foreach (Formation formation in team.FormationsIncludingEmpty)
+            {
+                if (formation.CountOfUnits > 0 && formation.FormationIndex == FormationClass.Infantry)
+                {
+                    if (formation.CountOfUnits < smallestCount)
+                    {
+                        smallestCount = formation.CountOfUnits;
+                        smallestInfantry = formation;
+                    }
+                }
+            }
+            
+            if (smallestInfantry != null)
+            {
+                return smallestInfantry.CurrentPosition.ToVec3();
+            }
+            
+            // Third priority: player's position if available
+            try
+            {
+                if (Mission.Current?.MainAgent != null && team.IsEnemyOf(Mission.Current.MainAgent.Team))
+                {
+                    // Target player directly - vendetta targeting
+                    return Mission.Current.MainAgent.Position.ToVec3();
+                }
+            }
+            catch
+            {
+                // Fallback to team center if exception occurs
+            }
+            
+            // Default to team center
+            return GetTeamCenterPosition(team);
+        }
+        
+        /// <summary>
+        /// Check if a formation is isolated from the rest of its team
+        /// </summary>
+        private bool IsFormationIsolated(Formation formation, Team team)
+        {
+            if (formation == null || team == null)
+            {
+                return false;
+            }
+            
+            Vec3 formationPos = formation.CurrentPosition.ToVec3();
+            
+            // Check distance to other friendly formations
+            foreach (Formation otherFormation in team.FormationsIncludingEmpty)
+            {
+                if (otherFormation == formation || otherFormation.CountOfUnits <= 0)
+                {
+                    continue;
+                }
+                
+                Vec3 otherPos = otherFormation.CurrentPosition.ToVec3();
+                float distance = formationPos.Distance(otherPos);
+                
+                // If any friendly formation is nearby, not isolated
+                if (distance < NEARBY_DISTANCE_THRESHOLD * 1.5f)
+                {
+                    return false;
+                }
+            }
+            
+            // No nearby friendly formations found
+            return true;
+        }
+        
+        /// <summary>
         /// Get a protected position for archers
         /// </summary>
         private Vec3 GetProtectedArcherPosition(Formation archerFormation, Team team, Team enemyTeam)
@@ -907,17 +1089,106 @@ namespace HannibalAI
                 // Incorporate commander memory if enabled
                 if (_config.UseCommanderMemory)
                 {
-                    float aggression = CommanderMemoryService.Instance.AggressivenessScore;
+                    // Get tactical advice from commander memory
+                    TacticalAdvice tacticalAdvice = CommanderMemoryService.Instance.GetTacticalAdvice();
+                    float aggression = tacticalAdvice?.SuggestedAggression ?? CommanderMemoryService.Instance.AggressivenessScore;
+                    bool hasVendetta = tacticalAdvice?.HasVendettaAgainstPlayer ?? false;
                     
-                    // Aggressive commanders may ignore disadvantages
-                    if (aggression > 0.7f)
+                    // Apply the tactical advice based on recommended tactic
+                    if (tacticalAdvice != null && tacticalAdvice.HasLearningData)
                     {
-                        approach.RecommendedTactic = TacticalTactic.AggressiveAdvance;
+                        // Use a preferred terrain if the memory system suggests one
+                        if (!string.IsNullOrEmpty(tacticalAdvice.PreferredTerrain))
+                        {
+                            approach.PreferredTerrain = tacticalAdvice.PreferredTerrain;
+                        }
+                        
+                        // Apply recommended tactic if available
+                        switch (tacticalAdvice.RecommendedTactic)
+                        {
+                            case "Offensive":
+                                approach.RecommendedTactic = TacticalTactic.AggressiveAdvance;
+                                break;
+                                
+                            case "Defensive":
+                                approach.RecommendedTactic = TacticalTactic.DefensivePositioning;
+                                break;
+                                
+                            case "Flanking":
+                                approach.RecommendedTactic = TacticalTactic.CavalryFlanking;
+                                break;
+                                
+                            case "RangedFocus":
+                                approach.RecommendedTactic = approach.HasHighGround ? 
+                                    TacticalTactic.DefendHighGround : TacticalTactic.RangedSkirmish;
+                                break;
+                                
+                            case "CavalryCharge":
+                                approach.RecommendedTactic = TacticalTactic.CavalryCharge;
+                                break;
+                        }
+                        
+                        // Apply unit type effectiveness
+                        if (tacticalAdvice.UnitEffectiveness != null && tacticalAdvice.UnitEffectiveness.Count > 0)
+                        {
+                            // Find the most effective unit type
+                            string bestUnitType = "Infantry";
+                            float bestEffectiveness = 0f;
+                            
+                            foreach (var pair in tacticalAdvice.UnitEffectiveness)
+                            {
+                                if (pair.Value > bestEffectiveness)
+                                {
+                                    bestEffectiveness = pair.Value;
+                                    bestUnitType = pair.Key;
+                                }
+                            }
+                            
+                            // Prioritize the most effective unit type
+                            switch (bestUnitType)
+                            {
+                                case "Infantry":
+                                    approach.PrioritizeInfantry = true;
+                                    break;
+                                case "Ranged":
+                                    approach.PrioritizeArchers = true;
+                                    break;
+                                case "Cavalry":
+                                    approach.PrioritizeCavalry = true;
+                                    break;
+                                case "HorseArcher":
+                                    approach.PrioritizeHorseArchers = true;
+                                    break;
+                            }
+                        }
+                        
+                        // Nemesis-specific behaviors
+                        if (hasVendetta)
+                        {
+                            approach.IsNemesis = true;
+                            approach.NemesisTitle = tacticalAdvice.CommanderTitle;
+                            
+                            // If this commander is a nemesis, they may directly target the player
+                            approach.TargetPlayerDirectly = true;
+                            
+                            // Log nemesis behavior if debug enabled
+                            if (_config.Debug)
+                            {
+                                Logger.Instance.Debug($"Nemesis commander '{approach.NemesisTitle}' is executing vendetta tactics against player");
+                            }
+                        }
                     }
-                    // Cautious commanders prioritize defense even with advantages
-                    else if (aggression < 0.3f)
+                    else
                     {
-                        approach.RecommendedTactic = TacticalTactic.DefensivePositioning;
+                        // Fall back to basic aggression-based system if no learning data
+                        if (aggression > 0.7f)
+                        {
+                            approach.RecommendedTactic = TacticalTactic.AggressiveAdvance;
+                        }
+                        else if (aggression < 0.3f)
+                        {
+                            approach.RecommendedTactic = TacticalTactic.DefensivePositioning;
+                        }
                     }
                 }
             }
@@ -1090,6 +1361,12 @@ namespace HannibalAI
         {
             try
             {
+                // Special handling for nemesis commanders with vendetta
+                if (approach.IsNemesis && !string.IsNullOrEmpty(approach.NemesisTitle) && _config.Debug)
+                {
+                    Logger.Instance.Debug($"Applying nemesis tactics for commander '{approach.NemesisTitle}'");
+                }
+                
                 foreach (var order in orders)
                 {
                     // Skip null formations
@@ -1099,6 +1376,50 @@ namespace HannibalAI
                     }
                     
                     FormationClass formationClass = order.TargetFormation.FormationIndex;
+                    
+                    // Apply unit prioritization from nemesis system if enabled
+                    if (approach.PrioritizeInfantry && formationClass == FormationClass.Infantry)
+                    {
+                        // Make this formation more aggressive as it's prioritized
+                        if (order.OrderType == FormationOrderType.Move)
+                        {
+                            order.OrderType = FormationOrderType.Advance;
+                        }
+                    }
+                    else if (approach.PrioritizeArchers && formationClass == FormationClass.Ranged)
+                    {
+                        // Prioritize archer positioning and protection
+                        order.AdditionalData = "Loose";
+                    }
+                    else if (approach.PrioritizeCavalry && formationClass == FormationClass.Cavalry)
+                    {
+                        // Make cavalry more aggressive if prioritized
+                        order.OrderType = FormationOrderType.Charge;
+                        order.AdditionalData = "Wedge";
+                    }
+                    else if (approach.PrioritizeHorseArchers && formationClass == FormationClass.HorseArcher)
+                    {
+                        // Make horse archers more mobile
+                        order.AdditionalData = "Loose";
+                    }
+                    
+                    // If this is a nemesis commander with vendetta targeting the player directly
+                    if (approach.IsNemesis && approach.TargetPlayerDirectly && Mission.Current?.MainAgent != null)
+                    {
+                        // Target the player's position more directly with certain unit types
+                        if (formationClass == FormationClass.Cavalry || 
+                            (formationClass == FormationClass.Infantry && !approach.HasHighGround))
+                        {
+                            // Direct some forces at player
+                            order.TargetPosition = Mission.Current.MainAgent.Position.ToVec3();
+                            
+                            // Keep track of last order to player for debugging
+                            if (_config.Debug)
+                            {
+                                Logger.Instance.Debug($"Nemesis commander directing {formationClass} formation at player position");
+                            }
+                        }
+                    }
                     
                     // Apply behavioral modifiers based on tactical approach
                     switch (approach.RecommendedTactic)
@@ -1188,6 +1509,7 @@ namespace HannibalAI
     /// </summary>
     public class TacticalApproach
     {
+        // Basic tactical information
         public bool HasCavalryAdvantage { get; set; }
         public bool HasArcherAdvantage { get; set; }
         public bool HasInfantryAdvantage { get; set; }
@@ -1196,10 +1518,35 @@ namespace HannibalAI
         public TacticalTactic RecommendedTactic { get; set; }
         public Dictionary<FormationClass, string> RecommendedFormations { get; set; }
         
+        // Unit prioritization flags for nemesis system
+        public bool PrioritizeInfantry { get; set; }
+        public bool PrioritizeArchers { get; set; }
+        public bool PrioritizeCavalry { get; set; }
+        public bool PrioritizeHorseArchers { get; set; }
+        
+        // Nemesis system integration
+        public bool IsNemesis { get; set; }
+        public string NemesisTitle { get; set; }
+        public bool TargetPlayerDirectly { get; set; }
+        public string PreferredTerrain { get; set; }
+        
         public TacticalApproach()
         {
+            // Initialize default values
             RecommendedFormations = new Dictionary<FormationClass, string>();
             RecommendedTactic = TacticalTactic.BalancedApproach;
+            
+            // Initialize unit priorities
+            PrioritizeInfantry = false;
+            PrioritizeArchers = false;
+            PrioritizeCavalry = false;
+            PrioritizeHorseArchers = false;
+            
+            // Initialize nemesis properties
+            IsNemesis = false;
+            NemesisTitle = "";
+            TargetPlayerDirectly = false;
+            PreferredTerrain = "Open";
         }
     }
     
@@ -1213,6 +1560,8 @@ namespace HannibalAI
         CavalryFlanking,
         InfantryAdvance,
         AggressiveAdvance,
-        DefensivePositioning
+        DefensivePositioning,
+        RangedSkirmish,
+        CavalryCharge
     }
 }
