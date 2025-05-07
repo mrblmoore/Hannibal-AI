@@ -79,7 +79,7 @@ namespace HannibalAI
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error executing order: {ex.Message}"));
+                Logger.Instance.Error($"Error executing order: {ex.Message}");
             }
         }
         

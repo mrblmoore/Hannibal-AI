@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
+using TaleWorlds.Engine;
 // Use TaleWorlds.Core.MissionMode instead of TaleWorlds.MountAndBlade.MissionMode
 using MissionMode = TaleWorlds.Core.MissionMode;
 
@@ -106,6 +107,9 @@ namespace HannibalAI
                 // Check if player is in player team
                 _isPlayerInPlayerTeam = IsPlayerInTeam(_playerTeam);
                 
+                // Analyze terrain features
+                var terrainFeatures = TerrainAnalyzer.Instance.AnalyzeCurrentTerrain();
+                
                 // Initialize AI commander
                 _aiCommander = _aiService.CreateCommander();
                 _aiCommander.Initialize(_playerTeam, _enemyTeam);
@@ -114,6 +118,12 @@ namespace HannibalAI
                 
                 // Log initialization
                 InformationManager.DisplayMessage(new InformationMessage("HannibalAI Controller initialized for battle"));
+                
+                // Log terrain features if in debug mode
+                if (ModConfig.Instance.Debug && terrainFeatures.Count > 0)
+                {
+                    InformationManager.DisplayMessage(new InformationMessage($"Terrain Analysis: Found {terrainFeatures.Count} tactical features"));
+                }
             }
             catch (Exception ex)
             {
@@ -128,11 +138,19 @@ namespace HannibalAI
         {
             try
             {
-                // Only control AI if player is in the player team
+                // Get formations to control based on settings
                 if (_isPlayerInPlayerTeam)
                 {
-                    // Run the AI update
+                    // Run the AI update for friendly team
                     _aiCommander.Update(dt);
+                    
+                    // Control enemy team if enabled in settings
+                    if (ModConfig.Instance.AIControlsEnemies && _enemyTeam != null)
+                    {
+                        // Process AI decisions for enemy formations
+                        var enemyOrders = _aiService.ProcessBattleSnapshot(_enemyTeam, _playerTeam);
+                        ExecuteAIDecisions(enemyOrders);
+                    }
                 }
             }
             catch (Exception ex)
@@ -166,6 +184,51 @@ namespace HannibalAI
             
             // Check if any team has no active agents
             return _playerTeam.ActiveAgents.Count == 0 || _enemyTeam.ActiveAgents.Count == 0;
+        }
+        
+        /// <summary>
+        /// Execute AI decisions (formation orders)
+        /// </summary>
+        private void ExecuteAIDecisions(List<FormationOrder> orders)
+        {
+            if (orders == null || orders.Count == 0)
+            {
+                return;
+            }
+            
+            try
+            {
+                // Execute each order
+                foreach (var order in orders)
+                {
+                    // Skip if formation is invalid
+                    if (order.TargetFormation == null || order.TargetFormation.CountOfUnits <= 0)
+                    {
+                        continue;
+                    }
+                    
+                    // Skip enemy formations if AI control is disabled
+                    if (order.TargetFormation.Team.IsEnemyOf(Mission.Current.MainAgent.Team) && 
+                        !ModConfig.Instance.AIControlsEnemies)
+                    {
+                        continue;
+                    }
+                    
+                    // Execute the order
+                    CommandExecutor.Instance.ExecuteOrder(order);
+                    
+                    // Log if debug is enabled
+                    if (ModConfig.Instance.Debug)
+                    {
+                        string message = $"Order: {order.OrderType} to formation {order.TargetFormation.Index}";
+                        Logger.Instance.Debug(message);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error executing AI decisions: {ex.Message}");
+            }
         }
         
         /// <summary>

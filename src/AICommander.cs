@@ -505,7 +505,7 @@ namespace HannibalAI
             
             foreach (var formation in _playerFormations)
             {
-                if ((int)formation.FormationIndex == (int)formationClass)
+                if (formation.FormationIndex == formationClass)
                 {
                     result.Add(formation);
                 }
@@ -691,15 +691,14 @@ namespace HannibalAI
         /// <summary>
         /// Count units in formations of a specific class
         /// </summary>
-        private int CountUnitsInFormationsOfClass(FormationClass formationClass, List<Formation> formations)
+        private int CountUnitsInFormationsOfClass(TaleWorlds.MountAndBlade.FormationClass formationClass, List<Formation> formations)
         {
             int count = 0;
             
             foreach (var formation in formations)
             {
-                // Compare formation class index to our enum values
-                // FormationClass enum must match game's Formation.FormationIndex values
-                if ((int)formation.FormationIndex == (int)formationClass)
+                // Use direct comparison since FormationIndex is already a FormationClass
+                if (formation.FormationIndex == formationClass)
                 {
                     count += formation.CountOfUnits;
                 }
@@ -742,7 +741,7 @@ namespace HannibalAI
         private void LogBattleState()
         {
             string message = $"Battle state: {_playerFormations.Count} player formations vs {_enemyFormations.Count} enemy formations";
-            InformationManager.DisplayMessage(new InformationMessage(message));
+            Logger.Instance.Info(message);
         }
         
         /// <summary>
@@ -757,15 +756,6 @@ namespace HannibalAI
             Default
         }
         
-        /// <summary>
-        /// Formation class enum for classifying formation types
-        /// </summary>
-        private enum FormationClass
-        {
-            Infantry = 0,
-            Ranged = 1,
-            Cavalry = 2,
-            HorseArcher = 3
-        }
+        // Using TaleWorlds.MountAndBlade.FormationClass directly instead of private enum
     }
 }

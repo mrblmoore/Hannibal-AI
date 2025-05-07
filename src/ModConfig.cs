@@ -11,10 +11,29 @@ namespace HannibalAI
     /// </summary>
     public class ModConfig
     {
+        private static ModConfig _instance;
+        
+        public static ModConfig Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = new ModConfig();
+                    _instance.LoadSettings();
+                }
+                return _instance;
+            }
+        }
+        
         // AI behavior settings
         public bool EnableAI { get; set; } = true;
         public bool VerboseLogging { get; set; } = true;
         public float AIUpdateInterval { get; set; } = 3.0f;
+        public bool AIControlsEnemies { get; set; } = false;
+        public bool UseCommanderMemory { get; set; } = true;
+        public bool Debug { get; set; } = false;
+        public int Aggressiveness { get; set; } = 50;
         
         // Formation preferences
         public bool PreferHighGround { get; set; } = true;
@@ -49,6 +68,10 @@ namespace HannibalAI
                         this.EnableAI = loadedConfig.EnableAI;
                         this.VerboseLogging = loadedConfig.VerboseLogging;
                         this.AIUpdateInterval = loadedConfig.AIUpdateInterval;
+                        this.AIControlsEnemies = loadedConfig.AIControlsEnemies;
+                        this.UseCommanderMemory = loadedConfig.UseCommanderMemory;
+                        this.Debug = loadedConfig.Debug;
+                        this.Aggressiveness = loadedConfig.Aggressiveness;
                         this.PreferHighGround = loadedConfig.PreferHighGround;
                         this.PreferRangedFormations = loadedConfig.PreferRangedFormations;
                         this.AggressiveCavalry = loadedConfig.AggressiveCavalry;

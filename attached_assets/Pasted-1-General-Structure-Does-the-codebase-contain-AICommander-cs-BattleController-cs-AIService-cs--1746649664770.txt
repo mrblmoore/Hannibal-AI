@@ -1,0 +1,113 @@
+1. General Structure
+Does the codebase contain:
+
+AICommander.cs
+
+BattleController.cs
+
+AIService.cs
+
+FallbackService.cs
+
+CommanderMemoryService.cs
+
+ModConfig.cs
+
+Logger.cs
+
+All required AICommand subclasses (e.g. MoveFormationCommand, ChangeFormationCommand, FlankCommand, HoldCommand, ChargeCommand, FollowCommand)?
+
+👉 If any are missing, which ones?
+
+✅ 2. Functionality coverage
+For each of the following features, answer:
+
+“Is this currently implemented, partially implemented, or missing?”
+
+A. Does AICommander have:
+
+MoveFormation(Formation, Vec3)
+
+ChangeFormation(Formation, FormationOrder)
+
+FlankEnemy(Formation, Vec3)
+
+HoldPosition(Formation, Vec3)
+
+ChargeFormation(Formation)
+
+FollowTarget(Formation, Agent)
+
+B. Does BattleController call ExecuteAIDecision dynamically during a battle?
+
+C. Does AIService have a method like ProcessBattleSnapshot(BattleSnapshot)?
+
+D. Does FallbackService have a method GetFallbackDecision(BattleSnapshot)?
+
+E. Does CommanderMemoryService store and retrieve per-commander memory?
+
+F. Is there a Logger class that writes logs both to file and to debug output?
+
+G. Does ModConfig expose debug toggles (e.g. Debug, ShowAIDecisions)?
+
+✅ 3. AI Decision Flow
+Ask:
+
+Where is ExecuteAIDecision called from?
+
+Where is ProcessBattleSnapshot called from?
+
+Where is MakeDecision called from?
+
+Is FallbackService.GetFallbackDecision ever called in a real battle?
+
+👉 In other words: “is the data flow connected?”
+
+✅ 4. Usage Check
+For each public method in key classes:
+
+“How many references exist? (0, 1, or more?)”
+
+Highlight any methods that are never called anywhere.
+
+✅ 5. Integration Points
+Is Logger.LogInfo or Logger.LogError called anywhere in AIService, AICommander, or BattleController?
+
+Is CommanderMemoryService actually instantiated anywhere?
+
+Does ModSettingsView actually write settings to ModConfig?
+
+✅ 6. Bannerlord Integration
+Is HannibalAI.dll registered in SubModule.xml?
+
+Does SubModule.xml reference all necessary modules (Harmony, Native, SandBoxCore, etc.)?
+
+Is the SubModuleClass set to HannibalAI.SubModule?
+
+Does the mod inject behavior via a class extending MBSubModuleBase?
+
+✅ 7. UI
+Does ModSettingsView.cs actually render a settings UI?
+
+Is it using GauntletLayer, ViewModel, and ViewScriptAttribute?
+
+Does it depend on any missing XML or xaml files?
+
+✅ 8. Missing References
+Ask:
+
+“Does the code currently reference any nonexistent types, methods, or namespaces?”
+
+(e.g., Scene.GetFogDensity, MissionStarted, Logger.LogError)
+
+✅ 9. Memory System / Nemesis Features
+Does CommanderMemoryService or anything else track:
+
+Player defeats over time?
+
+Enemy formation preferences?
+
+Commander behavioral tendencies?
+
+👉 Or is this a planned but unimplemented feature?
+

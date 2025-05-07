@@ -2,6 +2,7 @@ using System;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
+using HannibalAI.UI;
 
 namespace HannibalAI
 {
@@ -50,7 +51,10 @@ namespace HannibalAI
             base.OnMissionBehaviorInitialize(mission);
             try
             {
-                // Only add our controller to field battle missions
+                // Add settings behavior to every mission
+                mission.AddMissionBehavior(new SettingsBehavior());
+                
+                // Only add our battle controller to field battle missions
                 if (mission.CombatType == Mission.MissionCombatType.Combat)
                 {
                     mission.AddMissionBehavior(new BattleController(_aiService));
@@ -58,6 +62,12 @@ namespace HannibalAI
                     if (_config.VerboseLogging)
                     {
                         InformationManager.DisplayMessage(new InformationMessage("HannibalAI is active in this battle"));
+                    }
+                    
+                    // Log available commands
+                    if (_config.Debug)
+                    {
+                        InformationManager.DisplayMessage(new InformationMessage("Press F5 to open HannibalAI settings"));
                     }
                 }
             }

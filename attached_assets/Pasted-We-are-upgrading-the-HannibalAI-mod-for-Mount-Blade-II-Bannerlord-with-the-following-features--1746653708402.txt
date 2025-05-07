@@ -1,0 +1,180 @@
+We are upgrading the HannibalAI mod for Mount & Blade II: Bannerlord with the following features.
+
+📝 Existing Codebase Overview:
+✅ AICommander.cs → handles formation commands (Move, Hold, Flank, Charge, etc.)
+✅ BattleController.cs → routes decisions to AICommander
+✅ AIService.cs → builds decisions per battle snapshot
+✅ FallbackService.cs → handles fallback decisions
+✅ CommanderMemoryService.cs → tracks basic commander memory
+✅ Logger.cs → file/debug logging
+✅ ModConfig.cs → config settings
+✅ SubModule.xml → registered
+
+🎯 NEW FEATURES + REQUIRED IMPLEMENTATIONS:
+🟢 1️⃣ COMPLETE UI (ModSettingsView.cs):
+We need a fully working in-game UI using GauntletUI (or your recommended method):
+
+✅ A new UI tab or popup for HannibalAI config → accessible in campaign or custom battle.
+✅ Connect UI controls to ModConfig fields:
+
+Toggle: AIControlsEnemies (true/false)
+
+Toggle: UseCommanderMemory (true/false)
+
+Toggle: Debug (true/false)
+
+Slider: Aggressiveness (0-100)
+
+⚠️ Ensure ViewModel binds these fields → reflect + persist changes.
+
+➡️ UI should read/update ModConfig.Instance at runtime.
+
+🟢 2️⃣ ALLOW AI TO CONTROL ENEMY TEAM:
+✅ Add a new setting in ModConfig.cs:
+
+csharp
+Copy
+Edit
+public bool AIControlsEnemies { get; set; } = false;
+✅ In BattleController.cs → ExecuteAIDecision():
+
+Check formation team:
+
+csharp
+Copy
+Edit
+if (formation.Team.IsEnemyOf(Mission.MainAgent.Team) && !ModConfig.Instance.AIControlsEnemies)
+    return; // skip enemy AI if toggle off
+✅ If toggle enabled → process decisions for enemy formations too.
+
+🟢 3️⃣ EXPAND AI TACTICAL LOGIC:
+✅ In AIService.cs, add new helper methods:
+
+csharp
+Copy
+Edit
+bool IsEnemyNearby(Formation formation);
+bool IsAllyFormationWeak(Formation formation);
+bool IsTerrainAdvantageous(Vec3 position);
+➡️ Implement realistic checks using Bannerlord API (distance, health %, terrain tags).
+
+✅ Update ProcessBattleSnapshot() to use these for decision logic:
+
+Example:
+
+csharp
+Copy
+Edit
+if (IsEnemyNearby(f) && IsAllyFormationWeak(f))
+    command = new HoldCommand { Formation = f.Index, HoldPosition = f.CurrentPosition };
+else if (IsTerrainAdvantageous(f.CurrentPosition))
+    command = new FlankCommand { Formation = f.Index, TargetPosition = flankPos };
+else
+    command = new ChargeCommand { Formation = f.Index };
+➡️ Allow AI to respond to proximity, ally status, terrain advantage.
+
+🟢 4️⃣ FINISH COMMANDERMEMORYSERVICE:
+✅ Add properties to CommanderMemoryService.cs:
+
+csharp
+Copy
+Edit
+public int TimesDefeatedPlayer { get; set; }
+public string PreferredFormation { get; set; }
+public float AggressivenessScore { get; set; }
+public bool HasVendettaAgainstPlayer { get; set; }
+✅ Implement file save/load → JSON preferred:
+
+csharp
+Copy
+Edit
+public void SaveToFile(string path);
+public void LoadFromFile(string path);
+➡️ Memory must persist between game sessions.
+
+✅ On battle end, increment TimesDefeatedPlayer if defeated, etc. → auto-save.
+
+✅ Read memory in AIService → adjust behavior dynamically:
+
+csharp
+Copy
+Edit
+if (CommanderMemoryService.Instance.HasVendettaAgainstPlayer)
+    targetPlayerFormationMore();
+🟢 5️⃣ ADD BASIC NEMESIS SYSTEM:
+✅ If player defeats same enemy commander 3+ times:
+
+→ Commander gets title: "The Stubborn", "The Cunning", etc.
+
+✅ Store commander nickname in CommanderMemoryService.
+
+✅ Nemesis AI tracks:
+
+Player defeats vs. that commander
+
+Player kills by commander
+
+Aggression tuning (increase if confident, retreat if low morale)
+
+✅ Use memory to modify fallback decisions:
+
+csharp
+Copy
+Edit
+if (CommanderMemoryService.Instance.TimesDefeatedPlayer >= 3)
+    preferFlankingOverCharge = true;
+✅ Optionally display nemesis name on UI (future integration).
+
+🟢 6️⃣ ENSURE CONSISTENT INTEGRATION:
+✅ Any new fields/methods must be reflected in:
+
+ModConfig.cs
+
+SubModule.xml
+
+UI ViewModel bindings
+
+Runtime initializations
+
+✅ Cross-check namespace consistency:
+
+HannibalAI.Battle
+
+HannibalAI.Command
+
+HannibalAI.Services
+
+HannibalAI.Config
+
+HannibalAI.Utils
+
+HannibalAI.UI
+
+✅ Confirm all public methods have at least 1 reference → no dead code.
+
+⚠️ IMPLEMENTATION NOTES:
+➡️ Avoid using fake Bannerlord API calls.
+➡️ Use only documented TaleWorlds.Engine, TaleWorlds.MountAndBlade, TaleWorlds.GauntletUI namespaces.
+➡️ Use Vec3 from TaleWorlds.Library.
+➡️ Ensure Logger uses consistent file path (relative to module dir or save folder).
+
+🔥 DELIVERABLES:
+✅ Updated UI with working toggles/sliders.
+
+✅ AI controls enemy team if toggle enabled.
+
+✅ Tactical inputs + smarter AIService decisions.
+
+✅ CommanderMemoryService fully implemented & persists.
+
+✅ Nemesis system (titles, vendetta, dynamic behaviors).
+
+✅ All new methods/fields properly wired & referenced.
+
+✅ Compiles cleanly → no build errors/warnings.
+
+📝 For Replit:
+➡️ "This is an existing C# Bannerlord mod project in Visual Studio.
+I need you to complete these features without breaking current functionality.
+Integrate using best practices for Bannerlord modding.
+Don’t hallucinate API calls — verify via existing TaleWorlds API."
