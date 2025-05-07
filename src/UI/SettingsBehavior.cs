@@ -52,7 +52,7 @@ namespace HannibalAI.UI
             // Show debug message
             if (ModConfig.Instance.Debug)
             {
-                InformationManager.DisplayMessage(new InformationMessage("Press F5 to close HannibalAI settings"));
+                Logger.Instance.Info("Press F5 to close HannibalAI settings");
             }
         }
         

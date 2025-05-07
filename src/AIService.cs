@@ -32,6 +32,14 @@ namespace HannibalAI
         /// </summary>
         public List<FormationOrder> ProcessBattleSnapshot(Team playerTeam, Team enemyTeam)
         {
+            // If this is an enemy team, use specialized enemy AI
+            if (Mission.Current?.MainAgent != null && 
+                playerTeam.IsEnemyOf(Mission.Current.MainAgent.Team) && 
+                _config.AIControlsEnemies)
+            {
+                return ProcessEnemyTeamSnapshot(playerTeam, enemyTeam);
+            }
+            
             List<FormationOrder> commands = new List<FormationOrder>();
             
             try
@@ -398,6 +406,453 @@ namespace HannibalAI
         public void LogError(string message)
         {
             Logger.Instance.Error(message);
+        }
+        
+        /// <summary>
+        /// Process the enemy team's snapshot to generate more advanced enemy AI decisions
+        /// </summary>
+        private List<FormationOrder> ProcessEnemyTeamSnapshot(Team enemyTeam, Team playerTeam)
+        {
+            List<FormationOrder> commands = new List<FormationOrder>();
+            
+            try
+            {
+                if (enemyTeam == null || playerTeam == null)
+                {
+                    return commands;
+                }
+                
+                // Variables that influence enemy AI behavior
+                float aggressivenessFactor = _config.UseCommanderMemory ? 
+                    CommanderMemoryService.Instance.AggressivenessScore : 0.5f;
+                
+                // Determine if player's cavalry is a significant threat
+                bool playerHasStrongCavalry = DoesTeamHaveStrongCavalry(playerTeam);
+                
+                // Has this enemy defeated the player before? If so, they may have adapted
+                bool hasAdaptedToPlayer = _config.UseCommanderMemory && 
+                    CommanderMemoryService.Instance.TimesDefeatedPlayer > 0;
+                
+                // Step 1: Categorize formations
+                List<Formation> infantryFormations = GetFormationsByClass(enemyTeam, FormationClass.Infantry);
+                List<Formation> rangedFormations = GetFormationsByClass(enemyTeam, FormationClass.Ranged);
+                List<Formation> cavalryFormations = GetFormationsByClass(enemyTeam, FormationClass.Cavalry);
+                List<Formation> horseArcherFormations = GetFormationsByClass(enemyTeam, FormationClass.HorseArcher);
+                
+                // Step 2: Check battlefield conditions
+                bool isOutnumbered = CountActiveAgents(enemyTeam) < CountActiveAgents(playerTeam);
+                bool hasHeightAdvantage = EvaluateTerrainAdvantage(enemyTeam, playerTeam);
+                
+                // Step 3: Generate coordinated combined-arms strategy
+                
+                // Handle infantry formations - backbone of the army
+                foreach (var formation in infantryFormations)
+                {
+                    FormationOrder order;
+                    
+                    if (isOutnumbered || aggressivenessFactor < 0.4f)
+                    {
+                        // Defensive posture if outnumbered or cautious
+                        order = new FormationOrder
+                        {
+                            OrderType = FormationOrderType.FormShieldWall,
+                            TargetFormation = formation,
+                            TargetPosition = GetDefensivePosition(formation, enemyTeam, playerTeam),
+                            AdditionalData = "ShieldWall"
+                        };
+                    }
+                    else if (hasHeightAdvantage)
+                    {
+                        // Hold advantageous ground
+                        order = new FormationOrder
+                        {
+                            OrderType = FormationOrderType.Move,
+                            TargetFormation = formation,
+                            TargetPosition = formation.CurrentPosition.ToVec3(),
+                            AdditionalData = "Line"
+                        };
+                    }
+                    else if (aggressivenessFactor > 0.7f)
+                    {
+                        // Aggressive advance
+                        order = new FormationOrder
+                        {
+                            OrderType = FormationOrderType.Advance,
+                            TargetFormation = formation,
+                            TargetPosition = GetEnemyCenterPosition(playerTeam),
+                            AdditionalData = "Line"
+                        };
+                    }
+                    else
+                    {
+                        // Default to controlled advance
+                        order = new FormationOrder
+                        {
+                            OrderType = FormationOrderType.Move,
+                            TargetFormation = formation,
+                            TargetPosition = GetControlledAdvancePosition(formation, enemyTeam, playerTeam),
+                            AdditionalData = "Line"
+                        };
+                    }
+                    
+                    commands.Add(order);
+                }
+                
+                // Handle ranged formations - target priority units or provide cover
+                foreach (var formation in rangedFormations)
+                {
+                    FormationOrder order;
+                    
+                    if (playerHasStrongCavalry)
+                    {
+                        // Target cavalry threats
+                        order = new FormationOrder
+                        {
+                            OrderType = FormationOrderType.FireAt,
+                            TargetFormation = formation,
+                            TargetPosition = GetCavalryPosition(playerTeam),
+                            AdditionalData = "Loose"
+                        };
+                    }
+                    else if (hasHeightAdvantage)
+                    {
+                        // Exploit height advantage for fire
+                        order = new FormationOrder
+                        {
+                            OrderType = FormationOrderType.FireAt,
+                            TargetFormation = formation,
+                            TargetPosition = GetEnemyCenterPosition(playerTeam),
+                            AdditionalData = "Loose"
+                        };
+                    }
+                    else
+                    {
+                        // Default to targeting enemy center
+                        order = new FormationOrder
+                        {
+                            OrderType = FormationOrderType.FormLoose,
+                            TargetFormation = formation,
+                            TargetPosition = GetProtectedArcherPosition(formation, enemyTeam, playerTeam),
+                            AdditionalData = "Loose"
+                        };
+                    }
+                    
+                    commands.Add(order);
+                }
+                
+                // Handle cavalry - flanking or charging based on situation
+                foreach (var formation in cavalryFormations)
+                {
+                    FormationOrder order;
+                    
+                    if (hasAdaptedToPlayer && _config.UseCommanderMemory)
+                    {
+                        // If enemy has adapted to player, use preferred approach
+                        string preferredFormation = CommanderMemoryService.Instance.PreferredFormation;
+                        
+                        if (aggressivenessFactor > 0.6f)
+                        {
+                            // Aggressive charge
+                            order = new FormationOrder
+                            {
+                                OrderType = FormationOrderType.Charge,
+                                TargetFormation = formation,
+                                TargetPosition = GetEnemyCenterPosition(playerTeam),
+                                AdditionalData = preferredFormation
+                            };
+                        }
+                        else
+                        {
+                            // Strategic positioning
+                            order = new FormationOrder
+                            {
+                                OrderType = FormationOrderType.Move,
+                                TargetFormation = formation,
+                                TargetPosition = GetFlankPosition(formation, playerTeam),
+                                AdditionalData = preferredFormation
+                            };
+                        }
+                    }
+                    else if (isOutnumbered)
+                    {
+                        // When outnumbered, cavalry should target archers or wait for opportunity
+                        order = new FormationOrder
+                        {
+                            OrderType = FormationOrderType.FormWedge,
+                            TargetFormation = formation,
+                            TargetPosition = GetRangedFormationPosition(playerTeam),
+                            AdditionalData = "Wedge"
+                        };
+                    }
+                    else
+                    {
+                        // Default to standard flanking
+                        order = new FormationOrder
+                        {
+                            OrderType = aggressivenessFactor > 0.5f ? FormationOrderType.Charge : FormationOrderType.Move,
+                            TargetFormation = formation,
+                            TargetPosition = GetFlankPosition(formation, playerTeam),
+                            AdditionalData = "Wedge"
+                        };
+                    }
+                    
+                    commands.Add(order);
+                }
+                
+                // Handle horse archers - harass and kite
+                foreach (var formation in horseArcherFormations)
+                {
+                    FormationOrder order = new FormationOrder
+                    {
+                        OrderType = FormationOrderType.Move,
+                        TargetFormation = formation,
+                        TargetPosition = GetHorseArcherHarassPosition(formation, playerTeam),
+                        AdditionalData = "Loose"
+                    };
+                    
+                    commands.Add(order);
+                }
+                
+                // Log if debug is enabled
+                if (_config.Debug && commands.Count > 0)
+                {
+                    Logger.Instance.Debug($"Generated {commands.Count} enemy formation orders");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError($"Error processing enemy battle snapshot: {ex.Message}");
+            }
+            
+            return commands;
+        }
+        
+        /// <summary>
+        /// Get formations by class
+        /// </summary>
+        private List<Formation> GetFormationsByClass(Team team, FormationClass formationClass)
+        {
+            List<Formation> result = new List<Formation>();
+            
+            if (team?.FormationsIncludingEmpty == null)
+            {
+                return result;
+            }
+            
+            foreach (Formation formation in team.FormationsIncludingEmpty)
+            {
+                // Skip empty formations
+                if (formation.CountOfUnits <= 0)
+                {
+                    continue;
+                }
+                
+                if (formation.FormationIndex == formationClass)
+                {
+                    result.Add(formation);
+                }
+            }
+            
+            return result;
+        }
+        
+        /// <summary>
+        /// Count active agents in a team
+        /// </summary>
+        private int CountActiveAgents(Team team)
+        {
+            if (team?.ActiveAgents == null)
+            {
+                return 0;
+            }
+            
+            return team.ActiveAgents.Count;
+        }
+        
+        /// <summary>
+        /// Check if a team has strong cavalry
+        /// </summary>
+        private bool DoesTeamHaveStrongCavalry(Team team)
+        {
+            int cavalryCount = 0;
+            
+            foreach (Formation formation in team.FormationsIncludingEmpty)
+            {
+                if (formation.CountOfUnits <= 0)
+                {
+                    continue;
+                }
+                
+                if (formation.FormationIndex == FormationClass.Cavalry || 
+                    formation.FormationIndex == FormationClass.HorseArcher)
+                {
+                    cavalryCount += formation.CountOfUnits;
+                }
+            }
+            
+            // If cavalry is a significant portion of the army (more than 20% or more than 15 units)
+            return cavalryCount > CountActiveAgents(team) / 5 || cavalryCount > 15;
+        }
+        
+        /// <summary>
+        /// Evaluate terrain advantages between teams
+        /// </summary>
+        private bool EvaluateTerrainAdvantage(Team team, Team enemyTeam)
+        {
+            try
+            {
+                Vec3 teamCenter = GetTeamCenterPosition(team);
+                Vec3 enemyCenter = GetTeamCenterPosition(enemyTeam);
+                
+                return (teamCenter.z - enemyCenter.z) > HEIGHT_ADVANTAGE_THRESHOLD;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Get team center position
+        /// </summary>
+        private Vec3 GetTeamCenterPosition(Team team)
+        {
+            if (team == null)
+            {
+                return Vec3.Zero;
+            }
+            
+            Vec3 sum = Vec3.Zero;
+            int count = 0;
+            
+            foreach (Formation formation in team.FormationsIncludingEmpty)
+            {
+                if (formation.CountOfUnits > 0)
+                {
+                    sum += formation.CurrentPosition.ToVec3();
+                    count++;
+                }
+            }
+            
+            return count > 0 ? sum / count : Vec3.Zero;
+        }
+        
+        /// <summary>
+        /// Get a good position for defensive positioning
+        /// </summary>
+        private Vec3 GetDefensivePosition(Formation formation, Team team, Team enemyTeam)
+        {
+            // Just use current position for now - could be enhanced with terrain analysis
+            return formation.CurrentPosition.ToVec3();
+        }
+        
+        /// <summary>
+        /// Get a good position for controlled advance
+        /// </summary>
+        private Vec3 GetControlledAdvancePosition(Formation formation, Team team, Team enemyTeam)
+        {
+            Vec3 enemyCenter = GetEnemyCenterPosition(enemyTeam);
+            Vec3 formationPos = formation.CurrentPosition.ToVec3();
+            Vec3 direction = enemyCenter - formationPos;
+            
+            if (direction.Length == 0)
+            {
+                return formationPos;
+            }
+            
+            direction.Normalize();
+            
+            // Advance halfway toward the enemy
+            return formationPos + (direction * (formationPos.Distance(enemyCenter) / 2));
+        }
+        
+        /// <summary>
+        /// Get position where ranged units are in the enemy team
+        /// </summary>
+        private Vec3 GetRangedFormationPosition(Team enemyTeam)
+        {
+            foreach (Formation formation in enemyTeam.FormationsIncludingEmpty)
+            {
+                if (formation.CountOfUnits <= 0)
+                {
+                    continue;
+                }
+                
+                if (formation.FormationIndex == FormationClass.Ranged)
+                {
+                    return formation.CurrentPosition.ToVec3();
+                }
+            }
+            
+            // If no ranged formation found, return enemy center
+            return GetEnemyCenterPosition(enemyTeam);
+        }
+        
+        /// <summary>
+        /// Get cavalry position in enemy team
+        /// </summary>
+        private Vec3 GetCavalryPosition(Team enemyTeam)
+        {
+            foreach (Formation formation in enemyTeam.FormationsIncludingEmpty)
+            {
+                if (formation.CountOfUnits <= 0)
+                {
+                    continue;
+                }
+                
+                if (formation.FormationIndex == FormationClass.Cavalry || 
+                    formation.FormationIndex == FormationClass.HorseArcher)
+                {
+                    return formation.CurrentPosition.ToVec3();
+                }
+            }
+            
+            // If no cavalry formation found, return enemy center
+            return GetEnemyCenterPosition(enemyTeam);
+        }
+        
+        /// <summary>
+        /// Get a protected position for archers
+        /// </summary>
+        private Vec3 GetProtectedArcherPosition(Formation archerFormation, Team team, Team enemyTeam)
+        {
+            Vec3 enemyCenter = GetEnemyCenterPosition(enemyTeam);
+            Vec3 teamCenter = GetTeamCenterPosition(team);
+            
+            // Place archers behind infantry line
+            Vec3 direction = teamCenter - enemyCenter;
+            
+            if (direction.Length == 0)
+            {
+                return archerFormation.CurrentPosition.ToVec3();
+            }
+            
+            direction.Normalize();
+            
+            // Position 20 units behind team center, away from enemy
+            return teamCenter + (direction * 20);
+        }
+        
+        /// <summary>
+        /// Get a good position for horse archers to harass from
+        /// </summary>
+        private Vec3 GetHorseArcherHarassPosition(Formation formation, Team enemyTeam)
+        {
+            Vec3 enemyCenter = GetEnemyCenterPosition(enemyTeam);
+            Vec3 formationPos = formation.CurrentPosition.ToVec3();
+            
+            Vec3 direction = formationPos - enemyCenter;
+            
+            if (direction.Length == 0)
+            {
+                // If at same position, use a default direction
+                direction = new Vec3(1, 0, 0);
+            }
+            
+            direction.Normalize();
+            
+            // Position horse archers at a distance with good firing angles
+            return enemyCenter + (direction * 50);
         }
     }
 }

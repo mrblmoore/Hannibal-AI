@@ -117,17 +117,17 @@ namespace HannibalAI
                 _isInitialized = true;
                 
                 // Log initialization
-                InformationManager.DisplayMessage(new InformationMessage("HannibalAI Controller initialized for battle"));
+                Logger.Instance.Info("HannibalAI Controller initialized for battle");
                 
                 // Log terrain features if in debug mode
                 if (ModConfig.Instance.Debug && terrainFeatures.Count > 0)
                 {
-                    InformationManager.DisplayMessage(new InformationMessage($"Terrain Analysis: Found {terrainFeatures.Count} tactical features"));
+                    Logger.Instance.Info($"Terrain Analysis: Found {terrainFeatures.Count} tactical features");
                 }
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error initializing HannibalAI Controller: {ex.Message}"));
+                Logger.Instance.Error($"Error initializing HannibalAI Controller: {ex.Message}");
             }
         }
         
@@ -155,7 +155,7 @@ namespace HannibalAI
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error in HannibalAI update: {ex.Message}"));
+                Logger.Instance.Error($"Error in HannibalAI update: {ex.Message}");
             }
         }
         

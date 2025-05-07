@@ -12,6 +12,7 @@ namespace HannibalAI.UI
     {
         private ModSettingsViewModel _dataSource;
         
+        // Use a simple approach instead of GauntletUI for compatibility
         public ModSettingsScreen()
         {
             // Create the view model with config
@@ -21,18 +22,46 @@ namespace HannibalAI.UI
         public void Initialize()
         {
             // Display a message when settings are opened
-            InformationManager.DisplayMessage(new InformationMessage("HannibalAI settings opened"));
+            Logger.Instance.Info("HannibalAI settings opened");
+            
+            // Make sure UI is visible
+            _dataSource.IsVisible = true;
+            
+            // Display settings in a simple way
+            DisplayCurrentSettings();
+        }
+        
+        private void DisplayCurrentSettings()
+        {
+            // For now, just show the current settings in the log/message system
+            var config = ModConfig.Instance;
+            string settings = $"HannibalAI Settings:\n" +
+                              $"- AI Controls Enemies: {config.AIControlsEnemies}\n" +
+                              $"- Use Commander Memory: {config.UseCommanderMemory}\n" +
+                              $"- Debug Mode: {config.Debug}\n" +
+                              $"- Aggressiveness: {config.Aggressiveness}%";
+            
+            Logger.Instance.Info(settings);
+            
+            // Display an informational message to the player
+            InformationManager.DisplayMessage(new InformationMessage("HannibalAI settings opened. Use console for detailed view."));
         }
         
         public void CleanUp()
         {
-            _dataSource.OnFinalize();
-            _dataSource = null;
+            if (_dataSource != null)
+            {
+                _dataSource.OnFinalize();
+                _dataSource = null;
+            }
         }
         
         // Close callback
         private void OnClose()
         {
+            // Save settings before closing
+            ModConfig.Instance.SaveSettings();
+            
             // Clean up
             CleanUp();
         }

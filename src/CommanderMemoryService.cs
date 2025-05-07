@@ -40,7 +40,7 @@ namespace HannibalAI
         public Dictionary<string, int> FormationPreferences { get; set; }
         
         // File path for saving/loading data
-        private const string MEMORY_FILE_NAME = "HannibalAICommanderMemory.json";
+        private const string MEMORY_FILE_NAME = "HannibalAICommanderMemory.xml";
         private string MemoryFilePath => Path.Combine(GetModuleRootPath(), MEMORY_FILE_NAME);
         
         private CommanderMemoryService()
@@ -83,7 +83,7 @@ namespace HannibalAI
                 
                 if (ModConfig.Instance.Debug)
                 {
-                    InformationManager.DisplayMessage(new InformationMessage($"HannibalAI: {CommanderNickname} now has a vendetta against you!"));
+                    Logger.Instance.Info($"HannibalAI: {CommanderNickname} now has a vendetta against you!");
                 }
             }
             
@@ -107,7 +107,7 @@ namespace HannibalAI
                 
                 if (ModConfig.Instance.Debug)
                 {
-                    InformationManager.DisplayMessage(new InformationMessage($"HannibalAI: {CommanderNickname} has emerged as your nemesis!"));
+                    Logger.Instance.Info($"HannibalAI: {CommanderNickname} has emerged as your nemesis!");
                 }
             }
             
@@ -254,12 +254,12 @@ namespace HannibalAI
                 
                 if (ModConfig.Instance.Debug)
                 {
-                    InformationManager.DisplayMessage(new InformationMessage("HannibalAI commander memory saved successfully"));
+                    Logger.Instance.Info("HannibalAI commander memory saved successfully");
                 }
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error saving HannibalAI commander memory: {ex.Message}"));
+                Logger.Instance.Error($"Error saving HannibalAI commander memory: {ex.Message}");
             }
         }
         
@@ -297,17 +297,17 @@ namespace HannibalAI
                     
                     if (ModConfig.Instance.Debug)
                     {
-                        InformationManager.DisplayMessage(new InformationMessage("HannibalAI commander memory loaded successfully"));
+                        Logger.Instance.Info("HannibalAI commander memory loaded successfully");
                     }
                 }
                 else if (ModConfig.Instance.Debug)
                 {
-                    InformationManager.DisplayMessage(new InformationMessage("No previous HannibalAI commander memory found"));
+                    Logger.Instance.Info("No previous HannibalAI commander memory found");
                 }
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error loading HannibalAI commander memory: {ex.Message}"));
+                Logger.Instance.Error($"Error loading HannibalAI commander memory: {ex.Message}");
             }
         }
         

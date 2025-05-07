@@ -127,7 +127,7 @@ namespace HannibalAI.UI
             _config.SaveSettings();
             
             // Display confirmation
-            InformationManager.DisplayMessage(new InformationMessage("HannibalAI settings saved"));
+            Logger.Instance.Info("HannibalAI settings saved");
             
             // Hide UI
             IsVisible = false;
@@ -149,7 +149,7 @@ namespace HannibalAI.UI
             OnPropertyChanged(nameof(AggressivenessText));
             
             // Display confirmation
-            InformationManager.DisplayMessage(new InformationMessage("HannibalAI settings reset to defaults"));
+            Logger.Instance.Info("HannibalAI settings reset to defaults");
         }
         
         // Update the text representation when aggressiveness changes

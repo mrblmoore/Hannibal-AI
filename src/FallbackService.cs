@@ -58,6 +58,13 @@ namespace HannibalAI
                     }
                 }
                 
+                // Less aggressive commanders prefer defensive positioning
+                if (_config.UseCommanderMemory && CommanderMemoryService.Instance.AggressivenessScore < 0.4f)
+                {
+                    preferDefensivePositioning = true;
+                    isDefensive = true;
+                }
+                
                 // Generate basic orders based on formation type
                 if (isDefensive)
                 {
