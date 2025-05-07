@@ -28,7 +28,7 @@ namespace HannibalAI
         public AICommander(ModConfig config)
         {
             _config = config;
-            _commandExecutor = new CommandExecutor();
+            _commandExecutor = CommandExecutor.Instance;
             _keyPositions = new Dictionary<string, Vec3>();
             _playerFormations = new List<Formation>();
             _enemyFormations = new List<Formation>();

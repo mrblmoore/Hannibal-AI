@@ -259,7 +259,7 @@ namespace HannibalAI
             try
             {
                 Formation formation = order.TargetFormation;
-                formation.ArrangementOrder = ArrangementOrder.ArrangementOrderWedge;
+                formation.ArrangementOrder = ArrangementOrder.ArrangementOrderSkein;
                 
                 // If position is specified, also move to that position
                 if (order.TargetPosition != Vec3.Zero)
@@ -329,7 +329,7 @@ namespace HannibalAI
             try
             {
                 Formation formation = order.TargetFormation;
-                formation.FormOrder = FormOrder.FormOrderLoose;
+                formation.ArrangementOrder = ArrangementOrder.ArrangementOrderLoose;
                 
                 // If position is specified, also move to that position
                 if (order.TargetPosition != Vec3.Zero)
@@ -358,29 +358,31 @@ namespace HannibalAI
                     formation.ArrangementOrder = ArrangementOrder.ArrangementOrderCircle;
                     break;
                 case "wedge":
-                    formation.ArrangementOrder = ArrangementOrder.ArrangementOrderWedge;
+                    formation.ArrangementOrder = ArrangementOrder.ArrangementOrderSkein;
                     break;
                 case "column":
                     formation.ArrangementOrder = ArrangementOrder.ArrangementOrderColumn;
                     break;
                 case "shieldwall":
-                    formation.ArrangementOrder = ArrangementOrder.ArrangementOrderLine;
-                    formation.FormOrder = FormOrder.FormOrderWide;
+                    formation.ArrangementOrder = ArrangementOrder.ArrangementOrderShieldWall;
                     break;
                 case "loose":
-                    formation.FormOrder = FormOrder.FormOrderLoose;
+                    formation.ArrangementOrder = ArrangementOrder.ArrangementOrderLoose;
                     break;
-                case "close":
-                    formation.FormOrder = FormOrder.FormOrderClose;
+                case "scatter":
+                    formation.ArrangementOrder = ArrangementOrder.ArrangementOrderScatter;
                     break;
-                case "veryclose":
-                    formation.FormOrder = FormOrder.FormOrderVeryClose;
+                case "square":
+                    formation.ArrangementOrder = ArrangementOrder.ArrangementOrderSquare;
                     break;
                 case "wide":
                     formation.FormOrder = FormOrder.FormOrderWide;
                     break;
                 case "wider":
                     formation.FormOrder = FormOrder.FormOrderWider;
+                    break;
+                case "deep":
+                    formation.FormOrder = FormOrder.FormOrderDeep;
                     break;
                 default:
                     // Unknown arrangement type, ignore
