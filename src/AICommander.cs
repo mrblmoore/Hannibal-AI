@@ -16,6 +16,7 @@ namespace HannibalAI
     {
         private readonly ModConfig _config;
         private readonly CommandExecutor _commandExecutor;
+        private readonly AIService _aiService;
         
         // Current battle state tracking
         private Team _playerTeam;
@@ -30,6 +31,7 @@ namespace HannibalAI
         {
             _config = config;
             _commandExecutor = CommandExecutor.Instance;
+            _aiService = new AIService(config);
             _keyPositions = new Dictionary<string, Vec3>();
             _playerFormations = new List<Formation>();
             _enemyFormations = new List<Formation>();
@@ -70,11 +72,39 @@ namespace HannibalAI
                 return;
             }
             
-            // Determine tactical situation
+            // Determine tactical situation using enhanced approach
             TacticalSituation situation = AnalyzeTacticalSituation();
             
-            // Generate and execute orders based on the situation
+            // Get tactical approach using new advanced system
+            TacticalApproach approach = _aiService.DetermineTacticalApproach(_playerTeam, _enemyTeam);
+            
+            // Generate orders based on the tactical situation
             List<FormationOrder> orders = GenerateOrders(situation);
+            
+            // Apply terrain and tactical modifiers to the orders
+            _aiService.ApplyTerrainTactics(orders, approach);
+            
+            // Log the tactical approach if in debug mode
+            if (_config.Debug)
+            {
+                string tacticName = approach.RecommendedTactic.ToString();
+                string advantages = "";
+                
+                if (approach.HasHighGround) advantages += "High Ground, ";
+                if (approach.HasCavalryAdvantage) advantages += "Cavalry Advantage, ";
+                if (approach.HasArcherAdvantage) advantages += "Archer Advantage, ";
+                if (approach.HasInfantryAdvantage) advantages += "Infantry Advantage, ";
+                if (approach.HasForestCover) advantages += "Forest Cover, ";
+                
+                if (advantages.Length > 2)
+                {
+                    advantages = advantages.Substring(0, advantages.Length - 2);
+                }
+                
+                _aiService.LogInfo($"Using tactical approach: {tacticName} | Advantages: {advantages}");
+            }
+            
+            // Execute the enhanced orders
             ExecuteOrders(orders);
         }
         

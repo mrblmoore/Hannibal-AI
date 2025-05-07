@@ -157,8 +157,16 @@ namespace HannibalAI
                     // Control enemy team if enabled in settings
                     if (ModConfig.Instance.AIControlsEnemies && _enemyTeam != null)
                     {
+                        // Determine tactical approach for enemy forces using our enhanced system
+                        TacticalApproach enemyApproach = _aiService.DetermineTacticalApproach(_enemyTeam, _playerTeam);
+                        
                         // Process AI decisions for enemy formations
                         var enemyOrders = _aiService.ProcessBattleSnapshot(_enemyTeam, _playerTeam);
+                        
+                        // Apply terrain and tactical modifiers to the orders
+                        _aiService.ApplyTerrainTactics(enemyOrders, enemyApproach);
+                        
+                        // Execute the enhanced orders
                         ExecuteAIDecisions(enemyOrders);
                         
                         // Show enemy AI control status periodically (every 30 seconds)
@@ -168,11 +176,24 @@ namespace HannibalAI
                             if (ModConfig.Instance.UseCommanderMemory)
                             {
                                 float aggression = CommanderMemoryService.Instance.AggressivenessScore;
-                                enemyCommanderInfo = $" (Commander: {(aggression > 0.7f ? "Aggressive" : 
-                                                                    aggression < 0.3f ? "Cautious" : "Balanced")})";
+                                string style = aggression > 0.7f ? "Aggressive" : (aggression < 0.3f ? "Cautious" : "Balanced");
+                                enemyCommanderInfo = $" (Commander: {style})";
                             }
                             
-                            Logger.Instance.Info($"HannibalAI is controlling enemy formations{enemyCommanderInfo}");
+                            string tacticName = enemyApproach.RecommendedTactic.ToString();
+                            string advantages = "";
+                            
+                            if (enemyApproach.HasHighGround) advantages += "High Ground, ";
+                            if (enemyApproach.HasCavalryAdvantage) advantages += "Cavalry, ";
+                            if (enemyApproach.HasArcherAdvantage) advantages += "Archers, ";
+                            if (enemyApproach.HasForestCover) advantages += "Forest Cover, ";
+                            
+                            if (advantages.Length > 2)
+                            {
+                                advantages = "Advantages: " + advantages.Substring(0, advantages.Length - 2);
+                            }
+                            
+                            Logger.Instance.Info($"HannibalAI is controlling enemy - Tactic: {tacticName}{enemyCommanderInfo} | {advantages}");
                         }
                     }
                 }

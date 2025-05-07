@@ -377,12 +377,14 @@ namespace HannibalAI
         }
         
         /// <summary>
-        /// Create a new AI commander instance
+        /// Create a new AI commander instance with proper configuration
+        /// Note: AICommander now manages its own AIService instance
         /// </summary>
         public AICommander CreateCommander()
         {
             try
             {
+                // AICommander now creates and manages its own AIService instance internally
                 return new AICommander(_config);
             }
             catch (Exception ex)
@@ -854,5 +856,363 @@ namespace HannibalAI
             // Position horse archers at a distance with good firing angles
             return enemyCenter + (direction * 50);
         }
+        /// <summary>
+        /// Analyzes terrain and battle conditions to determine optimal tactical approach
+        /// </summary>
+        public TacticalApproach DetermineTacticalApproach(Team team, Team enemyTeam)
+        {
+            TacticalApproach approach = new TacticalApproach();
+            
+            try
+            {
+                if (team == null || enemyTeam == null)
+                {
+                    return approach;
+                }
+                
+                // Analyze force composition
+                approach.HasCavalryAdvantage = CalculateCavalryAdvantage(team, enemyTeam);
+                approach.HasArcherAdvantage = CalculateRangedAdvantage(team, enemyTeam);
+                approach.HasInfantryAdvantage = CalculateInfantryAdvantage(team, enemyTeam);
+                
+                // Analyze terrain factors
+                Vec3 teamPosition = GetTeamCenterPosition(team);
+                approach.HasHighGround = IsTerrainAdvantageous(teamPosition);
+                approach.HasForestCover = HasForestCover(teamPosition, 50f);
+                
+                // Determine formation types based on advantages
+                if (approach.HasHighGround && approach.HasArcherAdvantage)
+                {
+                    approach.RecommendedFormations.Add(FormationClass.Ranged, "Loose");
+                    approach.RecommendedTactic = TacticalTactic.DefendHighGround;
+                }
+                else if (approach.HasCavalryAdvantage)
+                {
+                    approach.RecommendedFormations.Add(FormationClass.Cavalry, "Wedge");
+                    approach.RecommendedTactic = TacticalTactic.CavalryFlanking;
+                }
+                else if (approach.HasInfantryAdvantage)
+                {
+                    approach.RecommendedFormations.Add(FormationClass.Infantry, "ShieldWall");
+                    approach.RecommendedTactic = TacticalTactic.InfantryAdvance;
+                }
+                else
+                {
+                    // Balanced approach if no clear advantage
+                    approach.RecommendedFormations.Add(FormationClass.Infantry, "Line");
+                    approach.RecommendedFormations.Add(FormationClass.Ranged, "Loose");
+                    approach.RecommendedTactic = TacticalTactic.BalancedApproach;
+                }
+                
+                // Incorporate commander memory if enabled
+                if (_config.UseCommanderMemory)
+                {
+                    float aggression = CommanderMemoryService.Instance.AggressivenessScore;
+                    
+                    // Aggressive commanders may ignore disadvantages
+                    if (aggression > 0.7f)
+                    {
+                        approach.RecommendedTactic = TacticalTactic.AggressiveAdvance;
+                    }
+                    // Cautious commanders prioritize defense even with advantages
+                    else if (aggression < 0.3f)
+                    {
+                        approach.RecommendedTactic = TacticalTactic.DefensivePositioning;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError($"Error determining tactical approach: {ex.Message}");
+            }
+            
+            return approach;
+        }
+        
+        /// <summary>
+        /// Calculate if a team has a cavalry advantage over another
+        /// </summary>
+        private bool CalculateCavalryAdvantage(Team team, Team enemyTeam)
+        {
+            int teamCavalryCount = 0;
+            int enemyCavalryCount = 0;
+            
+            foreach (Formation formation in team.FormationsIncludingEmpty)
+            {
+                if (formation.CountOfUnits <= 0)
+                {
+                    continue;
+                }
+                
+                if (formation.FormationIndex == FormationClass.Cavalry ||
+                    formation.FormationIndex == FormationClass.HorseArcher)
+                {
+                    teamCavalryCount += formation.CountOfUnits;
+                }
+            }
+            
+            foreach (Formation formation in enemyTeam.FormationsIncludingEmpty)
+            {
+                if (formation.CountOfUnits <= 0)
+                {
+                    continue;
+                }
+                
+                if (formation.FormationIndex == FormationClass.Cavalry ||
+                    formation.FormationIndex == FormationClass.HorseArcher)
+                {
+                    enemyCavalryCount += formation.CountOfUnits;
+                }
+            }
+            
+            // Consider both relative and absolute numbers
+            return (teamCavalryCount > enemyCavalryCount * 1.3f) || (teamCavalryCount > 25 && teamCavalryCount > enemyCavalryCount);
+        }
+        
+        /// <summary>
+        /// Calculate if a team has a ranged advantage over another
+        /// </summary>
+        private bool CalculateRangedAdvantage(Team team, Team enemyTeam)
+        {
+            int teamRangedCount = 0;
+            int enemyRangedCount = 0;
+            
+            foreach (Formation formation in team.FormationsIncludingEmpty)
+            {
+                if (formation.CountOfUnits <= 0)
+                {
+                    continue;
+                }
+                
+                if (formation.FormationIndex == FormationClass.Ranged ||
+                    formation.FormationIndex == FormationClass.HorseArcher)
+                {
+                    teamRangedCount += formation.CountOfUnits;
+                }
+            }
+            
+            foreach (Formation formation in enemyTeam.FormationsIncludingEmpty)
+            {
+                if (formation.CountOfUnits <= 0)
+                {
+                    continue;
+                }
+                
+                if (formation.FormationIndex == FormationClass.Ranged ||
+                    formation.FormationIndex == FormationClass.HorseArcher)
+                {
+                    enemyRangedCount += formation.CountOfUnits;
+                }
+            }
+            
+            return (teamRangedCount > enemyRangedCount * 1.3f) || (teamRangedCount > 20 && teamRangedCount > enemyRangedCount);
+        }
+        
+        /// <summary>
+        /// Calculate if a team has an infantry advantage over another
+        /// </summary>
+        private bool CalculateInfantryAdvantage(Team team, Team enemyTeam)
+        {
+            int teamInfantryCount = 0;
+            int enemyInfantryCount = 0;
+            
+            foreach (Formation formation in team.FormationsIncludingEmpty)
+            {
+                if (formation.CountOfUnits <= 0)
+                {
+                    continue;
+                }
+                
+                if (formation.FormationIndex == FormationClass.Infantry)
+                {
+                    teamInfantryCount += formation.CountOfUnits;
+                }
+            }
+            
+            foreach (Formation formation in enemyTeam.FormationsIncludingEmpty)
+            {
+                if (formation.CountOfUnits <= 0)
+                {
+                    continue;
+                }
+                
+                if (formation.FormationIndex == FormationClass.Infantry)
+                {
+                    enemyInfantryCount += formation.CountOfUnits;
+                }
+            }
+            
+            return (teamInfantryCount > enemyInfantryCount * 1.2f) || (teamInfantryCount > 30 && teamInfantryCount > enemyInfantryCount);
+        }
+        
+        /// <summary>
+        /// Check if a position has forest cover nearby for tactical considerations
+        /// </summary>
+        private bool HasForestCover(Vec3 position, float searchRadius)
+        {
+            // In real implementation, would use scene data to check for forest
+            // Simplified version for compatibility
+            
+            try
+            {
+                // Use a simple height variation as a proxy for trees and cover
+                // In the real game, this would use the actual scene vegetation data
+                float terrainVariation = GetTerrainHeightVariation(position, searchRadius);
+                return terrainVariation > 2.0f; // Significant height variation suggests trees or cover
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Get terrain height variation in an area (simplified proxy for forest detection)
+        /// </summary>
+        private float GetTerrainHeightVariation(Vec3 center, float radius)
+        {
+            // Simplified implementation that just returns a reasonable value
+            // In the real game, would analyze the actual terrain
+            
+            // For testing/compatibility, use position Z value as a proxy 
+            // Higher positions tend to have more natural variation/cover in the game
+            float baseHeight = center.z;
+            
+            // Return a percentage of base height as "variation"
+            // Areas with any elevation tend to have more vegetation in the game
+            return baseHeight * 0.1f;
+        }
+        
+        /// <summary>
+        /// Apply formation behavioral modifiers based on terrain and tactical conditions
+        /// </summary>
+        public void ApplyTerrainTactics(List<FormationOrder> orders, TacticalApproach approach)
+        {
+            try
+            {
+                foreach (var order in orders)
+                {
+                    // Skip null formations
+                    if (order.TargetFormation == null)
+                    {
+                        continue;
+                    }
+                    
+                    FormationClass formationClass = order.TargetFormation.FormationIndex;
+                    
+                    // Apply behavioral modifiers based on tactical approach
+                    switch (approach.RecommendedTactic)
+                    {
+                        case TacticalTactic.DefendHighGround:
+                            if (formationClass == FormationClass.Ranged)
+                            {
+                                // Prioritize holding positions for archers on high ground
+                                order.OrderType = FormationOrderType.Move;
+                                order.AdditionalData = "Loose";
+                            }
+                            else if (formationClass == FormationClass.Infantry)
+                            {
+                                // Infantry forms defensive shield wall
+                                order.OrderType = FormationOrderType.FormShieldWall;
+                                order.AdditionalData = "ShieldWall";
+                            }
+                            break;
+                            
+                        case TacticalTactic.CavalryFlanking:
+                            if (formationClass == FormationClass.Cavalry)
+                            {
+                                // Cavalry uses wedge and flanking
+                                order.OrderType = FormationOrderType.FormWedge;
+                                order.AdditionalData = "Wedge";
+                            }
+                            break;
+                            
+                        case TacticalTactic.InfantryAdvance:
+                            if (formationClass == FormationClass.Infantry)
+                            {
+                                // Infantry advances in line formation
+                                order.OrderType = FormationOrderType.Advance;
+                                order.AdditionalData = "Line";
+                            }
+                            break;
+                            
+                        case TacticalTactic.AggressiveAdvance:
+                            // All units advance aggressively
+                            if (formationClass == FormationClass.Cavalry || 
+                                formationClass == FormationClass.HorseArcher)
+                            {
+                                order.OrderType = FormationOrderType.Charge;
+                            }
+                            else
+                            {
+                                order.OrderType = FormationOrderType.Advance;
+                            }
+                            break;
+                            
+                        case TacticalTactic.DefensivePositioning:
+                            // All units take defensive posture
+                            if (formationClass == FormationClass.Infantry)
+                            {
+                                order.OrderType = FormationOrderType.FormShieldWall;
+                                order.AdditionalData = "ShieldWall";
+                            }
+                            else if (formationClass == FormationClass.Ranged)
+                            {
+                                order.OrderType = FormationOrderType.FireAt;
+                            }
+                            break;
+                    }
+                    
+                    // Apply terrain-specific modifiers
+                    if (approach.HasForestCover && formationClass == FormationClass.Infantry)
+                    {
+                        // Infantry in forest should use looser formations
+                        order.AdditionalData = "Loose";
+                    }
+                    else if (approach.HasHighGround && formationClass == FormationClass.Ranged)
+                    {
+                        // Ranged units on high ground gain advantage
+                        order.AdditionalData = "Loose";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogError($"Error applying terrain tactics: {ex.Message}");
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Represents a tactical approach with various advantages and recommended formations
+    /// </summary>
+    public class TacticalApproach
+    {
+        public bool HasCavalryAdvantage { get; set; }
+        public bool HasArcherAdvantage { get; set; }
+        public bool HasInfantryAdvantage { get; set; }
+        public bool HasHighGround { get; set; }
+        public bool HasForestCover { get; set; }
+        public TacticalTactic RecommendedTactic { get; set; }
+        public Dictionary<FormationClass, string> RecommendedFormations { get; set; }
+        
+        public TacticalApproach()
+        {
+            RecommendedFormations = new Dictionary<FormationClass, string>();
+            RecommendedTactic = TacticalTactic.BalancedApproach;
+        }
+    }
+    
+    /// <summary>
+    /// Represents different tactical approaches for AI
+    /// </summary>
+    public enum TacticalTactic
+    {
+        BalancedApproach,
+        DefendHighGround,
+        CavalryFlanking,
+        InfantryAdvance,
+        AggressiveAdvance,
+        DefensivePositioning
     }
 }

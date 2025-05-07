@@ -68,7 +68,7 @@ namespace HannibalAI
                 // Generate basic orders based on formation type
                 if (isDefensive)
                 {
-                    GenerateDefensiveFallbackOrders(fallbackOrders, infantryFormations, rangedFormations, cavalryFormations);
+                    GenerateDefensiveFallbackOrders(fallbackOrders, infantryFormations, rangedFormations, cavalryFormations, preferDefensivePositioning);
                 }
                 else
                 {
@@ -140,17 +140,18 @@ namespace HannibalAI
             List<FormationOrder> orders,
             List<Formation> infantryFormations,
             List<Formation> rangedFormations,
-            List<Formation> cavalryFormations)
+            List<Formation> cavalryFormations,
+            bool preferDefensivePositioning)
         {
             // Infantry forms shield wall in front
             foreach (var formation in infantryFormations)
             {
                 orders.Add(new FormationOrder
                 {
-                    OrderType = FormationOrderType.FormShieldWall,
+                    OrderType = preferDefensivePositioning ? FormationOrderType.FormShieldWall : FormationOrderType.FormLine,
                     TargetFormation = formation,
                     TargetPosition = Vec3.Zero, // Current position
-                    AdditionalData = "ShieldWall"
+                    AdditionalData = preferDefensivePositioning ? "ShieldWall" : "Line"
                 });
             }
             
@@ -169,12 +170,28 @@ namespace HannibalAI
             // Cavalry in reserve on the flanks
             foreach (var formation in cavalryFormations)
             {
+                FormationOrderType orderType = FormationOrderType.Move;
+                string formationType = "Column";
+                
+                // If extra defensive, keep cavalry in tighter formations
+                if (preferDefensivePositioning)
+                {
+                    orderType = FormationOrderType.Move;
+                    formationType = "Column";
+                }
+                else
+                {
+                    // Otherwise, allow for more flexible positioning
+                    orderType = FormationOrderType.FormWedge;
+                    formationType = "Wedge";
+                }
+                
                 orders.Add(new FormationOrder
                 {
-                    OrderType = FormationOrderType.Move,
+                    OrderType = orderType,
                     TargetFormation = formation,
                     TargetPosition = Vec3.Zero, // Current position
-                    AdditionalData = "Column"
+                    AdditionalData = formationType
                 });
             }
         }
