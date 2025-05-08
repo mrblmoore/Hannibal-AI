@@ -137,7 +137,7 @@ namespace HannibalAI
                     InformationManager.DisplayMessage(new InformationMessage(
                         $"Debug Mode: ON - Press F5 for settings", Color.FromUint(0xFFFF00)));
                     InformationManager.DisplayMessage(new InformationMessage(
-                        $"Formations controlled: {_playerTeam.FormationsCount}", Color.FromUint(0xFFFF00)));
+                        $"Formations controlled: {_playerTeam.FormationsIncludingEmpty.Count}", Color.FromUint(0xFFFF00)));
                 }
 
                 // Log terrain features if in debug mode

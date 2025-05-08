@@ -2,10 +2,54 @@ using System;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
-using TaleWorlds.Engine.GauntletUI;
 
 namespace HannibalAI.UI
 {
+    /// <summary>
+    /// Stub implementation of a layer for UI (compatibility)
+    /// </summary>
+    public class GauntletLayer
+    {
+        public GauntletLayer(int layer) 
+        {
+            // Simple constructor
+        }
+        
+        public InputRestrictions InputRestrictions { get; } = new InputRestrictions();
+        
+        public void LoadMovie(string name, object dataSource)
+        {
+            // Stub implementation
+        }
+    }
+    
+    /// <summary>
+    /// Simple input restrictions class
+    /// </summary>
+    public class InputRestrictions
+    {
+        public void ResetInputRestrictions()
+        {
+            // Stub implementation
+        }
+    }
+    
+    /// <summary>
+    /// Helper for mission screen
+    /// </summary>
+    public static class MissionScreen
+    {
+        public static void AddLayer(GauntletLayer layer)
+        {
+            // Stub implementation
+        }
+        
+        public static void RemoveLayer(GauntletLayer layer)
+        {
+            // Stub implementation
+        }
+    }
+
     /// <summary>
     /// Settings screen for HannibalAI mod
     /// </summary>

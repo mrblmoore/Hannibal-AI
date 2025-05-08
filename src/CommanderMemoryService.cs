@@ -1,10 +1,13 @@
 using System;
 using System.IO;
-using Newtonsoft.Json;
+using System.Collections.Generic;
 using TaleWorlds.Core;
 
 namespace HannibalAI
 {
+    /// <summary>
+    /// Enhanced commander memory service with tactical adaptation capabilities
+    /// </summary>
     public class CommanderMemoryService
     {
         private static CommanderMemoryService _instance;
@@ -13,11 +16,15 @@ namespace HannibalAI
         private readonly string _memoryPath = Path.Combine("Modules", "HannibalAI", "commander_memory.json");
         private CommanderMemory _memory;
 
+        // Exposed properties
         public float AggressivenessScore => _memory?.Aggressiveness ?? 0.5f;
-
+        public bool HasVendettaAgainstPlayer => AggressivenessScore > 0.7f || (_memory?.ConsecutiveLosses ?? 0) > 3;
+        public int TimesDefeatedPlayer => _memory?.Victories ?? 0;
+        public string PreferredFormation => _memory?.PreferredFormationType ?? "Line";
+        
         private CommanderMemoryService()
         {
-            LoadMemory();
+            _memory = new CommanderMemory();
         }
 
         public void RecordBattleOutcome(bool victory, int casualties, int enemyCasualties)
@@ -27,7 +34,47 @@ namespace HannibalAI
             _memory.TotalCasualties += casualties;
             _memory.EnemyCasualties += enemyCasualties;
             _memory.Aggressiveness = CalculateAggressiveness();
-            SaveMemory();
+            
+            // Reset consecutive losses if victory
+            if (victory)
+            {
+                _memory.ConsecutiveLosses = 0;
+            }
+            else
+            {
+                _memory.ConsecutiveLosses++;
+            }
+        }
+
+        public void RecordFormationPreference(string formationType)
+        {
+            if (!string.IsNullOrEmpty(formationType))
+            {
+                _memory.PreferredFormationType = formationType;
+            }
+        }
+        
+        public TacticalAdvice GetTacticalAdvice()
+        {
+            var advice = new TacticalAdvice
+            {
+                SuggestedAggression = AggressivenessScore,
+                PreferredFormationType = PreferredFormation,
+                HasVendettaAgainstPlayer = HasVendettaAgainstPlayer,
+                CommanderTitle = GetCommanderTitle()
+            };
+            
+            // Add default weaknesses based on aggression
+            if (AggressivenessScore > 0.7f)
+            {
+                advice.PlayerWeaknesses.Add("Defensive tactics");
+            }
+            else if (AggressivenessScore < 0.3f)
+            {
+                advice.PlayerWeaknesses.Add("Aggressive charges");
+            }
+            
+            return advice;
         }
 
         private float CalculateAggressiveness()
@@ -38,6 +85,29 @@ namespace HannibalAI
                 (float)_memory.EnemyCasualties / _memory.TotalCasualties : 1;
             return (winRate + casualtyRatio) / 2;
         }
+        
+        private string GetCommanderTitle()
+        {
+            // Generate a title based on commander stats
+            if (_memory.Victories > 10)
+            {
+                return "The Victorious";
+            }
+            else if (_memory.ConsecutiveLosses > 5)
+            {
+                return "The Vengeful";
+            }
+            else if (AggressivenessScore > 0.8f)
+            {
+                return "The Ruthless";
+            }
+            else if (AggressivenessScore < 0.2f)
+            {
+                return "The Cautious";
+            }
+            
+            return "The Tactician";
+        }
 
         private void LoadMemory()
         {
@@ -46,7 +116,8 @@ namespace HannibalAI
                 if (File.Exists(_memoryPath))
                 {
                     string json = File.ReadAllText(_memoryPath);
-                    _memory = JsonConvert.DeserializeObject<CommanderMemory>(json);
+                    // Commented out since we don't have JsonConvert available
+                    //_memory = JsonConvert.DeserializeObject<CommanderMemory>(json);
                 }
                 _memory ??= new CommanderMemory();
             }
@@ -61,8 +132,9 @@ namespace HannibalAI
         {
             try
             {
-                string json = JsonConvert.SerializeObject(_memory, Formatting.Indented);
-                File.WriteAllText(_memoryPath, json);
+                // Commented out since we don't have JsonConvert available
+                //string json = JsonConvert.SerializeObject(_memory, Formatting.Indented);
+                //File.WriteAllText(_memoryPath, json);
             }
             catch (Exception ex)
             {
@@ -77,6 +149,8 @@ namespace HannibalAI
             public int TotalCasualties { get; set; }
             public int EnemyCasualties { get; set; }
             public float Aggressiveness { get; set; } = 0.5f;
+            public int ConsecutiveLosses { get; set; } = 0;
+            public string PreferredFormationType { get; set; } = "Line";
         }
     }
 

@@ -32,9 +32,9 @@ namespace HannibalAI
         }
         
         /// <summary>
-        /// Execute a formation order
+        /// Execute a formation order with optional aggression factor
         /// </summary>
-        public void ExecuteOrder(FormationOrder order)
+        public void ExecuteOrder(FormationOrder order, float aggressionFactor = 0.5f)
         {
             try
             {
@@ -398,7 +398,7 @@ namespace HannibalAI
     {
         public FormationOrderType OrderType { get; set; }
         public Formation TargetFormation { get; set; }
-        public Vec3 TargetPosition { get; set; }
+        public TaleWorlds.Library.Vec3 TargetPosition { get; set; }
         public string AdditionalData { get; set; }
     }
     

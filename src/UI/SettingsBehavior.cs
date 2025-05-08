@@ -3,7 +3,6 @@ using TaleWorlds.Core;
 using TaleWorlds.InputSystem;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Library;
-using TaleWorlds.Engine.GauntletUI;
 
 namespace HannibalAI.UI
 {
@@ -48,7 +47,7 @@ namespace HannibalAI.UI
             if (_settingsScreen == null)
             {
                 var layer = new GauntletLayer(1000);
-                var vm = new ModSettingsViewModel();
+                var vm = new ModSettingsViewModel(ModConfig.Instance, null);
                 layer.LoadMovie("HannibalAI_Settings", vm);
                 MissionScreen.AddLayer(layer);
                 _settingsScreen = new ModSettingsScreen(layer);
