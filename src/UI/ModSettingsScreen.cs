@@ -81,12 +81,12 @@ namespace HannibalAI.UI
     public class ModSettingsScreen
     {
         private readonly GauntletLayer _layer;
-        
+
         public ModSettingsScreen(GauntletLayer layer)
         {
             _layer = layer;
         }
-        
+
         public void OnFinalize()
         {
             if (_layer != null)
