@@ -40,9 +40,9 @@ namespace HannibalAI
             // Get position components safely without direct type conversions
             try
             {
-                float x = formation.CurrentPosition.AsVec2.x;
-                float y = formation.CurrentPosition.AsVec2.y;
-                return new Vec3(x, y, 0f);
+                // Access x and y directly from the Vec2
+                Vec2 pos2d = formation.CurrentPosition.AsVec2;
+                return new Vec3(pos2d.x, pos2d.y, 0f);
             }
             catch
             {
@@ -63,9 +63,9 @@ namespace HannibalAI
             // Get position components safely without direct type conversions
             try 
             {
-                float x = agent.Position.AsVec2.x;
-                float y = agent.Position.AsVec2.y;
-                return new Vec3(x, y, 0f);
+                // Access x and y directly from the Vec2
+                Vec2 pos2d = agent.Position.AsVec2;
+                return new Vec3(pos2d.x, pos2d.y, 0f);
             }
             catch
             {
