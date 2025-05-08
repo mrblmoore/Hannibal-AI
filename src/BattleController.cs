@@ -135,7 +135,7 @@ namespace HannibalAI
                 if (ModConfig.Instance.Debug)
                 {
                     InformationManager.DisplayMessage(new InformationMessage(
-                        $"Debug Mode: ON - Press F5 for settings", Color.FromUint(0xFFFF00)));
+                        $"Debug Mode: ON - Press INSERT for settings", Color.FromUint(0xFFFF00)));
                     InformationManager.DisplayMessage(new InformationMessage(
                         $"Formations controlled: {_playerTeam.FormationsIncludingEmpty.Count}", Color.FromUint(0xFFFF00)));
                 }
@@ -163,12 +163,20 @@ namespace HannibalAI
                 if (_isPlayerInPlayerTeam)
                 {
                     // Display active AI status at battle start for player awareness
-                    if (Mission.Current.CurrentTime < 3.0f)
+                    if (Mission.Current.CurrentTime < 1.0f)
                     {
+                        // First notification - large and noticeable
                         InformationManager.DisplayMessage(new InformationMessage(
-                            "HannibalAI active - Press F5 for settings", Color.FromUint(0x33FF33)));
+                            "=== HANNIBAL AI ACTIVE ===", Color.FromUint(0xFFCC00)));
                         
                         Logger.Instance.Info("HannibalAI is running in this battle");
+                    }
+                    
+                    // Second notification with more details
+                    if (Mission.Current.CurrentTime > 2.0f && Mission.Current.CurrentTime < 2.5f)
+                    {
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            "HannibalAI active - Press INSERT for settings", Color.FromUint(0x33FF33)));
                     }
                     
                     // Run the AI update for friendly team
@@ -197,10 +205,18 @@ namespace HannibalAI
                         ExecuteAIDecisions(enemyOrders, aggressionFactor);
                         
                         // Display an immediate notification that enemy AI is active (first 5 seconds of battle)
-                        if (Mission.Current.CurrentTime < 5.0f)
+                        if (Mission.Current.CurrentTime < 1.0f)
                         {
                             InformationManager.DisplayMessage(new InformationMessage(
                                 "HannibalAI is controlling enemy formations", Color.FromUint(0xFF3333)));
+                        }
+                        
+                        // Repeat notification after 3 seconds for visibility
+                        if (Mission.Current.CurrentTime > 3.0f && Mission.Current.CurrentTime < 3.5f)
+                        {
+                            InformationManager.DisplayMessage(new InformationMessage(
+                                "HannibalAI active - Enemy AI using " + enemyApproach.RecommendedTactic.ToString() + " tactics", 
+                                Color.FromUint(0xFF3333)));
                         }
 
                         // Show enemy AI control status periodically (every 30 seconds)

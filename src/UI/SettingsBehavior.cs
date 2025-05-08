@@ -24,8 +24,8 @@ namespace HannibalAI.UI
         public override void OnMissionTick(float dt)
         {
             // Check for key press to open settings
-            if (Input.IsKeyPressed(InputKey.F5) || 
-                (Input.IsKeyPressed(InputKey.F5) && Input.IsKeyDown(InputKey.LeftAlt)))
+            if (Input.IsKeyPressed(InputKey.Insert) || 
+                (Input.IsKeyPressed(InputKey.Insert) && Input.IsKeyDown(InputKey.LeftAlt)))
             {
                 Logger.Instance.Info("Settings key pressed - attempting to toggle settings screen");
                 ToggleSettings();
@@ -57,7 +57,7 @@ namespace HannibalAI.UI
                     _isSettingsOpen = true;
 
                     InformationManager.DisplayMessage(
-                        new InformationMessage("HannibalAI Settings Opened (F5 or Alt+F5 to close)", Color.FromUint(0x00FF00)));
+                        new InformationMessage("HannibalAI Settings Opened (Press Insert to close)", Color.FromUint(0x00FF00)));
                     
                     Logger.Instance.Info("Settings screen created successfully");
                 }

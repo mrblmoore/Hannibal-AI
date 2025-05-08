@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Prefab>
+  <Window>
+    <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent">
+      <Children>
+        <Standard.Window DoNotPassEventsToChildren="true" WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" SuggestedWidth="500" SuggestedHeight="600" HorizontalAlignment="Center" VerticalAlignment="Center" MarginTop="30">
+          <Children>
+            <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" StackLayout.LayoutMethod="VerticalBottomToTop">
+              <Children>
+                <!-- Title -->
+                <TextWidget Text="HannibalAI Settings" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" HorizontalAlignment="Center" VerticalAlignment="Center" Brush.FontSize="28"/>
+                
+                <!-- Toggle Controls -->
+                <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="20">
+                  <Children>
+                    <CheckboxWidget DataSource="{AIControlsEnemies}" DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="32" SuggestedHeight="32" MarginLeft="10" />
+                    <TextWidget Text="AI Controls Enemy Formations" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="50" />
+                  </Children>
+                </ListPanel>
+                
+                <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="10">
+                  <Children>
+                    <CheckboxWidget DataSource="{UseCommanderMemory}" DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="32" SuggestedHeight="32" MarginLeft="10" />
+                    <TextWidget Text="Use Commander Memory (Nemesis System)" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="50" />
+                  </Children>
+                </ListPanel>
+                
+                <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="10">
+                  <Children>
+                    <CheckboxWidget DataSource="{Debug}" DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="32" SuggestedHeight="32" MarginLeft="10" />
+                    <TextWidget Text="Debug Mode" WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="50" />
+                  </Children>
+                </ListPanel>
+                
+                <!-- Aggressiveness Slider -->
+                <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="20">
+                  <Children>
+                    <TextWidget Text="AI Aggressiveness:" WidthSizePolicy="Fixed" HeightSizePolicy="CoverChildren" SuggestedWidth="150" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="10" />
+                    <TextWidget Text="{AggressivenessText}" WidthSizePolicy="Fixed" HeightSizePolicy="CoverChildren" SuggestedWidth="50" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                  </Children>
+                </ListPanel>
+                
+                <SliderWidget DataSource="{Aggressiveness}" WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="32" MinValue="0" MaxValue="100" MarginLeft="10" MarginRight="10" MarginTop="5" />
+                
+                <!-- Buttons -->
+                <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" MarginTop="30" MarginBottom="10">
+                  <Children>
+                    <ButtonWidget Command.Click="ExecuteResetDefaults" DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="120" SuggestedHeight="40" HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="20">
+                      <Children>
+                        <TextWidget Text="Reset Defaults" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Children>
+                    </ButtonWidget>
+                    
+                    <ButtonWidget Command.Click="ExecuteClose" DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="100" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Center" MarginRight="20">
+                      <Children>
+                        <TextWidget Text="Close" WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Children>
+                    </ButtonWidget>
+                  </Children>
+                </ListPanel>
+                
+              </Children>
+            </ListPanel>
+          </Children>
+        </Standard.Window>
+      </Children>
+    </Widget>
+  </Window>
+</Prefab>

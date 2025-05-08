@@ -18,8 +18,8 @@ if [ ! "$(ls -A lib/*.dll 2>/dev/null)" ]; then
     echo "Run ./download-dependencies.sh to download dependencies or add them manually."
 fi
 
-# Create bin directory if it doesn't exist
-mkdir -p bin
+# Create bin directory and Win64_Shipping_Client directory if they don't exist
+mkdir -p bin/Win64_Shipping_Client
 
 # Build the project
 echo "Compiling C# code..."
@@ -31,9 +31,22 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Copy SubModule.xml to bin
+# Copy files to Win64_Shipping_Client directory (this is where Bannerlord looks for DLLs)
+echo "Copying files to Win64_Shipping_Client directory..."
+cp bin/HannibalAI.dll bin/Win64_Shipping_Client/
+cp bin/HannibalAI.pdb bin/Win64_Shipping_Client/
+
+# Copy SubModule.xml to bin root directory
 echo "Copying SubModule.xml to bin directory..."
 cp SubModule.xml bin/
+cp SubModule.xml bin/Win64_Shipping_Client/
+
+# Copy GUI folder to bin directory if it exists
+if [ -d "GUI" ]; then
+    echo "Copying GUI files..."
+    mkdir -p bin/GUI
+    cp -r GUI/* bin/GUI/
+fi
 
 echo "Build completed successfully."
 echo "Output files are located in the bin directory."

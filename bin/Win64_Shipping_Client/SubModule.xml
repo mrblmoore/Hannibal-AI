@@ -28,5 +28,12 @@
             </Tags>
         </SubModule>
     </SubModules>
-    <Xmls/>
+    <Xmls>
+        <XmlNode>
+            <XmlName id="UIExtenderCanvasTypes" path="GUI"/>
+        </XmlNode>
+        <XmlNode>
+            <XmlName id="Screens" path="GUI"/>
+        </XmlNode>
+    </Xmls>
 </Module>

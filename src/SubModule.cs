@@ -67,7 +67,7 @@ namespace HannibalAI
                     // Log available commands
                     if (_config.Debug)
                     {
-                        InformationManager.DisplayMessage(new InformationMessage("Press F5 to open HannibalAI settings"));
+                        InformationManager.DisplayMessage(new InformationMessage("Press INSERT key to open HannibalAI settings"));
                     }
                 }
             }
