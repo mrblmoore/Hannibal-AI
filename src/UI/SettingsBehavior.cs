@@ -24,8 +24,10 @@ namespace HannibalAI.UI
         public override void OnMissionTick(float dt)
         {
             // Check for key press to open settings
-            if (Input.IsKeyPressed(InputKey.F5))
+            if (Input.IsKeyPressed(InputKey.F5) || 
+                (Input.IsKeyPressed(InputKey.F5) && Input.IsKeyDown(InputKey.LeftAlt)))
             {
+                Logger.Instance.Info("Settings key pressed - attempting to toggle settings screen");
                 ToggleSettings();
             }
         }
@@ -44,17 +46,27 @@ namespace HannibalAI.UI
 
         private void OpenSettings()
         {
-            if (_settingsScreen == null)
+            try
             {
-                var layer = new GauntletLayer(1000);
-                var vm = new ModSettingsViewModel(ModConfig.Instance, null);
-                layer.LoadMovie("HannibalAI_Settings", vm);
-                MissionScreen.AddLayer(layer);
-                _settingsScreen = new ModSettingsScreen(layer);
-                _isSettingsOpen = true;
+                if (_settingsScreen == null)
+                {
+                    Logger.Instance.Info("Creating settings screen");
+                    var layer = new GauntletLayer(1000);
+                    _settingsScreen = new ModSettingsScreen(layer);
+                    _settingsScreen.Initialize();
+                    _isSettingsOpen = true;
 
+                    InformationManager.DisplayMessage(
+                        new InformationMessage("HannibalAI Settings Opened (F5 or Alt+F5 to close)", Color.FromUint(0x00FF00)));
+                    
+                    Logger.Instance.Info("Settings screen created successfully");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Failed to open settings: {ex.Message}");
                 InformationManager.DisplayMessage(
-                    new InformationMessage("HannibalAI Settings Opened", Color.FromUint(0x00FF00)));
+                    new InformationMessage($"Failed to open settings: {ex.Message}", Color.FromUint(0xFF0000)));
             }
         }
 

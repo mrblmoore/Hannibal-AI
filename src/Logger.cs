@@ -109,13 +109,28 @@ namespace HannibalAI
             {
                 using (StreamWriter writer = new StreamWriter(_logFilePath, true))
                 {
-                    writer.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{level}] {message}");
+                    string threadId = System.Threading.Thread.CurrentThread.ManagedThreadId.ToString();
+                    string category = GetCategory();
+                    writer.WriteLine($"[{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff}] [{level}] [Thread:{threadId}] [{category}] {message}");
+                    writer.Flush();
                 }
             }
-            catch
+            catch (Exception ex)
             {
-                // Silently fail - don't cause game issues if logging fails
+                InformationManager.DisplayMessage(new InformationMessage($"Logging failed: {ex.Message}", Color.FromUint(0xFF0000)));
             }
+        }
+
+        private string GetCategory()
+        {
+            System.Diagnostics.StackTrace stackTrace = new System.Diagnostics.StackTrace();
+            var frames = stackTrace.GetFrames();
+            if (frames != null && frames.Length >= 4)
+            {
+                var method = frames[3].GetMethod();
+                return method.DeclaringType?.Name ?? "Unknown";
+            }
+            return "Unknown";
         }
         
         /// <summary>
