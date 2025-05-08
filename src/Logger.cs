@@ -29,7 +29,7 @@ namespace HannibalAI
         private Logger(ModConfig config)
         {
             _config = config;
-            _logFilePath = Path.Combine(GetModuleRootPath(), "HannibalAI.log");
+            _logFilePath = "HannibalAI.log";
             
             // Create or clear the log file
             try
