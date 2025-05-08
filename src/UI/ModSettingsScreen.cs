@@ -78,6 +78,12 @@ namespace HannibalAI.UI
             // Display a message when settings are opened
             Logger.Instance.Info("HannibalAI settings opened");
             
+            if (_layer != null)
+            {
+                _layer.LoadMovie("GUI/HannibalAI_Settings", _dataSource);
+                Logger.Instance.Info("Loaded GauntletUI movie");
+            }
+            
             // Make sure UI is visible
             _dataSource.IsVisible = true;
             
