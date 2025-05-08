@@ -37,10 +37,17 @@ namespace HannibalAI
                 return Vec3.Zero;
             }
             
-            // Extract 2D position directly without conversion to avoid compatibility issues
-            WorldPosition worldPos = formation.CurrentPosition;
-            Vec2 pos2d = worldPos.AsVec2;
-            return new Vec3(pos2d.x, pos2d.y, 0f);
+            // Get position components safely without direct type conversions
+            try
+            {
+                float x = formation.CurrentPosition.AsVec2.x;
+                float y = formation.CurrentPosition.AsVec2.y;
+                return new Vec3(x, y, 0f);
+            }
+            catch
+            {
+                return Vec3.Zero;
+            }
         }
         
         /// <summary>
@@ -53,10 +60,17 @@ namespace HannibalAI
                 return Vec3.Zero;
             }
             
-            // Extract 2D position directly without conversion to avoid compatibility issues
-            WorldPosition worldPos = agent.Position;
-            Vec2 pos2d = worldPos.AsVec2;
-            return new Vec3(pos2d.x, pos2d.y, 0f);
+            // Get position components safely without direct type conversions
+            try 
+            {
+                float x = agent.Position.AsVec2.x;
+                float y = agent.Position.AsVec2.y;
+                return new Vec3(x, y, 0f);
+            }
+            catch
+            {
+                return Vec3.Zero;
+            }
         }
         
         /// <summary>
