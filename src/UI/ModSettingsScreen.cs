@@ -2,6 +2,7 @@ using System;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
+using TaleWorlds.Engine.GauntletUI;
 
 namespace HannibalAI.UI
 {
@@ -11,11 +12,20 @@ namespace HannibalAI.UI
     public class ModSettingsScreen
     {
         private ModSettingsViewModel _dataSource;
+        private GauntletLayer _layer;
         
-        // Use a simple approach instead of GauntletUI for compatibility
+        // Default constructor for simple implementation
         public ModSettingsScreen()
         {
             // Create the view model with config
+            _dataSource = new ModSettingsViewModel(ModConfig.Instance, OnClose);
+            _layer = null;
+        }
+        
+        // Constructor with GauntletLayer for UI implementation
+        public ModSettingsScreen(GauntletLayer layer)
+        {
+            _layer = layer;
             _dataSource = new ModSettingsViewModel(ModConfig.Instance, OnClose);
         }
         
@@ -62,6 +72,19 @@ namespace HannibalAI.UI
             }
         }
         
+        public void OnFinalize()
+        {
+            // Handle layer cleanup if using GauntletUI
+            if (_layer != null)
+            {
+                _layer.InputRestrictions.ResetInputRestrictions();
+                MissionScreen.RemoveLayer(_layer);
+            }
+            
+            // Clean up data source
+            CleanUp();
+        }
+        
         // Close callback
         private void OnClose()
         {
@@ -69,31 +92,7 @@ namespace HannibalAI.UI
             ModConfig.Instance.SaveSettings();
             
             // Clean up
-            CleanUp();
-        }
-    }
-}
-using TaleWorlds.Engine.GauntletUI;
-using TaleWorlds.Library;
-
-namespace HannibalAI.UI
-{
-    public class ModSettingsScreen
-    {
-        private readonly GauntletLayer _layer;
-
-        public ModSettingsScreen(GauntletLayer layer)
-        {
-            _layer = layer;
-        }
-
-        public void OnFinalize()
-        {
-            if (_layer != null)
-            {
-                _layer.InputRestrictions.ResetInputRestrictions();
-                MissionScreen.RemoveLayer(_layer);
-            }
+            OnFinalize();
         }
     }
 }
