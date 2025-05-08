@@ -128,9 +128,17 @@ namespace HannibalAI
                 InformationManager.DisplayMessage(new InformationMessage(
                     "HannibalAI activated!", Color.FromUint(0x00FF00)));
 
-                // Show information message to player
+                // Show detailed status messages
                 InformationManager.DisplayMessage(new InformationMessage(
-                    $"HannibalAI Active: {(ModConfig.Instance.AIControlsEnemies ? "Controlling All Forces" : "Friendly Forces Only")}"));
+                    $"HannibalAI Active: {(ModConfig.Instance.AIControlsEnemies ? "Controlling All Forces" : "Friendly Forces Only")}", Color.FromUint(0x00FF00)));
+                
+                if (ModConfig.Instance.Debug)
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"Debug Mode: ON - Press F5 for settings", Color.FromUint(0xFFFF00)));
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"Formations controlled: {_playerTeam.FormationsCount}", Color.FromUint(0xFFFF00)));
+                }
 
                 // Log terrain features if in debug mode
                 if (ModConfig.Instance.Debug && terrainFeatures.Count > 0)
