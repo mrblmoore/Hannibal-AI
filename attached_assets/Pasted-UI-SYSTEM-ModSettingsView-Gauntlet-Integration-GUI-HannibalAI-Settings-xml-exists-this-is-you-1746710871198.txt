@@ -1,0 +1,57 @@
+UI SYSTEM (ModSettingsView, Gauntlet Integration)
+✅ GUI/HannibalAI_Settings.xml exists → this is your XML for UI.
+
+❌ Missing ModSettingsView.cs in the codebase directory.
+I couldn’t locate UI/ModSettingsView.cs in the extracted files. This is critical because the error you had earlier was due to missing references to TaleWorlds.Engine.GauntletUI, GauntletLayer, etc.
+
+👉 Likely cause why UI doesn’t show in-game:
+
+ModSettingsView.cs might have not been properly committed to Git or was overwritten.
+
+GUI/HannibalAI_Settings.xml is present but no C# code is loading it.
+
+No registration of GauntletLayer or injection of UI view model in SubModule.
+
+✅ Found SubModule.xml and it references HannibalAI.dll → that part is fine.
+
+🔍 FIXES REQUIRED:
+✅ Ensure ModSettingsView.cs is in /UI/ and fully implemented.
+✅ In SubModule.cs, check if Loading or OnMissionBehaviorInitialize adds the Gauntlet layer.
+✅ Verify that ViewModel is created and bound to XML.
+
+📝 2️⃣ MEMORY SYSTEM (CommanderMemoryService.cs)
+✅ CommanderMemoryService.cs exists in /Services/.
+
+✅ Contains methods for GetMemory, StoreMemory.
+
+❌ No calls or references found in AICommander or BattleController or AIService.
+
+👉 Likely cause why it isn’t storing/using memory:
+
+Methods are implemented but no other class is actually calling them → so memory isn’t written or retrieved.
+
+🔍 FIXES REQUIRED:
+✅ Add hooks in AICommander.MakeDecision or AIService.ProcessBattleSnapshot to call StoreMemory and GetMemory.
+✅ Consider passing formationId or commanderId to memory functions.
+✅ Add logging in StoreMemory/GetMemory to validate when they trigger.
+
+📝 3️⃣ AI INTEGRATION (AICommander, AIService, FallbackService)
+✅ AICommander.cs → exists in /Battle/ with MoveFormation, ChangeFormation, FlankEnemy, etc.
+
+✅ AIService.cs → exists in /Services/ with ProcessBattleSnapshot defined.
+
+✅ FallbackService.cs → exists in /Services/ with GetFallbackDecision.
+
+🚩 AICommander.MakeDecision() has 0 references in scan → nothing is calling it → AI isn’t being triggered!
+
+🚩 AIService.ProcessBattleSnapshot() only called inside itself → no other class triggers it.
+
+👉 Likely cause AI isn’t executing:
+
+SubModule.cs or BattleController isn’t calling these service methods during mission.
+
+🔍 FIXES REQUIRED:
+✅ Add call in MissionBehavior.OnMissionTick() (or equivalent) to call AIService.ProcessBattleSnapshot.
+✅ From there, chain AICommander.MakeDecision → BattleController.ExecuteAIDecision.
+✅ Validate that ExecuteAIDecision triggers actual in-game formation commands.
+

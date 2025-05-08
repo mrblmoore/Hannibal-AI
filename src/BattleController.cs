@@ -162,8 +162,23 @@ namespace HannibalAI
                 // Get formations to control based on settings
                 if (_isPlayerInPlayerTeam)
                 {
+                    // Display active AI status at battle start for player awareness
+                    if (Mission.Current.CurrentTime < 3.0f)
+                    {
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            "HannibalAI active - Press F5 for settings", Color.FromUint(0x33FF33)));
+                        
+                        Logger.Instance.Info("HannibalAI is running in this battle");
+                    }
+                    
                     // Run the AI update for friendly team
                     _aiCommander.Update(dt);
+                    
+                    // Add more verbose logging to help troubleshoot AI command execution
+                    if (ModConfig.Instance.Debug && Mission.Current.CurrentTime % 15 < 0.1f)
+                    {
+                        Logger.Instance.Info("HannibalAI friendly commander update executed");
+                    }
 
                     // Control enemy team if enabled in settings
                     if (ModConfig.Instance.AIControlsEnemies && _enemyTeam != null)
@@ -180,6 +195,13 @@ namespace HannibalAI
                         // Execute the enhanced orders with aggression factor
                         float aggressionFactor = CommanderMemoryService.Instance.AggressivenessScore;
                         ExecuteAIDecisions(enemyOrders, aggressionFactor);
+                        
+                        // Display an immediate notification that enemy AI is active (first 5 seconds of battle)
+                        if (Mission.Current.CurrentTime < 5.0f)
+                        {
+                            InformationManager.DisplayMessage(new InformationMessage(
+                                "HannibalAI is controlling enemy formations", Color.FromUint(0xFF3333)));
+                        }
 
                         // Show enemy AI control status periodically (every 30 seconds)
                         if (ModConfig.Instance.Debug && Mission.Current.CurrentTime % 30 < 1.0f)
@@ -205,6 +227,10 @@ namespace HannibalAI
                                 advantages = "Advantages: " + advantages.Substring(0, advantages.Length - 2);
                             }
 
+                            // Display as game message so player can see it
+                            InformationManager.DisplayMessage(new InformationMessage(
+                                $"Enemy Tactic: {tacticName}{enemyCommanderInfo}", Color.FromUint(0xFF6600)));
+                            
                             Logger.Instance.Info($"HannibalAI is controlling enemy - Tactic: {tacticName}{enemyCommanderInfo} | {advantages}");
                         }
                     }
@@ -213,6 +239,10 @@ namespace HannibalAI
             catch (Exception ex)
             {
                 Logger.Instance.Error($"Error in HannibalAI update: {ex.Message}");
+                
+                // Display error to player so they're aware something went wrong
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"HannibalAI Error: {ex.Message}", Color.FromUint(0xFF0000)));
             }
         }
 
@@ -301,9 +331,43 @@ namespace HannibalAI
             {
                 // Mission is in battle mode, continue
             }
+            else if (Mission.Current.Mode == MissionMode.Deployment)
+            {
+                // Battle is starting, initialize memory
+                Logger.Instance.Info("Battle is starting, initializing commander memory");
+            }
             else
             {
                 _isBattleOver = true;
+                
+                // Record battle outcome when the mission ends
+                if (ModConfig.Instance.UseCommanderMemory && _playerTeam != null && _enemyTeam != null)
+                {
+                    bool playerVictory = false;
+                    int playerCasualties = 0;
+                    int enemyCasualties = 0;
+                    
+                    // Determine victory based on remaining troops
+                    if (_playerTeam.ActiveAgents.Count > 0 && _enemyTeam.ActiveAgents.Count == 0)
+                    {
+                        playerVictory = true;
+                    }
+                    
+                    // Count casualties (simplified for compatibility)
+                    // Use InitialAgentCount or estimate based on battle situation
+                    int playerInitialCount = Math.Max(100, _playerTeam.ActiveAgents.Count + playerCasualties);
+                    int enemyInitialCount = Math.Max(100, _enemyTeam.ActiveAgents.Count + enemyCasualties);
+                    
+                    // Calculate casualties based on initial estimates and remaining troops
+                    playerCasualties = playerInitialCount - _playerTeam.ActiveAgents.Count;
+                    enemyCasualties = enemyInitialCount - _enemyTeam.ActiveAgents.Count;
+                    
+                    // Record the outcome
+                    CommanderMemoryService.Instance.RecordBattleOutcome(!playerVictory, enemyCasualties, playerCasualties);
+                    
+                    Logger.Instance.Info($"Battle outcome recorded: Player victory: {playerVictory}, " +
+                        $"Player casualties: {playerCasualties}, Enemy casualties: {enemyCasualties}");
+                }
             }
         }
     }

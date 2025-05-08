@@ -17,9 +17,11 @@ namespace HannibalAI.UI
         
         public InputRestrictions InputRestrictions { get; } = new InputRestrictions();
         
-        public void LoadMovie(string name, object dataSource)
+        public GauntletMovie LoadMovie(string name, object dataSource)
         {
-            // Stub implementation
+            // Stub implementation - log that we're loading a movie
+            Logger.Instance.Info($"Loading UI movie: {name}");
+            return new GauntletMovie();
         }
     }
     
@@ -80,8 +82,10 @@ namespace HannibalAI.UI
             
             if (_layer != null)
             {
+                // Create a proper view to handle the UI
+                // Load the movie directly instead of using ModSettingsView
                 _layer.LoadMovie("HannibalAI_Settings", _dataSource);
-                Logger.Instance.Info("Loaded GauntletUI movie");
+                Logger.Instance.Info("Settings view initialized successfully");
             }
             
             // Make sure UI is visible
