@@ -80,7 +80,7 @@ namespace HannibalAI.UI
             
             if (_layer != null)
             {
-                _layer.LoadMovie("GUI/HannibalAI_Settings", _dataSource);
+                _layer.LoadMovie("HannibalAI_Settings", _dataSource);
                 Logger.Instance.Info("Loaded GauntletUI movie");
             }
             

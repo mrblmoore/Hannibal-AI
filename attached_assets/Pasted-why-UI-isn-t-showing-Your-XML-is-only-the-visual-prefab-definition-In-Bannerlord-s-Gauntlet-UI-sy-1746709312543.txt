@@ -1,0 +1,113 @@
+why UI isn’t showing):
+Your XML is only the visual prefab definition.
+In Bannerlord’s Gauntlet UI system, you still need:
+
+A ViewModel class exposing:
+
+AIControlsEnemies (bool, bound to the checkbox)
+
+UseCommanderMemory (bool, bound to the checkbox)
+
+Debug (bool, bound to the checkbox)
+
+Aggressiveness (int/float, bound to the slider)
+
+AggressivenessText (string, derived display text from Aggressiveness)
+
+ExecuteResetDefaults() method
+
+ExecuteClose() method
+
+A View registration (to load this XML + bind it to your ViewModel)
+
+Typically happens in your SubModule.cs → GauntletMovie creation.
+
+👉 Without the ViewModel class and View binding code, the UI won’t appear even though the XML is correct.
+
+📝 How to proceed:
+✅ 1. Create a ViewModel class (e.g., ModSettingsViewModel.cs):
+Example:
+
+csharp
+Copy
+Edit
+using TaleWorlds.Library;
+using TaleWorlds.MountAndBlade.ViewModelCollection.Gauntlet;
+
+namespace HannibalAI.UI
+{
+    public class ModSettingsViewModel : ViewModel
+    {
+        private bool _aiControlsEnemies;
+        private bool _useCommanderMemory;
+        private bool _debug;
+        private int _aggressiveness;
+
+        public bool AIControlsEnemies
+        {
+            get => _aiControlsEnemies;
+            set { if (value != _aiControlsEnemies) { _aiControlsEnemies = value; OnPropertyChanged(nameof(AIControlsEnemies)); } }
+        }
+
+        public bool UseCommanderMemory
+        {
+            get => _useCommanderMemory;
+            set { if (value != _useCommanderMemory) { _useCommanderMemory = value; OnPropertyChanged(nameof(UseCommanderMemory)); } }
+        }
+
+        public bool Debug
+        {
+            get => _debug;
+            set { if (value != _debug) { _debug = value; OnPropertyChanged(nameof(Debug)); } }
+        }
+
+        public int Aggressiveness
+        {
+            get => _aggressiveness;
+            set { if (value != _aggressiveness) { _aggressiveness = value; OnPropertyChanged(nameof(Aggressiveness)); OnPropertyChanged(nameof(AggressivenessText)); } }
+        }
+
+        public string AggressivenessText => $"{Aggressiveness}%";
+
+        public void ExecuteResetDefaults()
+        {
+            AIControlsEnemies = true;
+            UseCommanderMemory = true;
+            Debug = false;
+            Aggressiveness = 50;
+        }
+
+        public void ExecuteClose()
+        {
+            // Logic to close UI
+        }
+
+        public ModSettingsViewModel()
+        {
+            ExecuteResetDefaults();
+        }
+    }
+}
+✅ 2. Register the UI in SubModule.cs or where appropriate:
+csharp
+Copy
+Edit
+var movie = GauntletUIManager.LoadMovie("HannibalAI_Settings", new ModSettingsViewModel());
+➡️ This loads HannibalAI_Settings.xml (your prefab) and binds it to the ModSettingsViewModel instance.
+
+🔍 Why it matters:
+Without ViewModel binding and loading code, the UI prefab is just a “design file” that doesn’t get instantiated.
+
+✅ Next steps:
+Implement ModSettingsViewModel.cs (or confirm if you already have it)
+
+Add the GauntletUIManager.LoadMovie() code into a spot like OnGameStart() or triggered by a hotkey/menu
+
+Verify your project references include:
+
+TaleWorlds.Engine.GauntletUI
+
+TaleWorlds.MountAndBlade.GauntletUI
+
+TaleWorlds.Library
+
