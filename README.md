@@ -1,46 +1,44 @@
+
 # HannibalAI - Mount & Blade II: Bannerlord Mod
 
-A custom AI system that controls battle formations in Bannerlord.
+An advanced AI mod that enhances battle tactics and unit control using intelligent decision-making.
 
-## Project Setup in Replit
+## Current Features
+- Dynamic formation control system
+- Basic tactical decision making
+- Formation movement and positioning
+- Battle state analysis
+- Weather and terrain consideration
+- Basic logging system
 
-This repository is configured for development in Replit with strategies for handling Bannerlord's external dependencies.
+## Installation
+1. Download the latest release
+2. Extract to your Bannerlord Modules folder
+3. Enable the mod in the launcher
 
-### Directory Structure
+## Usage
+- The mod activates automatically in battles
+- Press F5 during battle to access settings
+- Green message indicates AI is active
+- Formations will be controlled based on tactical analysis
 
-- `src/` - Contains the main mod code
-- `lib/` - Place for Bannerlord game DLLs (must be added manually)
-- `stubs/` - Stub implementations of game types for compilation
-- `Properties/` - Assembly metadata
-- `SubModule.xml` - Mod definition file for Bannerlord
-- Build scripts for dependency management and compilation
+## Configuration
+Edit `hannibal_ai_config.json` to customize:
+- Debug mode
+- AI aggressiveness
+- Formation preferences
+- Terrain analysis weight
 
-### Development Workflow
+## Known Issues
+- Settings UI may need refresh (F5 twice)
+- Some advanced features in development
 
-1. **First-time setup**: 
-   - Run `./download-dependencies.sh` to fetch compatible DLLs
-   - Place the downloaded DLLs in the `lib/` directory
+## Upcoming Features
+- Enhanced commander memory system
+- Advanced UI configuration
+- Improved fallback tactics
+- Extended formation controls
 
-2. **Build the mod**:
-   - Run `./build.sh` to compile the project
-   - Output will be in the `bin/` directory
-
-3. **Verification**:
-   - Run `./verify-mod.sh` to check mod structure integrity
-
-### Handling Dependencies
-
-This project uses a hybrid approach for managing Bannerlord dependencies:
-- Reference DLLs in the `lib/` folder for compilation
-- Stub implementations in `stubs/` for missing types
-- Compatible with both Replit and local development
-
-### Using With Bannerlord
-
-To use the compiled mod:
-1. Copy the output from the `bin/` directory to your Bannerlord Modules folder
-2. Ensure the folder structure matches Bannerlord's module requirements
-
-## GitHub Repository
-
-The latest code is available at: https://github.com/mrblmoore/Hannibal-AI
+## Requirements
+- Mount & Blade II: Bannerlord (latest version)
+- .NET Framework 4.7.2+

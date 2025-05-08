@@ -125,6 +125,9 @@ namespace HannibalAI
                     "HannibalAI is controlling friendly formations only";
                 Logger.Instance.Info(aiControlStatus);
                 
+                InformationManager.DisplayMessage(new InformationMessage(
+                    "HannibalAI activated!", Color.FromUint(0x00FF00)));
+                
                 // Show information message to player
                 InformationManager.DisplayMessage(new InformationMessage(
                     $"HannibalAI Active: {(ModConfig.Instance.AIControlsEnemies ? "Controlling All Forces" : "Friendly Forces Only")}"));

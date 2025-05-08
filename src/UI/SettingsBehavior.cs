@@ -10,6 +10,19 @@ namespace HannibalAI.UI
     /// Mission behavior to handle settings UI activation
     /// </summary>
     public class SettingsBehavior : MissionBehavior
+{
+    public override void OnMissionTick(float dt)
+    {
+        if (Input.IsKeyPressed(InputKey.F5))
+        {
+            var layer = new GauntletLayer(1000);
+            var vm = new ModSettingsViewModel();
+            layer.LoadMovie("HannibalAI_Settings", vm);
+            MissionScreen.AddLayer(layer);
+            InformationManager.DisplayMessage(new InformationMessage("HannibalAI Settings Opened"));
+        }
+    }
+}
     {
         private ModSettingsScreen _settingsScreen;
         private bool _isSettingsOpen;
