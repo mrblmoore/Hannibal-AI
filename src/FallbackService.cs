@@ -13,58 +13,61 @@ namespace HannibalAI
     {
         private readonly ModConfig _config;
         private readonly AIService _aiService;
-        
+        private static FallbackService _instance;
+        public static FallbackService Instance => _instance ??= new FallbackService();
+
+
         public FallbackService(ModConfig config, AIService aiService)
         {
             _config = config;
             _aiService = aiService;
         }
-        
+
         /// <summary>
         /// Generate fallback formation orders when primary decision making fails
         /// </summary>
         public List<FormationOrder> GenerateFallbackOrders(Team team, Team enemyTeam)
         {
             List<FormationOrder> fallbackOrders = new List<FormationOrder>();
-            
+
             try
             {
                 if (team == null || team.FormationsIncludingEmpty == null || team.FormationsIncludingEmpty.Count == 0)
                 {
                     return fallbackOrders;
                 }
-                
+
                 // Determine team situation
                 bool isDefensive = ShouldDefend(team, enemyTeam);
-                
+
                 // Get various formation types
                 List<Formation> infantryFormations = GetFormationsByClass(team, FormationClass.Infantry);
                 List<Formation> rangedFormations = GetFormationsByClass(team, FormationClass.Ranged);
                 List<Formation> cavalryFormations = GetFormationsByClass(team, FormationClass.Cavalry);
-                
+
                 // Apply nemesis system influence if enabled
                 bool preferFlankingOverCharge = false;
                 bool preferDefensivePositioning = false;
-                
+
                 if (_config.UseCommanderMemory && CommanderMemoryService.Instance.TimesDefeatedPlayer >= 3)
                 {
                     // Commander who has defeated player 3+ times adapts tactics
                     preferFlankingOverCharge = true;
-                    
+
                     // Commander with vendetta is more aggressive
                     if (CommanderMemoryService.Instance.HasVendettaAgainstPlayer)
                     {
                         isDefensive = false;
                     }
                 }
-                
+
                 // Less aggressive commanders prefer defensive positioning
                 if (_config.UseCommanderMemory && CommanderMemoryService.Instance.AggressivenessScore < 0.4f)
                 {
                     preferDefensivePositioning = true;
                     isDefensive = true;
                 }
-                
+
                 // Generate basic orders based on formation type
                 if (isDefensive)
                 {
@@ -74,13 +77,13 @@ namespace HannibalAI
                 {
                     GenerateOffensiveFallbackOrders(fallbackOrders, infantryFormations, rangedFormations, cavalryFormations, preferFlankingOverCharge);
                 }
-                
+
                 // If we have a preferred formation from memory, use it
                 if (_config.UseCommanderMemory && !string.IsNullOrEmpty(CommanderMemoryService.Instance.PreferredFormation))
                 {
                     ApplyPreferredFormation(fallbackOrders, CommanderMemoryService.Instance.PreferredFormation);
                 }
-                
+
                 // Log fallback scenario
                 if (_config.Debug)
                 {
@@ -91,10 +94,10 @@ namespace HannibalAI
             {
                 _aiService.LogError($"Error generating fallback orders: {ex.Message}");
             }
-            
+
             return fallbackOrders;
         }
-        
+
         /// <summary>
         /// Determine if team should use defensive tactics
         /// </summary>
@@ -104,20 +107,20 @@ namespace HannibalAI
             {
                 return true; // Default to defensive if missing data
             }
-            
+
             // Check unit count advantage
             int teamCount = CountActiveAgents(team);
             int enemyCount = CountActiveAgents(enemyTeam);
-            
+
             // Default defensiveness check
             bool isOutnumbered = teamCount < enemyCount;
-            
+
             // Apply commander memory if enabled
             if (_config.UseCommanderMemory)
             {
                 // More aggressive commanders are less likely to defend
                 float aggressionModifier = CommanderMemoryService.Instance.AggressivenessScore;
-                
+
                 // If significantly aggressive, might attack even when outnumbered
                 if (aggressionModifier > 0.7f)
                 {
@@ -129,10 +132,10 @@ namespace HannibalAI
                     isOutnumbered = teamCount < enemyCount * 0.8f;
                 }
             }
-            
+
             return isOutnumbered;
         }
-        
+
         /// <summary>
         /// Generate defensive fallback orders
         /// </summary>
@@ -154,7 +157,7 @@ namespace HannibalAI
                     AdditionalData = preferDefensivePositioning ? "ShieldWall" : "Line"
                 });
             }
-            
+
             // Ranged units in loose formation behind infantry
             foreach (var formation in rangedFormations)
             {
@@ -166,13 +169,13 @@ namespace HannibalAI
                     AdditionalData = "Loose"
                 });
             }
-            
+
             // Cavalry in reserve on the flanks
             foreach (var formation in cavalryFormations)
             {
                 FormationOrderType orderType = FormationOrderType.Move;
                 string formationType = "Column";
-                
+
                 // If extra defensive, keep cavalry in tighter formations
                 if (preferDefensivePositioning)
                 {
@@ -185,7 +188,7 @@ namespace HannibalAI
                     orderType = FormationOrderType.FormWedge;
                     formationType = "Wedge";
                 }
-                
+
                 orders.Add(new FormationOrder
                 {
                     OrderType = orderType,
@@ -195,7 +198,7 @@ namespace HannibalAI
                 });
             }
         }
-        
+
         /// <summary>
         /// Generate offensive fallback orders
         /// </summary>
@@ -217,7 +220,7 @@ namespace HannibalAI
                     AdditionalData = "Line"
                 });
             }
-            
+
             // Ranged units provide covering fire
             foreach (var formation in rangedFormations)
             {
@@ -229,7 +232,7 @@ namespace HannibalAI
                     AdditionalData = "Loose"
                 });
             }
-            
+
             // Cavalry charges or flanks based on strategy
             foreach (var formation in cavalryFormations)
             {
@@ -255,7 +258,7 @@ namespace HannibalAI
                 }
             }
         }
-        
+
         /// <summary>
         /// Apply preferred formation from commander memory
         /// </summary>
@@ -270,19 +273,19 @@ namespace HannibalAI
                 }
             }
         }
-        
+
         /// <summary>
         /// Get formations by class
         /// </summary>
         private List<Formation> GetFormationsByClass(Team team, FormationClass formationClass)
         {
             List<Formation> result = new List<Formation>();
-            
+
             if (team?.FormationsIncludingEmpty == null)
             {
                 return result;
             }
-            
+
             foreach (Formation formation in team.FormationsIncludingEmpty)
             {
                 // Skip empty formations
@@ -290,16 +293,16 @@ namespace HannibalAI
                 {
                     continue;
                 }
-                
+
                 if (formation.FormationIndex == formationClass)
                 {
                     result.Add(formation);
                 }
             }
-            
+
             return result;
         }
-        
+
         /// <summary>
         /// Count active agents in a team
         /// </summary>
@@ -309,8 +312,71 @@ namespace HannibalAI
             {
                 return 0;
             }
-            
+
             return team.ActiveAgents.Count;
+        }
+
+        public FormationOrder GetFallbackOrder(Formation formation)
+        {
+            if (formation == null) return null;
+
+            try
+            {
+                var currentPos = formation.CurrentPosition;
+                var fallbackPos = GetSafePosition(formation);
+
+                return new FormationOrder
+                {
+                    OrderType = FormationOrderType.Move,
+                    TargetFormation = formation,
+                    TargetPosition = fallbackPos,
+                    Urgency = 0.9f
+                };
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error in FallbackService: {ex.Message}");
+                return null;
+            }
+        }
+
+        private Vec3 GetSafePosition(Formation formation)
+        {
+            var currentPos = formation.CurrentPosition;
+            var team = formation.Team;
+
+            // Find position away from enemies
+            var safeDirection = GetSafeDirection(formation);
+            return currentPos + (safeDirection * 50f);
+        }
+
+        private Vec3 GetSafeDirection(Formation formation)
+        {
+            var enemyCenter = GetEnemyCenter(formation);
+            return (formation.CurrentPosition - enemyCenter).Normalized();
+        }
+
+        private Vec3 GetEnemyCenter(Formation formation)
+        {
+            var enemyTeam = formation.Team.IsAttacker ?
+                Mission.Current.DefenderTeam : Mission.Current.AttackerTeam;
+
+            if (enemyTeam == null || enemyTeam.Formations.Count == 0)
+                return formation.CurrentPosition;
+
+            Vec3 center = Vec3.Zero;
+            int count = 0;
+
+            foreach (var enemyFormation in enemyTeam.Formations)
+            {
+                if (enemyFormation.CountOfUnits > 0)
+                {
+                    center += enemyFormation.CurrentPosition;
+                    count++;
+                }
+            }
+
+            return count > 0 ? center / count : formation.CurrentPosition;
         }
     }
 }
