@@ -3,6 +3,7 @@ using TaleWorlds.Core;
 using TaleWorlds.InputSystem;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Library;
+using TaleWorlds.Engine.GauntletUI;
 
 namespace HannibalAI.UI
 {
@@ -10,30 +11,17 @@ namespace HannibalAI.UI
     /// Mission behavior to handle settings UI activation
     /// </summary>
     public class SettingsBehavior : MissionBehavior
-{
-    public override void OnMissionTick(float dt)
-    {
-        if (Input.IsKeyPressed(InputKey.F5))
-        {
-            var layer = new GauntletLayer(1000);
-            var vm = new ModSettingsViewModel();
-            layer.LoadMovie("HannibalAI_Settings", vm);
-            MissionScreen.AddLayer(layer);
-            InformationManager.DisplayMessage(new InformationMessage("HannibalAI Settings Opened"));
-        }
-    }
-}
     {
         private ModSettingsScreen _settingsScreen;
         private bool _isSettingsOpen;
-        
+
         public override MissionBehaviorType BehaviorType => MissionBehaviorType.Other;
-        
+
         public SettingsBehavior()
         {
             _isSettingsOpen = false;
         }
-        
+
         public override void OnMissionTick(float dt)
         {
             // Check for key press to open settings
@@ -42,8 +30,8 @@ namespace HannibalAI.UI
                 ToggleSettings();
             }
         }
-        
-        public void ToggleSettings()
+
+        private void ToggleSettings()
         {
             if (!_isSettingsOpen)
             {
@@ -54,33 +42,32 @@ namespace HannibalAI.UI
                 CloseSettings();
             }
         }
-        
+
         private void OpenSettings()
         {
-            // Create and initialize settings screen
-            _settingsScreen = new ModSettingsScreen();
-            _settingsScreen.Initialize();
-            _isSettingsOpen = true;
-            
-            // Show debug message
-            if (ModConfig.Instance.Debug)
+            if (_settingsScreen == null)
             {
-                Logger.Instance.Info("Press F5 to close HannibalAI settings");
+                var layer = new GauntletLayer(1000);
+                var vm = new ModSettingsViewModel();
+                layer.LoadMovie("HannibalAI_Settings", vm);
+                MissionScreen.AddLayer(layer);
+                _settingsScreen = new ModSettingsScreen(layer);
+                _isSettingsOpen = true;
+
+                InformationManager.DisplayMessage(
+                    new InformationMessage("HannibalAI Settings Opened", Color.FromUint(0x00FF00)));
             }
         }
-        
+
         private void CloseSettings()
         {
-            // Clean up settings screen
             if (_settingsScreen != null)
             {
-                _settingsScreen.CleanUp();
+                _settingsScreen.OnFinalize();
                 _settingsScreen = null;
+                _isSettingsOpen = false;
             }
-            
-            _isSettingsOpen = false;
         }
-        
         public override void OnRemoveBehavior()
         {
             CloseSettings();

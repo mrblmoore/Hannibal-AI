@@ -22,10 +22,10 @@ namespace HannibalAI
         private bool _isBattleOver;
         private Team _playerTeam;
         private Team _enemyTeam;
-        
+
         private float _updateTimer;
         private const float UPDATE_INTERVAL = 3.0f; // seconds between AI updates
-        
+
         public BattleController(AIService aiService)
         {
             _aiService = aiService;
@@ -33,27 +33,27 @@ namespace HannibalAI
             _isBattleOver = false;
             _updateTimer = 0f;
         }
-        
+
         public override MissionBehaviorType BehaviorType => MissionBehaviorType.Other;
-        
+
         /// <summary>
         /// Called when the mission is loaded
         /// </summary>
         public override void OnMissionTick(float dt)
         {
             base.OnMissionTick(dt);
-            
+
             if (!_isInitialized)
             {
                 InitializeAI();
                 return;
             }
-            
+
             if (_isBattleOver || _aiCommander == null)
             {
                 return;
             }
-            
+
             // Update AI at regular intervals
             _updateTimer += dt;
             if (_updateTimer >= UPDATE_INTERVAL)
@@ -61,14 +61,14 @@ namespace HannibalAI
                 _updateTimer = 0f;
                 UpdateAI(dt);
             }
-            
+
             // Check if battle is over
             if (IsBattleOver())
             {
                 _isBattleOver = true;
             }
         }
-        
+
         /// <summary>
         /// Initialize the AI when the battle begins
         /// </summary>
@@ -82,10 +82,10 @@ namespace HannibalAI
                 {
                     return;
                 }
-                
+
                 _playerTeam = null;
                 _enemyTeam = null;
-                
+
                 foreach (Team team in mission.Teams)
                 {
                     if (team.Side == BattleSideEnum.Defender)
@@ -97,41 +97,41 @@ namespace HannibalAI
                         _enemyTeam = team;
                     }
                 }
-                
+
                 // Ensure we found both teams
                 if (_playerTeam == null || _enemyTeam == null)
                 {
                     return;
                 }
-                
+
                 // Check if player is in player team
                 _isPlayerInPlayerTeam = IsPlayerInTeam(_playerTeam);
-                
+
                 // Analyze terrain features
                 var terrainFeatures = TerrainAnalyzer.Instance.AnalyzeCurrentTerrain();
-                
+
                 // Initialize AI commander
                 _aiCommander = _aiService.CreateCommander();
                 _aiCommander.Initialize(_playerTeam, _enemyTeam);
-                
+
                 _isInitialized = true;
-                
+
                 // Log initialization
                 Logger.Instance.Info("HannibalAI Controller initialized for battle");
-                
+
                 // Display enemy AI control status
                 string aiControlStatus = ModConfig.Instance.AIControlsEnemies ? 
                     "HannibalAI is controlling both friendly and enemy formations" : 
                     "HannibalAI is controlling friendly formations only";
                 Logger.Instance.Info(aiControlStatus);
-                
+
                 InformationManager.DisplayMessage(new InformationMessage(
                     "HannibalAI activated!", Color.FromUint(0x00FF00)));
-                
+
                 // Show information message to player
                 InformationManager.DisplayMessage(new InformationMessage(
                     $"HannibalAI Active: {(ModConfig.Instance.AIControlsEnemies ? "Controlling All Forces" : "Friendly Forces Only")}"));
-                
+
                 // Log terrain features if in debug mode
                 if (ModConfig.Instance.Debug && terrainFeatures.Count > 0)
                 {
@@ -143,7 +143,7 @@ namespace HannibalAI
                 Logger.Instance.Error($"Error initializing HannibalAI Controller: {ex.Message}");
             }
         }
-        
+
         /// <summary>
         /// Update the AI state and process commands
         /// </summary>
@@ -156,22 +156,23 @@ namespace HannibalAI
                 {
                     // Run the AI update for friendly team
                     _aiCommander.Update(dt);
-                    
+
                     // Control enemy team if enabled in settings
                     if (ModConfig.Instance.AIControlsEnemies && _enemyTeam != null)
                     {
                         // Determine tactical approach for enemy forces using our enhanced system
                         TacticalApproach enemyApproach = _aiService.DetermineTacticalApproach(_enemyTeam, _playerTeam);
-                        
+
                         // Process AI decisions for enemy formations
                         var enemyOrders = _aiService.ProcessBattleSnapshot(_enemyTeam, _playerTeam);
-                        
+
                         // Apply terrain and tactical modifiers to the orders
                         _aiService.ApplyTerrainTactics(enemyOrders, enemyApproach);
-                        
-                        // Execute the enhanced orders
-                        ExecuteAIDecisions(enemyOrders);
-                        
+
+                        // Execute the enhanced orders with aggression factor
+                        float aggressionFactor = CommanderMemoryService.Instance.AggressivenessScore;
+                        ExecuteAIDecisions(enemyOrders, aggressionFactor);
+
                         // Show enemy AI control status periodically (every 30 seconds)
                         if (ModConfig.Instance.Debug && Mission.Current.CurrentTime % 30 < 1.0f)
                         {
@@ -182,20 +183,20 @@ namespace HannibalAI
                                 string style = aggression > 0.7f ? "Aggressive" : (aggression < 0.3f ? "Cautious" : "Balanced");
                                 enemyCommanderInfo = $" (Commander: {style})";
                             }
-                            
+
                             string tacticName = enemyApproach.RecommendedTactic.ToString();
                             string advantages = "";
-                            
+
                             if (enemyApproach.HasHighGround) advantages += "High Ground, ";
                             if (enemyApproach.HasCavalryAdvantage) advantages += "Cavalry, ";
                             if (enemyApproach.HasArcherAdvantage) advantages += "Archers, ";
                             if (enemyApproach.HasForestCover) advantages += "Forest Cover, ";
-                            
+
                             if (advantages.Length > 2)
                             {
                                 advantages = "Advantages: " + advantages.Substring(0, advantages.Length - 2);
                             }
-                            
+
                             Logger.Instance.Info($"HannibalAI is controlling enemy - Tactic: {tacticName}{enemyCommanderInfo} | {advantages}");
                         }
                     }
@@ -206,7 +207,7 @@ namespace HannibalAI
                 Logger.Instance.Error($"Error in HannibalAI update: {ex.Message}");
             }
         }
-        
+
         /// <summary>
         /// Check if player is in the given team
         /// </summary>
@@ -216,10 +217,10 @@ namespace HannibalAI
             {
                 return false;
             }
-            
+
             return Agent.Main.Team == team;
         }
-        
+
         /// <summary>
         /// Check if the battle is effectively over
         /// </summary>
@@ -229,21 +230,21 @@ namespace HannibalAI
             {
                 return true;
             }
-            
+
             // Check if any team has no active agents
             return _playerTeam.ActiveAgents.Count == 0 || _enemyTeam.ActiveAgents.Count == 0;
         }
-        
+
         /// <summary>
         /// Execute AI decisions (formation orders)
         /// </summary>
-        private void ExecuteAIDecisions(List<FormationOrder> orders)
+        private void ExecuteAIDecisions(List<FormationOrder> orders, float aggressionFactor)
         {
             if (orders == null || orders.Count == 0)
             {
                 return;
             }
-            
+
             try
             {
                 // Execute each order
@@ -254,17 +255,18 @@ namespace HannibalAI
                     {
                         continue;
                     }
-                    
+
                     // Skip enemy formations if AI control is disabled
                     if (order.TargetFormation.Team.IsEnemyOf(Mission.Current.MainAgent.Team) && 
                         !ModConfig.Instance.AIControlsEnemies)
                     {
                         continue;
                     }
-                    
-                    // Execute the order
-                    CommandExecutor.Instance.ExecuteOrder(order);
-                    
+
+                    // Execute the order, potentially modifying it based on aggressionFactor
+                    CommandExecutor.Instance.ExecuteOrder(order, aggressionFactor); //Added aggressionFactor
+
+
                     // Log if debug is enabled
                     if (ModConfig.Instance.Debug)
                     {
@@ -278,14 +280,14 @@ namespace HannibalAI
                 Logger.Instance.Error($"Error executing AI decisions: {ex.Message}");
             }
         }
-        
+
         /// <summary>
         /// Called when the mission ends
         /// </summary>
         public override void OnMissionModeChange(MissionMode oldMissionMode, bool atStart)
         {
             base.OnMissionModeChange(oldMissionMode, atStart);
-            
+
             // Check if mission is ending (using enum value instead of End property)
             if (Mission.Current.Mode == MissionMode.Battle)
             {
