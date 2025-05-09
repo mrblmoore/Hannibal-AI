@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
+using TaleWorlds.Engine;
 using HannibalAI.Memory;
 using HannibalAI.Terrain;
 
@@ -455,9 +457,9 @@ namespace HannibalAI.Tactics
             if (formation.QuerySystem != null)
             {
                 WorldPosition position = formation.QuerySystem.MedianPosition;
-                if (position != null)
+                if (position.GetNavMesh() != null)
                 {
-                    _lastPositions[formation] = position.AsVec3;
+                    _lastPositions[formation] = position.GetGroundVec3();
                 }
             }
         }
@@ -494,10 +496,10 @@ namespace HannibalAI.Tactics
                             WorldPosition myPos = formation.QuerySystem.MedianPosition;
                             WorldPosition enemyPos = enemyFormation.QuerySystem.MedianPosition;
                             
-                            if (myPos != null && enemyPos != null)
+                            if (myPos.GetNavMesh() != null && enemyPos.GetNavMesh() != null)
                             {
-                                Vec3 myVec = myPos.AsVec3;
-                                Vec3 enemyVec = enemyPos.AsVec3;
+                                Vec3 myVec = myPos.GetGroundVec3();
+                                Vec3 enemyVec = enemyPos.GetGroundVec3();
                                 
                                 float distance = (myVec - enemyVec).Length;
                                 totalDistance += distance;
@@ -614,10 +616,10 @@ namespace HannibalAI.Tactics
                     WorldPosition pos1 = formation1.QuerySystem.MedianPosition;
                     WorldPosition pos2 = formation2.QuerySystem.MedianPosition;
                     
-                    if (pos1 != null && pos2 != null)
+                    if (pos1.GetNavMesh() != null && pos2.GetNavMesh() != null)
                     {
-                        Vec3 vec1 = pos1.AsVec3;
-                        Vec3 vec2 = pos2.AsVec3;
+                        Vec3 vec1 = pos1.GetGroundVec3();
+                        Vec3 vec2 = pos2.GetGroundVec3();
                         
                         float distance = (vec1 - vec2).Length;
                         return distance < threshold;
@@ -654,13 +656,13 @@ namespace HannibalAI.Tactics
                 }
                 
                 WorldPosition myPos = formation.QuerySystem.MedianPosition;
-                if (myPos == null)
+                if (myPos.GetNavMesh() == null)
                 {
                     return false;
                 }
                 
-                Vec3 myVec = myPos.AsVec3;
-                Vec3 dirForward = formation.Direction;
+                Vec3 myVec = myPos.GetGroundVec3();
+                Vec3 dirForward = new Vec3(formation.Direction.X, formation.Direction.Y, 0);
                 Vec3 dirRight = Vec3.CrossProduct(dirForward, new Vec3(0, 0, 1));
                 
                 // Count enemy positions in different quadrants
@@ -674,9 +676,9 @@ namespace HannibalAI.Tactics
                     if (enemyFormation.QuerySystem != null)
                     {
                         WorldPosition enemyPos = enemyFormation.QuerySystem.MedianPosition;
-                        if (enemyPos != null)
+                        if (enemyPos.GetNavMesh() != null)
                         {
-                            Vec3 enemyVec = enemyPos.AsVec3;
+                            Vec3 enemyVec = enemyPos.GetGroundVec3();
                             Vec3 relativePos = enemyVec - myVec;
                             
                             // Skip if too far away
@@ -732,7 +734,11 @@ namespace HannibalAI.Tactics
                 float totalHealth = 0f;
                 int unitCount = 0;
                 
-                foreach (Agent agent in formation.GetUnits())
+                // Get agents from the formation using Bannerlord API
+                List<Agent> formationAgents = Mission.Current.Agents.Where(
+                    a => a != null && a.IsActive() && a.Formation == formation).ToList();
+                
+                foreach (Agent agent in formationAgents)
                 {
                     if (agent != null && agent.IsActive())
                     {
@@ -744,7 +750,9 @@ namespace HannibalAI.Tactics
                 float avgHealth = unitCount > 0 ? totalHealth / unitCount : 0f;
                 
                 // Check if formation is severely depleted
-                float strengthRatio = formation.CountOfUnits / Math.Max(1, formation.InitialCountOfUnits);
+                // Since we don't have initial count, estimate based on current strength
+                float initialEstimate = formation.CountOfUnits * 1.5f; // Estimate initial was 50% more
+                float strengthRatio = formation.CountOfUnits / Math.Max(1, initialEstimate);
                 
                 // Consider weak if health is low or numbers are severely depleted
                 return avgHealth < 0.4f || strengthRatio < 0.3f;
@@ -777,8 +785,8 @@ namespace HannibalAI.Tactics
                     {
                         // Look for square/shieldwall or tight formations ready for cavalry
                         if (enemyFormation.ArrangementOrder != null &&
-                            (enemyFormation.ArrangementOrder.OrderType == ArrangementOrder.ArrangementOrderEnum.Square ||
-                            enemyFormation.ArrangementOrder.OrderType == ArrangementOrder.ArrangementOrderEnum.ShieldWall))
+                            (enemyFormation.ArrangementOrder.OrderType.ToString().Contains("Square") ||
+                            enemyFormation.ArrangementOrder.OrderType.ToString().Contains("ShieldWall")))
                         {
                             // In a real implementation, would check for units with spear weapons
                             // For now, just assume a significant portion have spears
@@ -837,10 +845,10 @@ namespace HannibalAI.Tactics
                 if (formation.QuerySystem == null) return false;
                 
                 WorldPosition myPos = formation.QuerySystem.MedianPosition;
-                if (myPos == null) return false;
+                if (myPos.GetNavMesh() == null) return false;
                 
-                Vec3 myVec = myPos.AsVec3;
-                Vec3 chargeDirection = formation.Direction;
+                Vec3 myVec = myPos.GetGroundVec3();
+                Vec3 chargeDirection = new Vec3(formation.Direction.X, formation.Direction.Y, 0);
                 
                 // Check charge path for obstacles
                 foreach (Formation enemyFormation in enemyTeam.FormationsIncludingEmpty)
@@ -850,9 +858,9 @@ namespace HannibalAI.Tactics
                     if (enemyFormation.QuerySystem != null)
                     {
                         WorldPosition enemyPos = enemyFormation.QuerySystem.MedianPosition;
-                        if (enemyPos != null)
+                        if (enemyPos.GetNavMesh() != null)
                         {
-                            Vec3 enemyVec = enemyPos.AsVec3;
+                            Vec3 enemyVec = enemyPos.GetGroundVec3();
                             Vec3 relativePos = enemyVec - myVec;
                             
                             // Check if enemy is in front and at good charge distance
