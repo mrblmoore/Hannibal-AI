@@ -5,46 +5,156 @@ using TaleWorlds.MountAndBlade;
 
 namespace HannibalAI.UI
 {
-    /// <summary>
-    /// Simplified layer for UI (compatibility without requiring Bannerlord DLLs)
-    /// </summary>
-    public class GauntletLayer
+    // We're using TaleWorlds.GauntletUI namespace which provides:
+// - GauntletLayer class
+// - IGauntletMovie interface
+// - InputRestrictions class
+
+/// <summary>
+/// Wrapper for GauntletLayer to help with testing and compatibility
+/// </summary>
+public class GauntletWrapper
+{
+    // Static flag indicating if we're using actual Bannerlord GauntletUI
+    public static bool UseActualGauntlet = true;
+    
+    // The actual layer (only set when using real GauntletUI)
+    private object _actualLayer;
+    
+    // The actual input restrictions
+    private object _inputRestrictions;
+    
+    public GauntletWrapper(int layerPriority)
     {
-        public GauntletLayer(int layer) 
+        try
         {
-            // Simple constructor
-            Logger.Instance.Info($"Creating GauntletLayer with priority {layer}");
+            if (UseActualGauntlet)
+            {
+                // Try to create an actual GauntletLayer using reflection
+                Type gauntletLayerType = Type.GetType("TaleWorlds.GauntletUI.GauntletLayer, TaleWorlds.GauntletUI");
+                if (gauntletLayerType != null)
+                {
+                    _actualLayer = Activator.CreateInstance(gauntletLayerType, new object[] { Mission.Current.Scene, layerPriority });
+                    
+                    // Get InputRestrictions property
+                    var inputRestrictionsProperty = gauntletLayerType.GetProperty("InputRestrictions");
+                    if (inputRestrictionsProperty != null)
+                    {
+                        _inputRestrictions = inputRestrictionsProperty.GetValue(_actualLayer);
+                    }
+                    
+                    Logger.Instance.Info("Created actual GauntletLayer");
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Error($"Failed to create actual GauntletLayer: {ex.Message}");
         }
         
-        public InputRestrictions InputRestrictions { get; } = new InputRestrictions();
-        
-        public object LoadMovie(string name, object dataSource)
+        // Fallback to fake implementation
+        _actualLayer = null;
+        _inputRestrictions = new DummyInputRestrictions();
+        Logger.Instance.Warning("Using dummy GauntletLayer");
+    }
+    
+    public object LoadMovie(string movieName, object dataSource)
+    {
+        try
         {
-            // Simplified implementation that just logs the movie loading
-            Logger.Instance.Info($"Loading UI movie: {name}");
-            InformationManager.DisplayMessage(
-                new InformationMessage($"HannibalAI: Loading UI for {name}", Color.FromUint(0x00FF00)));
-            return new object(); // Return a generic object as we don't need the actual movie
+            if (_actualLayer != null)
+            {
+                // Try to call LoadMovie on the actual layer
+                var method = _actualLayer.GetType().GetMethod("LoadMovie", new[] { typeof(string), typeof(object) });
+                if (method != null)
+                {
+                    var result = method.Invoke(_actualLayer, new[] { movieName, dataSource });
+                    Logger.Instance.Info($"Loaded movie '{movieName}' using actual GauntletLayer");
+                    return result;
+                }
+            }
         }
+        catch (Exception ex)
+        {
+            Logger.Instance.Error($"Failed to load movie: {ex.Message}");
+        }
+        
+        // Fallback implementation
+        Logger.Instance.Info($"Simulated loading of movie: {movieName}");
+        InformationManager.DisplayMessage(
+            new InformationMessage($"HannibalAI: Loading UI for {movieName}", Color.FromUint(0x00FF00)));
+        return new object();
+    }
+    
+    public object InputRestrictions => _inputRestrictions;
+    
+    public void SetInputRestrictions(bool useKeyboardEvents, object mask)
+    {
+        try
+        {
+            if (_inputRestrictions != null)
+            {
+                var method = _inputRestrictions.GetType().GetMethod("SetInputRestrictions", 
+                    new[] { typeof(bool), typeof(object) });
+                
+                if (method != null)
+                {
+                    method.Invoke(_inputRestrictions, new[] { useKeyboardEvents, mask });
+                    Logger.Instance.Info($"Set input restrictions: useKeyboardEvents={useKeyboardEvents}");
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Error($"Failed to set input restrictions: {ex.Message}");
+        }
+        
+        // Fallback
+        Logger.Instance.Info($"Simulated setting input restrictions: useKeyboardEvents={useKeyboardEvents}");
+    }
+    
+    public void ResetInputRestrictions()
+    {
+        try
+        {
+            if (_inputRestrictions != null)
+            {
+                var method = _inputRestrictions.GetType().GetMethod("ResetInputRestrictions");
+                if (method != null)
+                {
+                    method.Invoke(_inputRestrictions, null);
+                    Logger.Instance.Info("Reset input restrictions");
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.Instance.Error($"Failed to reset input restrictions: {ex.Message}");
+        }
+        
+        // Fallback
+        Logger.Instance.Info("Simulated resetting input restrictions");
     }
     
     /// <summary>
-    /// Simple input restrictions class
+    /// Dummy implementation of input restrictions
     /// </summary>
-    public class InputRestrictions
+    private class DummyInputRestrictions
     {
-        public void ResetInputRestrictions()
+        public void SetInputRestrictions(bool useKeyboardEvents, object mask)
         {
-            // Simple implementation
-            Logger.Instance.Info("Resetting input restrictions");
+            Logger.Instance.Info($"Dummy input restrictions: useKeyboardEvents={useKeyboardEvents}");
         }
         
-        public void SetInputRestrictions(bool useKeyboardEvents, object usageMask)
+        public void ResetInputRestrictions()
         {
-            // Simple implementation
-            Logger.Instance.Info($"Setting input restrictions: useKeyboardEvents={useKeyboardEvents}");
+            Logger.Instance.Info("Dummy input restrictions reset");
         }
     }
+}
     
     /// <summary>
     /// Settings screen for HannibalAI mod
@@ -52,7 +162,7 @@ namespace HannibalAI.UI
     public class ModSettingsScreen
     {
         private ModSettingsViewModel _dataSource;
-        private GauntletLayer _layer;
+        private GauntletWrapper _layer;
         private ModSettingsView _view;
         
         // Default constructor for simple implementation
@@ -63,8 +173,8 @@ namespace HannibalAI.UI
             _layer = null;
         }
         
-        // Constructor with GauntletLayer for UI implementation
-        public ModSettingsScreen(GauntletLayer layer)
+        // Constructor with GauntletWrapper for UI implementation
+        public ModSettingsScreen(GauntletWrapper layer)
         {
             _layer = layer;
             _dataSource = new ModSettingsViewModel(ModConfig.Instance, OnClose);
@@ -148,7 +258,7 @@ namespace HannibalAI.UI
             if (_layer != null)
             {
                 // Reset input restrictions
-                _layer.InputRestrictions.ResetInputRestrictions();
+                _layer.ResetInputRestrictions();
                 
                 // Log that we're removing the layer
                 Logger.Instance.Info("ModSettingsScreen: Removing UI layer from mission screen");

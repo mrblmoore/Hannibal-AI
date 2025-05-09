@@ -25,7 +25,7 @@ namespace HannibalAI.UI
             Logger.Instance.Info("ModSettingsView constructor called with dataSource");
         }
         
-        public bool Initialize(GauntletLayer gauntletLayer)
+        public bool Initialize(GauntletWrapper gauntletLayer)
         {
             try
             {
@@ -45,7 +45,7 @@ namespace HannibalAI.UI
                         Logger.Instance.Info("Successfully loaded HannibalAI_Settings prefab");
                         
                         // Set input restrictions to allow keyboard and mouse interaction with the UI
-                        gauntletLayer.InputRestrictions.SetInputRestrictions(true, null);
+                        gauntletLayer.SetInputRestrictions(true, null);
                         
                         return true;
                     }

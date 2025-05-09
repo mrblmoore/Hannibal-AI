@@ -101,7 +101,7 @@ namespace HannibalAI.UI
                     Logger.Instance.Info("Creating settings screen");
                     
                     // Create a layer for the UI with a high priority to make it appear on top
-                    var layer = new GauntletLayer(1000);
+                    var layer = new GauntletWrapper(1000);
                     
                     // Create the settings screen with the layer
                     _settingsScreen = new ModSettingsScreen(layer);
