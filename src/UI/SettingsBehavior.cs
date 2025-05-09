@@ -3,7 +3,6 @@ using TaleWorlds.Core;
 using TaleWorlds.InputSystem;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Library;
-using TaleWorlds.GauntletUI;
 
 namespace HannibalAI.UI
 {
@@ -71,6 +70,14 @@ namespace HannibalAI.UI
                                  $"- Aggressiveness: {config.Aggressiveness}%";
             
             Logger.Instance.Info(settingsLog);
+            
+            // Display friendly message for debugging
+            if (config.Debug)
+            {
+                InformationManager.DisplayMessage(
+                    new InformationMessage("HannibalAI debug mode active - detailed logging enabled", 
+                    Color.FromUint(0xFFFF00)));
+            }
         }
 
         private void ToggleSettings()
@@ -127,6 +134,11 @@ namespace HannibalAI.UI
                 _settingsScreen.OnFinalize();
                 _settingsScreen = null;
                 _isSettingsOpen = false;
+                
+                // Show confirmation message
+                InformationManager.DisplayMessage(
+                    new InformationMessage("HannibalAI Settings closed", 
+                    Color.FromUint(0x00FF00)));
             }
         }
         
