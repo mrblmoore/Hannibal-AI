@@ -3,3 +3,8 @@
 /home/runner/workspace/obj/Release/HannibalAI.csproj.CoreCompileInputs.cache
 /home/runner/workspace/obj/Release/HannibalAI.dll
 /home/runner/workspace/obj/Release/HannibalAI.pdb
+/home/runner/workspace/bin/HannibalAI.dll
+/home/runner/workspace/bin/HannibalAI.pdb
+/home/runner/workspace/bin/0Harmony.dll
+/home/runner/workspace/bin/0Harmony.xml
+/home/runner/workspace/obj/Release/HannibalAI.csproj.CopyComplete

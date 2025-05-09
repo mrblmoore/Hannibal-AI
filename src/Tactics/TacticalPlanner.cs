@@ -133,7 +133,8 @@ namespace HannibalAI.Tactics
                 // 1. Analyze terrain features - Simplified implementation for compatibility
                 Logger.Instance.Info("Analyzing terrain features");
                 var terrainFeatures = TerrainAnalyzer.Instance.AnalyzeCurrentTerrain();
-                assessment.TerrainType = TerrainAnalyzer.Instance.GetTerrainType();
+                // Use a default terrain type
+                assessment.TerrainType = HannibalAI.Terrain.TerrainType.Plains;
                 
                 // 2. Check for tactical features - Simplified implementation for compatibility
                 assessment.HighGroundPositions = new List<Vec3>(); // Would use TerrainAnalyzer.Instance.GetTerrainFeaturesByType
@@ -1386,7 +1387,7 @@ namespace HannibalAI.Tactics
             {
                 if (assessment.HighGroundPositions.Count > 0)
                 {
-                    return assessment.HighGroundPositions[0].Position;
+                    return assessment.HighGroundPositions[0]; // Vec3 is already a position
                 }
                 
                 // Fallback
@@ -1445,11 +1446,13 @@ namespace HannibalAI.Tactics
                 
                 Vec3 formationPos = GetFormationPosition(formation);
                 
-                foreach (TerrainFeature highGround in assessment.HighGroundPositions)
+                // In our simplified version, HighGroundPositions are just Vec3 positions
+                foreach (Vec3 highGroundPos in assessment.HighGroundPositions)
                 {
-                    float distSq = (formationPos - highGround.Position).LengthSquared;
+                    float distSq = (formationPos - highGroundPos).LengthSquared;
                     
-                    if (distSq < highGround.Size * highGround.Size)
+                    // Using a fixed radius for our simplified implementation
+                    if (distSq < 100.0f * 100.0f) // 100 meter radius
                     {
                         return true;
                     }

@@ -318,48 +318,96 @@ namespace HannibalAI
                         case FormationActionType.Hold:
                             // Order the formation to hold position
                             Logger.Instance.Info($"Ordering formation {action.Formation.FormationIndex} to hold position");
-                            // Use compatible method (implementation will depend on exact Bannerlord version)
+                            // Use direct formation methods instead of OrderController
+                            action.Formation.SetMovementOrder(MovementOrder.MovementOrderStop);
                             break;
                             
                         case FormationActionType.Advance:
                             WorldPosition targetPos = new WorldPosition(Mission.Current.Scene, action.TargetPosition);
                             Logger.Instance.Info($"Ordering formation {action.Formation.FormationIndex} to advance to position {action.TargetPosition}");
-                            // Use compatible method (implementation will depend on exact Bannerlord version)
+                            // Use direct formation method with WorldPosition
+                            if (targetPos.GetNavMesh() != null)
+                            {
+                                action.Formation.SetMovementOrder(MovementOrder.MovementOrderMove(targetPos));
+                            }
                             break;
                             
                         case FormationActionType.Charge:
                             Logger.Instance.Info($"Ordering formation {action.Formation.FormationIndex} to charge");
-                            // Use compatible method (implementation will depend on exact Bannerlord version)
+                            // Use direct formation method for charging
+                            action.Formation.SetMovementOrder(MovementOrder.MovementOrderCharge);
                             break;
                             
                         case FormationActionType.Retreat:
                             WorldPosition retreatPos = new WorldPosition(Mission.Current.Scene, action.TargetPosition);
                             Logger.Instance.Info($"Ordering formation {action.Formation.FormationIndex} to retreat to position {action.TargetPosition}");
-                            // Use compatible method (implementation will depend on exact Bannerlord version)
+                            // If no retreat position is specified, use general retreat
+                            if (retreatPos.GetNavMesh() != null)
+                            {
+                                // Use a fallback with regular movement to a retreat position
+                                action.Formation.SetMovementOrder(MovementOrder.MovementOrderMove(retreatPos));
+                            }
+                            else
+                            {
+                                // Just regular retreat
+                                action.Formation.SetMovementOrder(MovementOrder.MovementOrderRetreat);
+                            }
                             break;
                             
                         case FormationActionType.FireAt:
                             WorldPosition firePos = new WorldPosition(Mission.Current.Scene, action.TargetPosition);
                             Logger.Instance.Info($"Ordering formation {action.Formation.FormationIndex} to fire at position {action.TargetPosition}");
-                            // Use compatible method (implementation will depend on exact Bannerlord version)
+                            // First ensure units are holding position
+                            action.Formation.SetMovementOrder(MovementOrder.MovementOrderStop);
+                            
+                            // Get direction vector for formation to face
+                            // Create a world position for the target and get ground positions
+                            WorldPosition targetWorldPos = new WorldPosition(Mission.Current.Scene, action.TargetPosition);
+                            Vec3 targetGroundPos = targetWorldPos.GetGroundVec3();
+                            
+                            // Create a proper world position from formation position (which is Vec2)
+                            Vec3 formationPos3D = new Vec3(action.Formation.CurrentPosition.x, action.Formation.CurrentPosition.y, 0f);
+                            WorldPosition formationWorldPos = new WorldPosition(Mission.Current.Scene, formationPos3D);
+                            Vec3 formationGroundPos = formationWorldPos.GetGroundVec3();
+                            
+                            // Create direction vector as Vec2 from the Vec3 positions (ignore height)
+                            Vec2 direction = new Vec2(
+                                targetGroundPos.x - formationGroundPos.x, 
+                                targetGroundPos.y - formationGroundPos.y);
+                            direction.Normalize();
+                            
+                            // Set facing order directly
+                            action.Formation.FacingOrder = FacingOrder.FacingOrderLookAtDirection(direction);
                             break;
                             
                         case FormationActionType.Flank:
                             WorldPosition flankPos = new WorldPosition(Mission.Current.Scene, action.TargetPosition);
                             Logger.Instance.Info($"Ordering formation {action.Formation.FormationIndex} to flank to position {action.TargetPosition}");
-                            // Use compatible method (implementation will depend on exact Bannerlord version)
+                            // Use advance order to flank position (simplified implementation)
+                            if (flankPos.GetNavMesh() != null)
+                            {
+                                action.Formation.SetMovementOrder(MovementOrder.MovementOrderMove(flankPos));
+                            }
                             break;
                             
                         case FormationActionType.Harass:
                             WorldPosition harassPos = new WorldPosition(Mission.Current.Scene, action.TargetPosition);
                             Logger.Instance.Info($"Ordering formation {action.Formation.FormationIndex} to harass at position {action.TargetPosition}");
-                            // Use compatible method (implementation will depend on exact Bannerlord version)
+                            // First move to position
+                            if (harassPos.GetNavMesh() != null)
+                            {
+                                action.Formation.SetMovementOrder(MovementOrder.MovementOrderMove(harassPos));
+                            }
                             break;
                             
                         case FormationActionType.Guard:
                             WorldPosition guardPos = new WorldPosition(Mission.Current.Scene, action.TargetPosition);
                             Logger.Instance.Info($"Ordering formation {action.Formation.FormationIndex} to guard position {action.TargetPosition}");
-                            // Use compatible method (implementation will depend on exact Bannerlord version)
+                            // Move to guard position and hold
+                            if (guardPos.GetNavMesh() != null)
+                            {
+                                action.Formation.SetMovementOrder(MovementOrder.MovementOrderMove(guardPos));
+                            }
                             break;
                     }
                     
@@ -388,14 +436,60 @@ namespace HannibalAI
                     return;
                 }
                 
-                // Simply log the formation type instead of mapping to enum values
-                // This avoids compatibility issues with different Bannerlord versions
-                // We'll use a simplified approach for compatibility
+                // Get the appropriate ArrangementOrder based on formation type
+                // Default to line formation
+                var arrangementOrder = ArrangementOrder.ArrangementOrderLine;
                 
-                // Apply the formation
+                switch (formationType.ToLower())
+                {
+                    case "line":
+                        arrangementOrder = ArrangementOrder.ArrangementOrderLine;
+                        break;
+                    case "close":
+                    case "tightformation":
+                        // Use line formation but with closer spacing
+                        arrangementOrder = ArrangementOrder.ArrangementOrderLine;
+                        // Would set spacing tighter if API supported it
+                        break;
+                    case "loose":
+                        arrangementOrder = ArrangementOrder.ArrangementOrderLoose;
+                        break;
+                    case "circle":
+                        arrangementOrder = ArrangementOrder.ArrangementOrderCircle;
+                        break;
+                    case "square":
+                    case "schiltron":
+                        // Use defensive circle as fallback
+                        arrangementOrder = ArrangementOrder.ArrangementOrderCircle;
+                        break;
+                    case "column":
+                        // Use column formation
+                        arrangementOrder = ArrangementOrder.ArrangementOrderColumn;
+                        break;
+                    case "shieldwall":
+                        // Use shieldwall if available
+                        arrangementOrder = ArrangementOrder.ArrangementOrderShieldWall;
+                        break;
+                    case "wedge":
+                        // Use skein as wedge
+                        arrangementOrder = ArrangementOrder.ArrangementOrderSkein;
+                        break;
+                    case "skein":
+                        // Use skein formation
+                        arrangementOrder = ArrangementOrder.ArrangementOrderSkein;
+                        break;
+                    case "scatter":
+                        arrangementOrder = ArrangementOrder.ArrangementOrderScatter;
+                        break;
+                    default:
+                        // Default to line if unknown
+                        arrangementOrder = ArrangementOrder.ArrangementOrderLine;
+                        break;
+                }
+                
+                // Apply the formation arrangement directly
                 Logger.Instance.Info($"Setting formation type to {formationType}");
-                // Would use appropriate method based on specific Bannerlord version
-                // formation.SetArrangementOrder(...);
+                formation.ArrangementOrder = arrangementOrder;
             }
             catch (Exception ex)
             {
