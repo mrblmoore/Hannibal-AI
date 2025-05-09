@@ -59,6 +59,16 @@ namespace HannibalAI
             if (_updateTimer >= UPDATE_INTERVAL)
             {
                 _updateTimer = 0f;
+                
+                // Add debug log to verify AI is running
+                if (_aiService.ModConfig.Debug)
+                {
+                    Logger.Instance.Info("[HannibalAI] BattleController.OnMissionTick - Updating AI");
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        "HannibalAI: Updating battle tactics", 
+                        Color.FromUint(0x00CCFF)));
+                }
+                
                 UpdateAI(dt);
             }
 

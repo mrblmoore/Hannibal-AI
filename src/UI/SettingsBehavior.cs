@@ -3,6 +3,7 @@ using TaleWorlds.Core;
 using TaleWorlds.InputSystem;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Library;
+using TaleWorlds.GauntletUI;
 
 namespace HannibalAI.UI
 {
@@ -43,15 +44,33 @@ namespace HannibalAI.UI
                         new InformationMessage("HannibalAI: Press INSERT key to open tactical settings", 
                         Color.FromUint(0x00CCFF)));
                 }
+                
+                // Log settings to help debug during development
+                if (ModConfig.Instance.Debug)
+                {
+                    LogCurrentSettings();
+                }
             }
             
             // Check for key press to open settings
-            if (Input.IsKeyPressed(InputKey.Insert) || 
-                (Input.IsKeyPressed(InputKey.Insert) && Input.IsKeyDown(InputKey.LeftAlt)))
+            if (Input.IsKeyPressed(InputKey.Insert))
             {
                 Logger.Instance.Info("Settings key pressed - attempting to toggle settings screen");
                 ToggleSettings();
             }
+        }
+
+        private void LogCurrentSettings()
+        {
+            var config = ModConfig.Instance;
+            string settingsLog = "HannibalAI Mod Settings:\n" +
+                                 $"- AI Controls Enemies: {config.AIControlsEnemies}\n" +
+                                 $"- Use Commander Memory: {config.UseCommanderMemory}\n" + 
+                                 $"- Show Help Messages: {config.ShowHelpMessages}\n" +
+                                 $"- Debug Mode: {config.Debug}\n" +
+                                 $"- Aggressiveness: {config.Aggressiveness}%";
+            
+            Logger.Instance.Info(settingsLog);
         }
 
         private void ToggleSettings()
@@ -74,10 +93,8 @@ namespace HannibalAI.UI
                 {
                     Logger.Instance.Info("Creating settings screen");
                     
-                    // Create a layer for the UI
-                    // Note: Direct access to mission's screen or layers might not be available
-                    // Using simplified approach that works with Bannerlord's API
-                    var layer = new GauntletLayer(1000); // High layer priority
+                    // Create a layer for the UI with a high priority to make it appear on top
+                    var layer = new GauntletLayer(1000);
                     
                     // Create the settings screen with the layer
                     _settingsScreen = new ModSettingsScreen(layer);
@@ -88,7 +105,8 @@ namespace HannibalAI.UI
 
                     // Show confirmation message
                     InformationManager.DisplayMessage(
-                        new InformationMessage("HannibalAI Settings Opened (Press Insert to close)", Color.FromUint(0x00FF00)));
+                        new InformationMessage("HannibalAI Settings Opened (Press Insert to close)", 
+                        Color.FromUint(0x00FF00)));
                     
                     Logger.Instance.Info("Settings screen created successfully");
                 }
@@ -97,7 +115,8 @@ namespace HannibalAI.UI
             {
                 Logger.Instance.Error($"Failed to open settings: {ex.Message}\n{ex.StackTrace}");
                 InformationManager.DisplayMessage(
-                    new InformationMessage($"Failed to open settings: {ex.Message}", Color.FromUint(0xFF0000)));
+                    new InformationMessage($"Failed to open settings: {ex.Message}", 
+                    Color.FromUint(0xFF0000)));
             }
         }
 

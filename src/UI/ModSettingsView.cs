@@ -1,17 +1,26 @@
 using System;
 using TaleWorlds.Library;
 using TaleWorlds.Core;
+using TaleWorlds.GauntletUI;
+using TaleWorlds.MountAndBlade;
+using TaleWorlds.Engine.GauntletUI;
 
 namespace HannibalAI.UI
 {
     /// <summary>
-    /// Minimal implementation of a View class to display settings
-    /// Uses only standard Bannerlord namespaces that we know are available
+    /// Connects the ModSettingsViewModel to the Gauntlet UI
     /// </summary>
     public class ModSettingsView : ViewModel
     {
         private ModSettingsViewModel _dataSource;
+        private GauntletMovie _gauntletMovie;
+        private IGauntletMovie _movie;
         
+        public ModSettingsView()
+        {
+            Logger.Instance.Info("ModSettingsView constructor called");
+        }
+
         public ModSettingsView(ModSettingsViewModel dataSource)
         {
             _dataSource = dataSource;
@@ -28,13 +37,22 @@ namespace HannibalAI.UI
                 // Try to load the Gauntlet UI definition
                 Logger.Instance.Info("Attempting to load HannibalAI_Settings prefab");
                 
-                try 
+                // Create a movie using our prefab and view model (actual GauntletUI usage)
+                try
                 {
-                    // Create a movie using our prefab and view model
-                    var movie = gauntletLayer.LoadMovie("HannibalAI_Settings", _dataSource);
-                    if (movie != null)
+                    _movie = gauntletLayer.LoadMovie("HannibalAI_Settings", _dataSource);
+                    
+                    if (_movie != null)
                     {
                         Logger.Instance.Info("Successfully loaded HannibalAI_Settings prefab");
+                        
+                        // This is the key part - we need to add the layer to the mission screen 
+                        // so it becomes visible
+                        Mission.Current.AddLayer(gauntletLayer);
+                        
+                        // Set input restriction
+                        gauntletLayer.InputRestrictions.SetInputRestrictions(true, InputUsageMask.Mouse);
+                    
                         return true;
                     }
                     else
@@ -62,11 +80,12 @@ namespace HannibalAI.UI
         
         private void DisplaySettings()
         {
-            // Display current settings using the InformationManager
+            // Display current settings using the InformationManager as fallback
             var settings = new[]
             {
                 $"AI Controls Enemies: {(_dataSource.AIControlsEnemies ? "ON" : "off")}",
                 $"Use Commander Memory: {(_dataSource.UseCommanderMemory ? "ON" : "off")}",
+                $"Show Help Messages: {(_dataSource.ShowHelpMessages ? "ON" : "off")}",
                 $"Debug Mode: {(_dataSource.Debug ? "ON" : "off")}",
                 $"Aggressiveness: {_dataSource.Aggressiveness}%"
             };
@@ -87,6 +106,7 @@ namespace HannibalAI.UI
         
         public override void OnFinalize()
         {
+            _movie = null;
             _dataSource = null;
             base.OnFinalize();
         }

@@ -2,62 +2,11 @@ using System;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
+using TaleWorlds.GauntletUI;
+using TaleWorlds.Engine.GauntletUI;
 
 namespace HannibalAI.UI
 {
-    /// <summary>
-    /// Simplified layer for UI (compatibility without requiring Bannerlord DLLs)
-    /// </summary>
-    public class GauntletLayer
-    {
-        public GauntletLayer(int layer) 
-        {
-            // Simple constructor
-            Logger.Instance.Info($"Creating GauntletLayer with priority {layer}");
-        }
-        
-        public InputRestrictions InputRestrictions { get; } = new InputRestrictions();
-        
-        public object LoadMovie(string name, object dataSource)
-        {
-            // Simplified implementation that just logs the movie loading
-            Logger.Instance.Info($"Loading UI movie: {name}");
-            InformationManager.DisplayMessage(
-                new InformationMessage($"HannibalAI: Loading UI for {name}", Color.FromUint(0x00FF00)));
-            return new object(); // Return a generic object as we don't need the actual movie
-        }
-    }
-    
-    /// <summary>
-    /// Simple input restrictions class
-    /// </summary>
-    public class InputRestrictions
-    {
-        public void ResetInputRestrictions()
-        {
-            // Simple implementation
-            Logger.Instance.Info("Resetting input restrictions");
-        }
-    }
-    
-    /// <summary>
-    /// Helper for mission screen
-    /// </summary>
-    public static class MissionScreen
-    {
-        public static void AddLayer(GauntletLayer layer)
-        {
-            // Simple implementation
-            Logger.Instance.Info("Adding UI layer to mission screen");
-        }
-        
-        public static void RemoveLayer(GauntletLayer layer)
-        {
-            // Simple implementation
-            Logger.Instance.Info("Removing UI layer from mission screen");
-        }
-    }
-
     /// <summary>
     /// Settings screen for HannibalAI mod
     /// </summary>
@@ -65,6 +14,7 @@ namespace HannibalAI.UI
     {
         private ModSettingsViewModel _dataSource;
         private GauntletLayer _layer;
+        private ModSettingsView _view;
         
         // Default constructor for simple implementation
         public ModSettingsScreen()
@@ -91,8 +41,8 @@ namespace HannibalAI.UI
                 try 
                 {
                     // Create a proper view using the ModSettingsView class
-                    var view = new ModSettingsView(_dataSource);
-                    if (view.Initialize(_layer))
+                    _view = new ModSettingsView(_dataSource);
+                    if (_view.Initialize(_layer))
                     {
                         Logger.Instance.Info("Settings view initialized successfully");
                     }
@@ -135,9 +85,6 @@ namespace HannibalAI.UI
                 $"HannibalAI: Enemy AI Control {(config.AIControlsEnemies ? "ON" : "OFF")} | " +
                 $"Commander Memory {(config.UseCommanderMemory ? "ON" : "OFF")} | " +
                 $"Aggression {config.Aggressiveness}%"));
-            
-            // Display an informational message to the player
-            InformationManager.DisplayMessage(new InformationMessage("HannibalAI settings opened. Use console for detailed view."));
         }
         
         public void CleanUp()
@@ -147,15 +94,27 @@ namespace HannibalAI.UI
                 _dataSource.OnFinalize();
                 _dataSource = null;
             }
+            
+            if (_view != null)
+            {
+                _view.OnFinalize();
+                _view = null;
+            }
         }
         
         public void OnFinalize()
         {
             // Handle layer cleanup if using GauntletUI
-            if (_layer != null)
+            if (_layer != null && Mission.Current != null)
             {
+                // Reset input restrictions
                 _layer.InputRestrictions.ResetInputRestrictions();
-                MissionScreen.RemoveLayer(_layer);
+                
+                // Remove the layer from the mission
+                Mission.Current.RemoveLayer(_layer);
+                
+                // Log that we're removing the layer
+                Logger.Instance.Info("ModSettingsScreen: Removing UI layer from mission screen");
             }
             
             // Clean up data source
