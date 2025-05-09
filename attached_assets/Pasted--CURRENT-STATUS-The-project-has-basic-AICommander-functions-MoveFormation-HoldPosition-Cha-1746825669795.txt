@@ -1,0 +1,67 @@
+**CURRENT STATUS:**
+
+The project has basic AICommander functions (MoveFormation, HoldPosition, ChargeFormation, etc.) and a placeholder FallbackService decision system. CommanderMemoryService is present but only does basic stat storage without deeper learning.
+
+
+I want to build on this to:
+
+✅ Keep the current AICommander and BattleController structure
+
+**FEATURES TO ADD:**
+
+1️⃣ **Enhanced Formation Control Logic:**
+
+- Add terrain analysis module:
+    - Scan battlefield terrain for elevations, chokepoints, forests
+    - Store recommended positions per formation type
+- Dynamic formation logic:
+    - Auto-select shield wall if under heavy ranged fire
+    - Auto-select schiltron when defending cavalry charge
+    - Switch between loose/tight formations depending on threat
+    - And more tactics we aren't thinking of 
+- Counter-tactics:
+    - Detect enemy formation type
+    - Auto-pick a counter-formation, etc
+- Combined arms coordination:
+    - Time cavalry charges after archer volleys
+    - Have infantry hold while skirmishers harass/flank
+- Add battlefield zone prioritization:
+    - Identify and prioritize control of high ground, bridges, hills
+    - Implement fallback/defensive retreat logic when losing key ground
+
+2️⃣ **Expanded Commander Memory System:**
+
+- Add persistent commander personalities (aggressive, cautious, opportunistic traits)
+- Commander personalities evolve over battles based on outcomes
+- Track battle history:
+    - Which formations worked best
+    - Which tactics failed vs. player
+- Add player recognition:
+    - Detect favorite player units/formations
+    - Develop counters over time
+- Adaptive learning:
+    - Gradually adjust tactics based on what’s been effective/ineffective
+- Tie commander behavior to stakes:
+    - More aggressive if defending home territory
+    - More cautious with elite armies
+    - More reckless if outnumbered
+- Allow commander vendettas (commander who’s lost multiple times against player fights harder next time)
+
+3️⃣ **UI Completion:**
+
+- Finish ModSettingsView:
+    - Bind UI XML to ViewModel
+    - Ensure UI appears in campaign via ScreenManager
+    - Allow toggling debug, aggressiveness, memory decay params from UI
+
+**TECHNICAL GUIDELINES:**
+
+- Keep BattleController registered via mission behavior (remove redundant Harmony patch unless needed for patching)
+- Use existing Logger for diagnostics
+- Reuse AICommander’s ExecuteCommand pipeline
+- Keep current folder structure
+
+Do not touch agent-level combat code (no need for weapon/attack logic).
+
+Do not override vanilla UI (keep it additive).
+

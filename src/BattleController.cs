@@ -6,6 +6,9 @@ using TaleWorlds.Library;
 using TaleWorlds.Engine;
 // Use TaleWorlds.Core.MissionMode instead of TaleWorlds.MountAndBlade.MissionMode
 using MissionMode = TaleWorlds.Core.MissionMode;
+using HannibalAI.Tactics;
+using HannibalAI.Terrain;
+using HannibalAI.Memory;
 
 namespace HannibalAI
 {
@@ -169,110 +172,291 @@ namespace HannibalAI
         {
             try
             {
-                // Get formations to control based on settings
+                // Display active AI status at battle start for player awareness
+                if (Mission.Current.CurrentTime < 1.0f)
+                {
+                    // First notification - large and noticeable
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        "=== HANNIBAL AI ACTIVE ===", Color.FromUint(0xFFCC00)));
+                    
+                    Logger.Instance.Info("HannibalAI is running in this battle");
+                }
+                
+                // Second notification with more details
+                if (Mission.Current.CurrentTime > 2.0f && Mission.Current.CurrentTime < 2.5f)
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        "HannibalAI active - Press INSERT for settings", Color.FromUint(0x33FF33)));
+                }
+                
+                // Update Tactical Planner with both original AICommander and enhanced Tactical system
+                
+                // 1. Always run original AICommander for player's team
                 if (_isPlayerInPlayerTeam)
                 {
-                    // Display active AI status at battle start for player awareness
-                    if (Mission.Current.CurrentTime < 1.0f)
-                    {
-                        // First notification - large and noticeable
-                        InformationManager.DisplayMessage(new InformationMessage(
-                            "=== HANNIBAL AI ACTIVE ===", Color.FromUint(0xFFCC00)));
-                        
-                        Logger.Instance.Info("HannibalAI is running in this battle");
-                    }
-                    
-                    // Second notification with more details
-                    if (Mission.Current.CurrentTime > 2.0f && Mission.Current.CurrentTime < 2.5f)
-                    {
-                        InformationManager.DisplayMessage(new InformationMessage(
-                            "HannibalAI active - Press INSERT for settings", Color.FromUint(0x33FF33)));
-                    }
-                    
-                    // Call the AI's decision-making process first - this is our new method
+                    // Call the original AI's decision-making process
                     _aiCommander.MakeDecision();
                     
                     // Then update ongoing AI activities
                     _aiCommander.Update(dt);
                     
-                    // Add more verbose logging to help troubleshoot AI command execution
+                    // Add verbose logging to help troubleshoot AI command execution
                     if (ModConfig.Instance.Debug && Mission.Current.CurrentTime % 15 < 0.1f)
                     {
                         Logger.Instance.Info("HannibalAI friendly commander update executed");
                     }
-
-                    // Control enemy team if enabled in settings
-                    if (ModConfig.Instance.AIControlsEnemies && _enemyTeam != null)
+                }
+                
+                // 2. Control enemy team if enabled in settings (using enhanced tactical system)
+                if (ModConfig.Instance.AIControlsEnemies && _enemyTeam != null)
+                {
+                    // Get tactical plan from tactical planner
+                    TacticalPlan enemyPlan = TacticalPlanner.Instance.DevelopTacticalPlan(_enemyTeam, _playerTeam);
+                    
+                    // Execute the tactical plan
+                    ExecuteTacticalPlan(enemyPlan);
+                    
+                    // Record commander memory data for adaptive learning
+                    if (ModConfig.Instance.UseCommanderMemory)
                     {
-                        // Determine tactical approach for enemy forces using our enhanced system
-                        TacticalApproach enemyApproach = _aiService.DetermineTacticalApproach(_enemyTeam, _playerTeam);
+                        // Record tactical data for enemy team
+                        Dictionary<FormationClass, int> enemyUnitCounts = GetUnitCounts(_enemyTeam);
+                        CommanderMemoryService.Instance.RecordPlayerUnitComposition(enemyUnitCounts);
+                    }
+                    
+                    // Display enemy AI status
+                    if (Mission.Current.CurrentTime < 1.0f)
+                    {
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            "HannibalAI is controlling enemy formations", Color.FromUint(0xFF3333)));
+                    }
+                    
+                    // Repeat notification after 3 seconds for visibility
+                    if (Mission.Current.CurrentTime > 3.0f && Mission.Current.CurrentTime < 3.5f)
+                    {
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            $"HannibalAI active - Enemy AI using {enemyPlan.Strategy} tactics", 
+                            Color.FromUint(0xFF3333)));
+                    }
 
-                        // Process AI decisions for enemy formations
-                        var enemyOrders = _aiService.ProcessBattleSnapshot(_enemyTeam, _playerTeam);
-
-                        // Apply terrain and tactical modifiers to the orders
-                        _aiService.ApplyTerrainTactics(enemyOrders, enemyApproach);
-
-                        // Execute the enhanced orders with aggression factor
-                        float aggressionFactor = CommanderMemoryService.Instance.AggressivenessScore;
-                        ExecuteAIDecisions(enemyOrders, aggressionFactor);
-                        
-                        // Display an immediate notification that enemy AI is active (first 5 seconds of battle)
-                        if (Mission.Current.CurrentTime < 1.0f)
+                    // Show enemy AI control status periodically (every 30 seconds)
+                    if (ModConfig.Instance.Debug && Mission.Current.CurrentTime % 30 < 1.0f)
+                    {
+                        // Get information about the commander
+                        string enemyCommanderInfo = "";
+                        if (ModConfig.Instance.UseCommanderMemory)
                         {
-                            InformationManager.DisplayMessage(new InformationMessage(
-                                "HannibalAI is controlling enemy formations", Color.FromUint(0xFF3333)));
+                            string commanderType = CommanderMemoryService.Instance.CurrentCommanderType;
+                            float aggression = CommanderMemoryService.Instance.AggressivenessScore;
+                            string style = aggression > 0.7f ? "Aggressive" : (aggression < 0.3f ? "Cautious" : "Balanced");
+                            enemyCommanderInfo = $" (Commander: {commanderType} - {style})";
                         }
+
+                        // Display as game message so player can see it
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            $"Enemy Tactic: {enemyPlan.Strategy}{enemyCommanderInfo}", Color.FromUint(0xFF6600)));
                         
-                        // Repeat notification after 3 seconds for visibility
-                        if (Mission.Current.CurrentTime > 3.0f && Mission.Current.CurrentTime < 3.5f)
+                        // Log additional details when in debug mode
+                        if (ModConfig.Instance.Debug)
                         {
-                            InformationManager.DisplayMessage(new InformationMessage(
-                                "HannibalAI active - Enemy AI using " + enemyApproach.RecommendedTactic.ToString() + " tactics", 
-                                Color.FromUint(0xFF3333)));
-                        }
-
-                        // Show enemy AI control status periodically (every 30 seconds)
-                        if (ModConfig.Instance.Debug && Mission.Current.CurrentTime % 30 < 1.0f)
-                        {
-                            string enemyCommanderInfo = "";
-                            if (ModConfig.Instance.UseCommanderMemory)
+                            string formationDetails = "";
+                            foreach (var action in enemyPlan.FormationActions)
                             {
-                                float aggression = CommanderMemoryService.Instance.AggressivenessScore;
-                                string style = aggression > 0.7f ? "Aggressive" : (aggression < 0.3f ? "Cautious" : "Balanced");
-                                enemyCommanderInfo = $" (Commander: {style})";
+                                formationDetails += $"\n  {action.Formation.FormationIndex}: {action.ActionType} ({action.FormationType})";
                             }
-
-                            string tacticName = enemyApproach.RecommendedTactic.ToString();
-                            string advantages = "";
-
-                            if (enemyApproach.HasHighGround) advantages += "High Ground, ";
-                            if (enemyApproach.HasCavalryAdvantage) advantages += "Cavalry, ";
-                            if (enemyApproach.HasArcherAdvantage) advantages += "Archers, ";
-                            if (enemyApproach.HasForestCover) advantages += "Forest Cover, ";
-
-                            if (advantages.Length > 2)
-                            {
-                                advantages = "Advantages: " + advantages.Substring(0, advantages.Length - 2);
-                            }
-
-                            // Display as game message so player can see it
-                            InformationManager.DisplayMessage(new InformationMessage(
-                                $"Enemy Tactic: {tacticName}{enemyCommanderInfo}", Color.FromUint(0xFF6600)));
                             
-                            Logger.Instance.Info($"HannibalAI is controlling enemy - Tactic: {tacticName}{enemyCommanderInfo} | {advantages}");
+                            Logger.Instance.Info($"HannibalAI enemy plan: {enemyPlan.Strategy}{enemyCommanderInfo}{formationDetails}");
                         }
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error in HannibalAI update: {ex.Message}");
+                Logger.Instance.Error($"Error in HannibalAI update: {ex.Message}\n{ex.StackTrace}");
                 
                 // Display error to player so they're aware something went wrong
                 InformationManager.DisplayMessage(new InformationMessage(
                     $"HannibalAI Error: {ex.Message}", Color.FromUint(0xFF0000)));
             }
+        }
+        
+        /// <summary>
+        /// Execute a tactical plan by issuing formation orders
+        /// </summary>
+        private void ExecuteTacticalPlan(TacticalPlan plan)
+        {
+            try
+            {
+                if (plan == null || plan.FormationActions.Count == 0)
+                {
+                    return;
+                }
+                
+                // Sort actions by priority (lowest number = highest priority)
+                plan.FormationActions.Sort((a, b) => a.Priority.CompareTo(b.Priority));
+                
+                // Execute each action
+                foreach (var action in plan.FormationActions)
+                {
+                    if (action.Formation == null || action.Formation.CountOfUnits <= 0)
+                    {
+                        continue;
+                    }
+                    
+                    // Apply formation type if specified
+                    if (!string.IsNullOrEmpty(action.FormationType))
+                    {
+                        ApplyFormationType(action.Formation, action.FormationType);
+                    }
+                    
+                    // Execute the action
+                    switch (action.ActionType)
+                    {
+                        case FormationActionType.Hold:
+                            action.Formation.SetMovementOrder(MovementOrder.MovementOrderType.Hold);
+                            break;
+                            
+                        case FormationActionType.Advance:
+                            WorldPosition targetPos = new WorldPosition(Mission.Current.Scene, action.TargetPosition);
+                            action.Formation.SetMovementOrder(MovementOrder.MovementOrderType.Advance, targetPos);
+                            break;
+                            
+                        case FormationActionType.Charge:
+                            action.Formation.SetMovementOrder(MovementOrder.MovementOrderType.Charge);
+                            break;
+                            
+                        case FormationActionType.Retreat:
+                            WorldPosition retreatPos = new WorldPosition(Mission.Current.Scene, action.TargetPosition);
+                            action.Formation.SetMovementOrder(MovementOrder.MovementOrderType.Retreat, retreatPos);
+                            break;
+                            
+                        case FormationActionType.FireAt:
+                            WorldPosition firePos = new WorldPosition(Mission.Current.Scene, action.TargetPosition);
+                            action.Formation.SetFacingOrder(FacingOrder.FacingOrderType.LookAtDirection, firePos);
+                            action.Formation.SetMovementOrder(MovementOrder.MovementOrderType.StandGround);
+                            break;
+                            
+                        case FormationActionType.Flank:
+                            WorldPosition flankPos = new WorldPosition(Mission.Current.Scene, action.TargetPosition);
+                            action.Formation.SetMovementOrder(MovementOrder.MovementOrderType.Advance, flankPos);
+                            break;
+                            
+                        case FormationActionType.Harass:
+                            WorldPosition harassPos = new WorldPosition(Mission.Current.Scene, action.TargetPosition);
+                            action.Formation.SetMovementOrder(MovementOrder.MovementOrderType.Advance, harassPos);
+                            break;
+                            
+                        case FormationActionType.Guard:
+                            WorldPosition guardPos = new WorldPosition(Mission.Current.Scene, action.TargetPosition);
+                            action.Formation.SetMovementOrder(MovementOrder.MovementOrderType.Advance, guardPos);
+                            break;
+                    }
+                    
+                    // Log action execution in debug mode
+                    if (ModConfig.Instance.Debug)
+                    {
+                        Logger.Instance.Info($"Formation {action.Formation.FormationIndex} executing {action.ActionType} with formation type {action.FormationType}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error executing tactical plan: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Apply a formation arrangement type to a formation
+        /// </summary>
+        private void ApplyFormationType(Formation formation, string formationType)
+        {
+            try
+            {
+                if (formation == null || string.IsNullOrEmpty(formationType))
+                {
+                    return;
+                }
+                
+                // Map string formation type to game's enum
+                ArrangementOrder.ArrangementOrderEnum arrangementType;
+                
+                switch (formationType.ToLower())
+                {
+                    case "line":
+                        arrangementType = ArrangementOrder.ArrangementOrderEnum.Line;
+                        break;
+                    case "close":
+                    case "tightformation":
+                        arrangementType = ArrangementOrder.ArrangementOrderEnum.Close;
+                        break;
+                    case "loose":
+                        arrangementType = ArrangementOrder.ArrangementOrderEnum.Loose;
+                        break;
+                    case "circle":
+                        arrangementType = ArrangementOrder.ArrangementOrderEnum.Circle;
+                        break;
+                    case "square":
+                    case "schiltron":
+                        arrangementType = ArrangementOrder.ArrangementOrderEnum.Square;
+                        break;
+                    case "column":
+                        arrangementType = ArrangementOrder.ArrangementOrderEnum.Column;
+                        break;
+                    case "shieldwall":
+                        arrangementType = ArrangementOrder.ArrangementOrderEnum.ShieldWall;
+                        break;
+                    case "wedge":
+                        arrangementType = ArrangementOrder.ArrangementOrderEnum.Wedge;
+                        break;
+                    case "skein":
+                        arrangementType = ArrangementOrder.ArrangementOrderEnum.Skein;
+                        break;
+                    default:
+                        // Default to line if unknown
+                        arrangementType = ArrangementOrder.ArrangementOrderEnum.Line;
+                        break;
+                }
+                
+                // Apply the formation
+                formation.SetArrangementOrder(arrangementType);
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error applying formation type: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Get unit counts for each formation class in a team
+        /// </summary>
+        private Dictionary<FormationClass, int> GetUnitCounts(Team team)
+        {
+            var counts = new Dictionary<FormationClass, int>();
+            
+            try
+            {
+                foreach (FormationClass formationClass in Enum.GetValues(typeof(FormationClass)))
+                {
+                    if (formationClass != FormationClass.NumberOfAllFormations)
+                    {
+                        counts[formationClass] = 0;
+                    }
+                }
+                
+                foreach (Formation formation in team.FormationsIncludingEmpty)
+                {
+                    if (formation.CountOfUnits > 0 && formation.FormationIndex != FormationClass.NumberOfAllFormations)
+                    {
+                        counts[formation.FormationIndex] += formation.CountOfUnits;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error getting unit counts: {ex.Message}");
+            }
+            
+            return counts;
         }
 
         /// <summary>

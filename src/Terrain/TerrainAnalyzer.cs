@@ -1,0 +1,624 @@
+using System;
+using System.Collections.Generic;
+using TaleWorlds.Core;
+using TaleWorlds.Library;
+using TaleWorlds.MountAndBlade;
+using TaleWorlds.Engine;
+
+namespace HannibalAI.Terrain
+{
+    /// <summary>
+    /// Analyzes battlefield terrain to identify tactical features and optimal positions
+    /// </summary>
+    public class TerrainAnalyzer
+    {
+        private static TerrainAnalyzer _instance;
+        
+        public static TerrainAnalyzer Instance
+        {
+            get
+            {
+                if (_instance == null)
+                {
+                    _instance = new TerrainAnalyzer();
+                }
+                return _instance;
+            }
+        }
+        
+        // Terrain analysis constants
+        private const float HIGH_GROUND_THRESHOLD = 3.0f; // Meters
+        private const float SIGNIFICANT_SLOPE_THRESHOLD = 15.0f; // Degrees
+        private const float CHOKEPOINT_WIDTH_THRESHOLD = 15.0f; // Meters
+        private const float FOREST_DENSITY_THRESHOLD = 0.3f; // Trees per unit area
+        
+        // Cache of terrain features
+        private List<TerrainFeature> _terrainFeatures;
+        private Dictionary<FormationClass, List<Vec3>> _optimalPositions;
+        private TerrainType _currentTerrainType;
+        private bool _terrainAnalyzed;
+        private float _battlefieldWidth;
+        private float _battlefieldLength;
+        
+        public TerrainAnalyzer()
+        {
+            _terrainFeatures = new List<TerrainFeature>();
+            _optimalPositions = new Dictionary<FormationClass, List<Vec3>>();
+            _terrainAnalyzed = false;
+            
+            // Initialize positions lists for each formation type
+            foreach (FormationClass formationClass in Enum.GetValues(typeof(FormationClass)))
+            {
+                if (formationClass != FormationClass.NumberOfAllFormations)
+                {
+                    _optimalPositions[formationClass] = new List<Vec3>();
+                }
+            }
+            
+            Logger.Instance.Info("TerrainAnalyzer created");
+        }
+        
+        /// <summary>
+        /// Analyze the current terrain to identify tactical features
+        /// </summary>
+        public List<TerrainFeature> AnalyzeCurrentTerrain()
+        {
+            if (_terrainAnalyzed)
+            {
+                return _terrainFeatures;
+            }
+            
+            try
+            {
+                Logger.Instance.Info("Analyzing battlefield terrain...");
+                _terrainFeatures.Clear();
+                
+                // Clear optimal positions
+                foreach (var key in _optimalPositions.Keys)
+                {
+                    _optimalPositions[key].Clear();
+                }
+                
+                // Get mission scene
+                Scene scene = Mission.Current?.Scene;
+                if (scene == null)
+                {
+                    Logger.Instance.Warning("Cannot analyze terrain - no active scene");
+                    return _terrainFeatures;
+                }
+                
+                // Determine battlefield bounds
+                EstimateBattlefieldBounds();
+                
+                // Detect terrain type
+                DetectTerrainType();
+                
+                // Scan for high ground
+                ScanForHighGround();
+                
+                // Identify chokepoints
+                IdentifyChokepoints();
+                
+                // Find forest cover
+                FindForestCover();
+                
+                // Find water features
+                FindWaterFeatures();
+                
+                // Calculate optimal positions for each formation type
+                CalculateOptimalPositions();
+                
+                _terrainAnalyzed = true;
+                
+                Logger.Instance.Info($"Terrain analysis complete. Found {_terrainFeatures.Count} tactical features.");
+                
+                // Log feature counts by type if in debug mode
+                if (ModConfig.Instance.Debug)
+                {
+                    Dictionary<TerrainFeatureType, int> featureCounts = new Dictionary<TerrainFeatureType, int>();
+                    foreach (TerrainFeature feature in _terrainFeatures)
+                    {
+                        if (!featureCounts.ContainsKey(feature.FeatureType))
+                        {
+                            featureCounts[feature.FeatureType] = 0;
+                        }
+                        featureCounts[feature.FeatureType]++;
+                    }
+                    
+                    // Log the counts
+                    foreach (var kvp in featureCounts)
+                    {
+                        Logger.Instance.Info($"- {kvp.Key}: {kvp.Value} features");
+                    }
+                }
+                
+                return _terrainFeatures;
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error analyzing terrain: {ex.Message}");
+                return new List<TerrainFeature>();
+            }
+        }
+        
+        /// <summary>
+        /// Get optimal positions for a specific formation type
+        /// </summary>
+        public List<Vec3> GetOptimalPositionsForFormation(FormationClass formationClass)
+        {
+            // Ensure terrain is analyzed
+            if (!_terrainAnalyzed)
+            {
+                AnalyzeCurrentTerrain();
+            }
+            
+            if (_optimalPositions.ContainsKey(formationClass))
+            {
+                return _optimalPositions[formationClass];
+            }
+            
+            return new List<Vec3>();
+        }
+        
+        /// <summary>
+        /// Get terrain features of a specific type
+        /// </summary>
+        public List<TerrainFeature> GetTerrainFeaturesByType(TerrainFeatureType featureType)
+        {
+            // Ensure terrain is analyzed
+            if (!_terrainAnalyzed)
+            {
+                AnalyzeCurrentTerrain();
+            }
+            
+            return _terrainFeatures.FindAll(f => f.FeatureType == featureType);
+        }
+        
+        /// <summary>
+        /// Get current terrain type
+        /// </summary>
+        public TerrainType GetTerrainType()
+        {
+            if (!_terrainAnalyzed)
+            {
+                AnalyzeCurrentTerrain();
+            }
+            
+            return _currentTerrainType;
+        }
+        
+        /// <summary>
+        /// Reset terrain analysis when exiting battle
+        /// </summary>
+        public void Reset()
+        {
+            _terrainFeatures.Clear();
+            foreach (var key in _optimalPositions.Keys)
+            {
+                _optimalPositions[key].Clear();
+            }
+            _terrainAnalyzed = false;
+            
+            Logger.Instance.Info("TerrainAnalyzer reset");
+        }
+        
+        #region Terrain Analysis Methods
+        
+        /// <summary>
+        /// Estimate the battlefield bounds based on spawn points or scene size
+        /// </summary>
+        private void EstimateBattlefieldBounds()
+        {
+            // In a real implementation, this would use spawn points and obstacles to determine
+            // the actual usable battlefield area
+            // For now, we'll use a simplified implementation with reasonable defaults
+            
+            _battlefieldWidth = 300.0f;
+            _battlefieldLength = 300.0f;
+            
+            try
+            {
+                // Attempt to get better battlefield dimensions from mission bounds
+                if (Mission.Current != null)
+                {
+                    // Example of how to get mission bounds - real implementation would use actual API methods
+                    // Would need to get actual bounds from Mission.Current.Scene
+                    _battlefieldWidth = 300.0f;
+                    _battlefieldLength = 300.0f;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Warning($"Failed to estimate battlefield bounds: {ex.Message}");
+            }
+            
+            Logger.Instance.Info($"Estimated battlefield dimensions: {_battlefieldWidth}m x {_battlefieldLength}m");
+        }
+        
+        /// <summary>
+        /// Detect the general terrain type of the battlefield
+        /// </summary>
+        private void DetectTerrainType()
+        {
+            // Default to plains
+            _currentTerrainType = TerrainType.Plains;
+            
+            try
+            {
+                // In a real implementation, would analyze the distribution of terrain textures
+                // and elevation variations to determine the terrain type
+                // For now, use a simplified approach
+                
+                // Count terrain features to determine type
+                int forestCount = 0;
+                int mountainCount = 0;
+                int waterCount = 0;
+                
+                // Simulate terrain detection through scene analysis
+                Scene scene = Mission.Current?.Scene;
+                if (scene != null)
+                {
+                    // Placeholder for actual terrain detection code
+                    // This would use texture identification, flora density, and elevation changes
+                    
+                    // For testing, use randomization to simulate different terrain types
+                    Random random = new Random();
+                    int terrainValue = random.Next(0, 5);
+                    
+                    switch (terrainValue)
+                    {
+                        case 0:
+                            _currentTerrainType = TerrainType.Plains;
+                            break;
+                        case 1:
+                            _currentTerrainType = TerrainType.Forest;
+                            break;
+                        case 2:
+                            _currentTerrainType = TerrainType.Hills;
+                            break;
+                        case 3:
+                            _currentTerrainType = TerrainType.Mountains;
+                            break;
+                        case 4:
+                            _currentTerrainType = TerrainType.River;
+                            break;
+                    }
+                    
+                    // Override with more realistic detection in actual implementation
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Warning($"Failed to detect terrain type: {ex.Message}");
+            }
+            
+            Logger.Instance.Info($"Detected terrain type: {_currentTerrainType}");
+        }
+        
+        /// <summary>
+        /// Scan the battlefield for elevated terrain that provides tactical advantage
+        /// </summary>
+        private void ScanForHighGround()
+        {
+            try
+            {
+                // In an actual implementation, would use heightmap sampling from the terrain
+                // to identify significant high ground areas
+                // For now, create some test high ground points
+                
+                // Create some sample high ground features
+                Random random = new Random();
+                int highGroundCount = random.Next(2, 5); // 2-4 high ground features
+                
+                for (int i = 0; i < highGroundCount; i++)
+                {
+                    // Create a high ground feature at a random position
+                    float x = (random.Next(0, 100) / 100.0f) * _battlefieldWidth - (_battlefieldWidth / 2.0f);
+                    float y = (random.Next(0, 100) / 100.0f) * _battlefieldLength - (_battlefieldLength / 2.0f);
+                    
+                    Vec3 position = new Vec3(x, y, 0.0f);
+                    float radius = random.Next(10, 30); // 10-30m radius
+                    float height = random.Next(3, 10); // 3-10m height
+                    
+                    TerrainFeature highGround = new TerrainFeature
+                    {
+                        FeatureType = TerrainFeatureType.HighGround,
+                        Position = position,
+                        Size = radius,
+                        Value = height, // Value represents height advantage
+                        Description = $"Hill ({height}m elevation)"
+                    };
+                    
+                    _terrainFeatures.Add(highGround);
+                    
+                    // High ground is good for archers and infantry
+                    _optimalPositions[FormationClass.Ranged].Add(position);
+                    _optimalPositions[FormationClass.Infantry].Add(position);
+                }
+                
+                Logger.Instance.Info($"Identified {highGroundCount} high ground features");
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Warning($"Failed to scan for high ground: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Identify narrower areas that can be used to funnel enemy forces
+        /// </summary>
+        private void IdentifyChokepoints()
+        {
+            try
+            {
+                // In a real implementation, would analyze terrain obstacles and pathfinding constraints
+                // to identify natural chokepoints
+                // For now, create some sample chokepoints
+                
+                Random random = new Random();
+                int chokepointCount = random.Next(0, 3); // 0-2 chokepoints
+                
+                for (int i = 0; i < chokepointCount; i++)
+                {
+                    // Create a chokepoint at a random position
+                    float x = (random.Next(0, 100) / 100.0f) * _battlefieldWidth - (_battlefieldWidth / 2.0f);
+                    float y = (random.Next(0, 100) / 100.0f) * _battlefieldLength - (_battlefieldLength / 2.0f);
+                    
+                    Vec3 position = new Vec3(x, y, 0.0f);
+                    float width = random.Next(5, 15); // 5-15m width
+                    
+                    TerrainFeature chokepoint = new TerrainFeature
+                    {
+                        FeatureType = TerrainFeatureType.Chokepoint,
+                        Position = position,
+                        Size = width,
+                        Value = 1.0f, // Value represents tactical importance
+                        Description = $"Chokepoint ({width}m wide)"
+                    };
+                    
+                    _terrainFeatures.Add(chokepoint);
+                    
+                    // Chokepoints are good for infantry
+                    _optimalPositions[FormationClass.Infantry].Add(position);
+                }
+                
+                Logger.Instance.Info($"Identified {chokepointCount} chokepoints");
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Warning($"Failed to identify chokepoints: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Find areas with forest cover for ambush and tactical advantage
+        /// </summary>
+        private void FindForestCover()
+        {
+            try
+            {
+                // In a real implementation, would analyze flora density in different areas
+                // to identify forests and significant tree cover
+                // For now, create some sample forest areas
+                
+                Random random = new Random();
+                int forestCount = _currentTerrainType == TerrainType.Forest ? 
+                    random.Next(3, 6) : // More forests in forest terrain
+                    random.Next(0, 3);  // Fewer forests in other terrain types
+                
+                for (int i = 0; i < forestCount; i++)
+                {
+                    // Create a forest area at a random position
+                    float x = (random.Next(0, 100) / 100.0f) * _battlefieldWidth - (_battlefieldWidth / 2.0f);
+                    float y = (random.Next(0, 100) / 100.0f) * _battlefieldLength - (_battlefieldLength / 2.0f);
+                    
+                    Vec3 position = new Vec3(x, y, 0.0f);
+                    float radius = random.Next(15, 40); // 15-40m radius
+                    float density = (random.Next(40, 100) / 100.0f); // 40-100% density
+                    
+                    TerrainFeature forest = new TerrainFeature
+                    {
+                        FeatureType = TerrainFeatureType.Forest,
+                        Position = position,
+                        Size = radius,
+                        Value = density, // Value represents forest density
+                        Description = $"Forest ({radius}m radius, {density*100}% density)"
+                    };
+                    
+                    _terrainFeatures.Add(forest);
+                    
+                    // Forests are good for infantry and skirmishers, bad for cavalry
+                    if (density > 0.7f)
+                    {
+                        _optimalPositions[FormationClass.Infantry].Add(position);
+                    }
+                }
+                
+                Logger.Instance.Info($"Identified {forestCount} forest areas");
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Warning($"Failed to find forest cover: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Find water features like rivers, lakes, or coastlines
+        /// </summary>
+        private void FindWaterFeatures()
+        {
+            try
+            {
+                // In a real implementation, would identify water bodies using texture and height analysis
+                // For now, create some sample water features
+                
+                Random random = new Random();
+                int waterCount = _currentTerrainType == TerrainType.River ? 
+                    1 : // Always a river in river terrain
+                    random.Next(0, 2); // 0-1 water features in other terrain
+                
+                for (int i = 0; i < waterCount; i++)
+                {
+                    // Decide if it's a river or lake
+                    bool isRiver = (i == 0 && _currentTerrainType == TerrainType.River) || random.Next(0, 2) == 0;
+                    
+                    if (isRiver)
+                    {
+                        // Create a river crossing area at a random position
+                        float x = (random.Next(0, 100) / 100.0f) * _battlefieldWidth - (_battlefieldWidth / 2.0f);
+                        float y = (random.Next(0, 100) / 100.0f) * _battlefieldLength - (_battlefieldLength / 2.0f);
+                        
+                        Vec3 position = new Vec3(x, y, 0.0f);
+                        float width = random.Next(5, 15); // 5-15m width
+                        
+                        TerrainFeature river = new TerrainFeature
+                        {
+                            FeatureType = TerrainFeatureType.River,
+                            Position = position,
+                            Size = width,
+                            Value = 1.0f, // Value represents tactical importance
+                            Description = $"River crossing ({width}m wide)"
+                        };
+                        
+                        _terrainFeatures.Add(river);
+                        
+                        // River crossings are important to control
+                        _optimalPositions[FormationClass.Infantry].Add(position);
+                    }
+                    else
+                    {
+                        // Create a lake at a random position
+                        float x = (random.Next(0, 100) / 100.0f) * _battlefieldWidth - (_battlefieldWidth / 2.0f);
+                        float y = (random.Next(0, 100) / 100.0f) * _battlefieldLength - (_battlefieldLength / 2.0f);
+                        
+                        Vec3 position = new Vec3(x, y, 0.0f);
+                        float radius = random.Next(20, 50); // 20-50m radius
+                        
+                        TerrainFeature lake = new TerrainFeature
+                        {
+                            FeatureType = TerrainFeatureType.Lake,
+                            Position = position,
+                            Size = radius,
+                            Value = 0.5f, // Value represents tactical importance
+                            Description = $"Lake ({radius}m radius)"
+                        };
+                        
+                        _terrainFeatures.Add(lake);
+                    }
+                }
+                
+                Logger.Instance.Info($"Identified {waterCount} water features");
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Warning($"Failed to find water features: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Calculate optimal positions for each formation type based on terrain features
+        /// </summary>
+        private void CalculateOptimalPositions()
+        {
+            try
+            {
+                // In a real implementation, would weigh different terrain features
+                // based on formation types and current battle conditions
+                
+                // For cavalry, open flat ground away from forests
+                Random random = new Random();
+                int cavalryPositions = random.Next(2, 5);
+                
+                for (int i = 0; i < cavalryPositions; i++)
+                {
+                    float x = (random.Next(0, 100) / 100.0f) * _battlefieldWidth - (_battlefieldWidth / 2.0f);
+                    float y = (random.Next(0, 100) / 100.0f) * _battlefieldLength - (_battlefieldLength / 2.0f);
+                    
+                    // Ensure position is not in a forest
+                    bool inForest = false;
+                    foreach (TerrainFeature feature in _terrainFeatures)
+                    {
+                        if (feature.FeatureType == TerrainFeatureType.Forest)
+                        {
+                            float distSq = (feature.Position.x - x) * (feature.Position.x - x) + 
+                                           (feature.Position.y - y) * (feature.Position.y - y);
+                            if (distSq < feature.Size * feature.Size)
+                            {
+                                inForest = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (!inForest)
+                    {
+                        _optimalPositions[FormationClass.Cavalry].Add(new Vec3(x, y, 0.0f));
+                        _optimalPositions[FormationClass.HorseArcher].Add(new Vec3(x, y, 0.0f));
+                    }
+                }
+                
+                // Already added positions for other formation types during feature detection
+                
+                Logger.Instance.Info("Calculated optimal positions for all formation types");
+                
+                // Log counts in debug mode
+                if (ModConfig.Instance.Debug)
+                {
+                    foreach (FormationClass formationClass in _optimalPositions.Keys)
+                    {
+                        Logger.Instance.Info($"- {formationClass}: {_optimalPositions[formationClass].Count} optimal positions");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Warning($"Failed to calculate optimal positions: {ex.Message}");
+            }
+        }
+        
+        #endregion
+    }
+
+    /// <summary>
+    /// Types of terrain features that can be identified
+    /// </summary>
+    public enum TerrainFeatureType
+    {
+        HighGround,
+        Chokepoint,
+        Forest,
+        River,
+        Lake,
+        Bridge,
+        Cliff,
+        OpenField,
+        FlankingPosition
+    }
+    
+    /// <summary>
+    /// General terrain type of the battlefield
+    /// </summary>
+    public enum TerrainType
+    {
+        Plains,
+        Forest,
+        Hills,
+        Mountains,
+        River,
+        Coast,
+        Desert,
+        Snow
+    }
+    
+    /// <summary>
+    /// Tactical feature of the terrain
+    /// </summary>
+    public class TerrainFeature
+    {
+        public TerrainFeatureType FeatureType { get; set; }
+        public Vec3 Position { get; set; }
+        public float Size { get; set; } // Radius or width depending on feature type
+        public float Value { get; set; } // Height, density, or importance depending on feature type
+        public string Description { get; set; }
+    }
+}
