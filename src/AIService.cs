@@ -21,10 +21,16 @@ namespace HannibalAI
         private const float WEAK_FORMATION_HEALTH_THRESHOLD = 0.4f; // Below this proportion of health, a formation is "weak"
         private const float HEIGHT_ADVANTAGE_THRESHOLD = 3.0f; // Height difference needed for terrain advantage
         
+        // Public property to expose configuration
+        public ModConfig Config => _config;
+        
         public AIService(ModConfig config)
         {
             _config = config;
             _fallbackService = new FallbackService(config, this);
+            
+            // Log creation of AIService
+            Logger.Instance.Info($"AIService created with config: Debug={config.Debug}, AIControlsEnemies={config.AIControlsEnemies}");
         }
         
         /// <summary>

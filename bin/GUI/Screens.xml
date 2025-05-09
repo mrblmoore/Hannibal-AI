@@ -1,4 +1,4 @@
-<![CDATA[<ScreenManager>
+<ScreenManager>
     <Screens>
         <Screen Id="HannibalAI_Settings">
             <TypeName>HannibalAI.UI.ModSettingsView</TypeName>
@@ -6,4 +6,3 @@
         </Screen>
     </Screens>
 </ScreenManager>
-]]>
