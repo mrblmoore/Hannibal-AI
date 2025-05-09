@@ -34,9 +34,15 @@ namespace HannibalAI
                 _config = new ModConfig();
                 _config.LoadSettings();
                 
-                // Log configuration
+                // Initialize UI layer
+                var gauntletLayer = new GauntletLayer(100);
+                var settingsScreen = new ModSettingsScreen(gauntletLayer);
+                settingsScreen.Initialize();
+                
+                // Log configuration and UI initialization
                 Logger.Instance.Info($"Mod config loaded - AI Controls Enemies: {_config.AIControlsEnemies}, " +
                     $"Use Commander Memory: {_config.UseCommanderMemory}, Debug: {_config.Debug}");
+                Logger.Instance.Info("UI Layer initialized");
 
                 // Log mod initialization
                 InformationManager.DisplayMessage(new InformationMessage("HannibalAI is loading..."));

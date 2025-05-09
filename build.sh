@@ -55,11 +55,15 @@ fi
 echo "Cleaning up duplicate files..."
 rm -f bin/HannibalAI.dll bin/HannibalAI.pdb
 
+# Ensure Win64_Shipping_Client directory exists
+mkdir -p bin/Win64_Shipping_Client
+
+# Copy DLL and PDB to shipping directory
+cp bin/HannibalAI.dll bin/Win64_Shipping_Client/
+cp bin/HannibalAI.pdb bin/Win64_Shipping_Client/
+
 echo "Build completed successfully."
-echo "Output files are organized in the bin directory with the proper Bannerlord structure."
-echo "- DLLs are located in bin/Win64_Shipping_Client/"
-echo "- SubModule.xml is in both bin/ and bin/Win64_Shipping_Client/"
-echo "- GUI files are in bin/GUI/"
+echo "Output files are located in bin/Win64_Shipping_Client"
 echo ""
 echo "To use this mod with Bannerlord, copy the contents of the bin directory"
 echo "to your Bannerlord Modules/HannibalAI folder."
