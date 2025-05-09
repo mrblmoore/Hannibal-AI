@@ -11,7 +11,7 @@ if [ ! -d "bin" ]; then
 fi
 
 # Check for required files
-required_files=("bin/HannibalAI.dll" "bin/SubModule.xml")
+required_files=("bin/Win64_Shipping_Client/HannibalAI.dll" "bin/SubModule.xml")
 
 all_files_present=true
 for file in "${required_files[@]}"; do
@@ -84,6 +84,11 @@ echo ""
 echo "Verification complete."
 if [ "$all_files_present" = true ]; then
     echo "✅ The mod structure appears to be valid."
+    echo "The mod files are organized in the proper Bannerlord structure:"
+    echo "- DLLs in bin/Win64_Shipping_Client/"
+    echo "- SubModule.xml in bin/ (root) and bin/Win64_Shipping_Client/"
+    echo "- GUI files in bin/GUI/"
+    echo ""
     echo "To use with Bannerlord, copy the contents of the bin directory to your Bannerlord Modules/HannibalAI folder."
 else
     echo "❌ The mod structure has issues that need to be resolved."

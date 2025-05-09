@@ -31,12 +31,15 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Copy files to Win64_Shipping_Client directory (this is where Bannerlord looks for DLLs)
-echo "Copying files to Win64_Shipping_Client directory..."
+# Create proper directory structure first
+mkdir -p bin/Win64_Shipping_Client/
+
+# Build will place DLLs in bin/ by default - copy to correct location and then remove from root
+echo "Moving files to Win64_Shipping_Client directory..."
 cp bin/HannibalAI.dll bin/Win64_Shipping_Client/
 cp bin/HannibalAI.pdb bin/Win64_Shipping_Client/
 
-# Copy SubModule.xml to bin root directory
+# Copy SubModule.xml to bin root directory (required) and client directory
 echo "Copying SubModule.xml to bin directory..."
 cp SubModule.xml bin/
 cp SubModule.xml bin/Win64_Shipping_Client/
@@ -48,13 +51,22 @@ if [ -d "GUI" ]; then
     cp -r GUI/* bin/GUI/
 fi
 
+# Remove duplicate DLLs from bin root to avoid confusion (leave only SubModule.xml in root)
+echo "Cleaning up duplicate files..."
+rm -f bin/HannibalAI.dll bin/HannibalAI.pdb
+
 echo "Build completed successfully."
-echo "Output files are located in the bin directory."
-echo "To use this mod with Bannerlord, copy the contents of the bin directory to your Bannerlord Modules/HannibalAI folder."
+echo "Output files are organized in the bin directory with the proper Bannerlord structure."
+echo "- DLLs are located in bin/Win64_Shipping_Client/"
+echo "- SubModule.xml is in both bin/ and bin/Win64_Shipping_Client/"
+echo "- GUI files are in bin/GUI/"
+echo ""
+echo "To use this mod with Bannerlord, copy the contents of the bin directory"
+echo "to your Bannerlord Modules/HannibalAI folder."
 
 # Verify the structure
 echo "Verifying mod structure..."
-if [ -f bin/HannibalAI.dll ] && [ -f bin/SubModule.xml ]; then
+if [ -f bin/Win64_Shipping_Client/HannibalAI.dll ] && [ -f bin/SubModule.xml ]; then
     echo "✅ Mod structure verified. Basic files are present."
 else
     echo "❌ Mod structure is incomplete. Please check the build output."
