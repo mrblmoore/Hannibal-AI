@@ -234,7 +234,7 @@ namespace HannibalAI.Memory
         /// <summary>
         /// Ensure all personality values stay within valid range
         /// </summary>
-        private void ClampPersonalityValues()
+        public void ClampPersonalityValues()
         {
             Aggressiveness = Math.Max(0.1f, Math.Min(1.0f, Aggressiveness));
             Caution = Math.Max(0.1f, Math.Min(1.0f, Caution));

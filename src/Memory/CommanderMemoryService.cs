@@ -9,7 +9,7 @@ using TaleWorlds.MountAndBlade;
 namespace HannibalAI.Memory
 {
     /// <summary>
-    /// Enhanced commander memory service with tactical adaptation capabilities
+    /// Enhanced commander memory service with tactical adaptation capabilities and nemesis system
     /// </summary>
     public class CommanderMemoryService
     {
@@ -41,10 +41,17 @@ namespace HannibalAI.Memory
         // Player analysis
         private PlayerAnalysis _playerAnalysis;
         
+        // Nemesis System (enhanced commander tracking)
+        private NemesisSystem _nemesisSystem;
+        
         // Exposed properties
         public float AggressivenessScore => _currentPersonality?.Aggressiveness ?? 0.5f;
         public bool HasVendettaAgainstPlayer => _currentPersonality?.HasVendettaAgainstPlayer ?? false;
         public string CurrentCommanderType => _currentPersonality?.PersonalityType ?? "Unknown";
+        
+        // Nemesis system properties
+        public NemesisCommander CurrentNemesis => _nemesisSystem?.GetCurrentNemesis();
+        public bool HasActiveNemesis => CurrentNemesis != null;
         
         /// <summary>
         /// Initialize the commander memory service
@@ -55,6 +62,7 @@ namespace HannibalAI.Memory
             _commanderPersonalities = new Dictionary<string, CommanderPersonality>();
             _battleHistory = new List<BattleRecord>();
             _playerAnalysis = new PlayerAnalysis();
+            _nemesisSystem = new NemesisSystem();
             
             // Set file paths
             _memoryFilePath = Path.Combine(GetModuleRootPath(), "CommanderMemory.xml");
@@ -64,7 +72,7 @@ namespace HannibalAI.Memory
             _currentPersonality = CommanderPersonality.CreateRandom();
             _commanderPersonalities[_currentCommanderId] = _currentPersonality;
             
-            Logger.Instance.Info("CommanderMemoryService initialized");
+            Logger.Instance.Info("CommanderMemoryService initialized with Nemesis System");
             
             // Load any existing data
             LoadMemoryData();
@@ -295,6 +303,25 @@ namespace HannibalAI.Memory
                     
                     // Set learning data flag if we have battle history
                     advice.HasLearningData = _currentPersonality.BattlesFought > 0;
+                    
+                    // Check if this is a nemesis commander
+                    var currentNemesis = _nemesisSystem?.GetCurrentNemesis();
+                    if (currentNemesis != null)
+                    {
+                        advice.IsNemesisCommander = true;
+                        advice.PreviousEncounters = currentNemesis.EncounterCount;
+                        advice.PreviousVictories = currentNemesis.VictoryCount;
+                        advice.HasVendettaAgainstPlayer = currentNemesis.HasVendetta;
+                        
+                        // If nemesis has a more accurate title, use it
+                        if (!string.IsNullOrEmpty(currentNemesis.CommanderName))
+                        {
+                            advice.CommanderTitle = $"{currentNemesis.CommanderName} ({currentNemesis.CommanderPersonality?.PersonalityType ?? "Unknown"})";
+                        }
+                        
+                        Logger.Instance.Info($"Tactical advice includes nemesis data: {currentNemesis.CommanderName}, " +
+                            $"Encounters: {currentNemesis.EncounterCount}, Vendetta: {currentNemesis.HasVendetta}");
+                    }
                 }
                 
                 // Add player weaknesses from analysis
@@ -397,12 +424,127 @@ namespace HannibalAI.Memory
                     _commanderPersonalities[_currentCommanderId] = _currentPersonality;
                 }
                 
+                // Reset nemesis system for new battle
+                if (_nemesisSystem != null)
+                {
+                    _nemesisSystem.ResetForNewBattle();
+                }
+                
                 Logger.Instance.Info($"Reset for new battle with commander: {_currentPersonality.PersonalityType}");
             }
             catch (Exception ex)
             {
                 Logger.Instance.Error($"Error resetting for new battle: {ex.Message}");
             }
+        }
+        
+        /// <summary>
+        /// Identify a potential nemesis commander from the current battle
+        /// </summary>
+        /// <param name="commanderId">The unique identifier for the commander</param>
+        /// <param name="commanderName">The display name of the commander</param>
+        /// <param name="partyStrength">The military strength of the commander's party</param>
+        public void IdentifyNemesisCommander(string commanderId, string commanderName, int partyStrength)
+        {
+            try
+            {
+                if (_nemesisSystem != null && !string.IsNullOrEmpty(commanderId))
+                {
+                    _nemesisSystem.IdentifyPotentialNemesis(commanderId, commanderName, partyStrength);
+                    
+                    // Get the current nemesis
+                    var nemesis = _nemesisSystem.GetCurrentNemesis();
+                    if (nemesis != null)
+                    {
+                        // If this is a returning nemesis, and they have a vendetta, display a message
+                        if (nemesis.EncounterCount > 1 && nemesis.HasVendetta)
+                        {
+                            string message = $"{nemesis.CommanderName} remembers you! They are seeking revenge from your past encounters.";
+                            InformationManager.DisplayMessage(new InformationMessage(message, Colors.Red));
+                            Logger.Instance.Info($"Nemesis with vendetta encountered: {nemesis.CommanderName}");
+                            
+                            // Incorporate nemesis personality into current commander
+                            if (nemesis.CommanderPersonality != null)
+                            {
+                                // Blend their personality with our current defaults
+                                _currentPersonality.Aggressiveness = Math.Max(_currentPersonality.Aggressiveness, nemesis.CommanderPersonality.Aggressiveness);
+                                _currentPersonality.Stubbornness = Math.Max(_currentPersonality.Stubbornness, nemesis.CommanderPersonality.Stubbornness);
+                                _currentPersonality.HasVendettaAgainstPlayer = true;
+                                
+                                Logger.Instance.Info("Applied nemesis personality traits to current battle commander");
+                            }
+                        }
+                        else if (nemesis.EncounterCount > 1)
+                        {
+                            InformationManager.DisplayMessage(new InformationMessage(
+                                $"You face {nemesis.CommanderName} again!", Colors.Yellow));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error identifying nemesis commander: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Record a battle outcome for the nemesis system
+        /// </summary>
+        public void RecordNemesisBattle(string commanderId, bool playerVictory, 
+            Dictionary<TacticType, float> tacticSuccessRates,
+            Dictionary<FormationClass, float> formationPerformance)
+        {
+            try
+            {
+                if (_nemesisSystem != null && !string.IsNullOrEmpty(commanderId))
+                {
+                    _nemesisSystem.RecordNemesisBattleOutcome(
+                        commanderId, 
+                        playerVictory, 
+                        tacticSuccessRates, 
+                        formationPerformance);
+                    
+                    // Update our main data store and save
+                    SaveMemoryData();
+                    
+                    // Show appropriate messages
+                    if (!playerVictory)
+                    {
+                        // Player lost, nemesis won
+                        var nemesis = _nemesisSystem.GetCurrentNemesis();
+                        if (nemesis != null && nemesis.VictoryCount > 1)
+                        {
+                            InformationManager.DisplayMessage(new InformationMessage(
+                                $"{nemesis.CommanderName} has defeated you {nemesis.VictoryCount} times!", Colors.Red));
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error recording nemesis battle: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Get a list of all commanders with a vendetta against the player
+        /// </summary>
+        public List<NemesisCommander> GetCommandersWithVendetta()
+        {
+            try
+            {
+                if (_nemesisSystem != null)
+                {
+                    return _nemesisSystem.GetCommandersWithVendetta();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error getting commanders with vendetta: {ex.Message}");
+            }
+            
+            return new List<NemesisCommander>();
         }
         
         #region Helper Methods
@@ -575,6 +717,13 @@ namespace HannibalAI.Memory
                             _playerAnalysis = data.PlayerAnalysis ?? new PlayerAnalysis();
                             _currentCommanderId = data.CurrentCommanderId ?? "default";
                             
+                            // Load nemesis system data if it exists
+                            if (data.NemesisData != null)
+                            {
+                                _nemesisSystem = data.NemesisData;
+                                Logger.Instance.Info($"Loaded nemesis system data with {_nemesisSystem.Commanders.Count} tracked enemy commanders");
+                            }
+                            
                             // Set current personality
                             if (!string.IsNullOrEmpty(_currentCommanderId) && _commanderPersonalities.ContainsKey(_currentCommanderId))
                             {
@@ -632,7 +781,8 @@ namespace HannibalAI.Memory
                     CommanderPersonalities = _commanderPersonalities,
                     BattleHistory = _battleHistory,
                     PlayerAnalysis = _playerAnalysis,
-                    CurrentCommanderId = _currentCommanderId
+                    CurrentCommanderId = _currentCommanderId,
+                    NemesisData = _nemesisSystem
                 };
                 
                 // Ensure directory exists
@@ -677,6 +827,10 @@ namespace HannibalAI.Memory
             
         public string CurrentCommanderId { get; set; } 
             = "default";
+            
+        // Nemesis system data for enhanced commander tracking
+        public NemesisSystem NemesisData { get; set; } 
+            = new NemesisSystem();
     }
     
     /// <summary>
@@ -883,6 +1037,9 @@ namespace HannibalAI.Memory
         public bool HasVendettaAgainstPlayer { get; set; } = false;
         public string CommanderTitle { get; set; } = "";
         public bool HasLearningData { get; set; } = false;
+        public bool IsNemesisCommander { get; set; } = false;
+        public int PreviousEncounters { get; set; } = 0;
+        public int PreviousVictories { get; set; } = 0;
         
         // Unit effectiveness
         public Dictionary<string, float> UnitEffectiveness { get; set; } = new Dictionary<string, float>();
@@ -912,7 +1069,23 @@ namespace HannibalAI.Memory
         {
             string result = $"Tactical Advice: {RecommendedTactic} (Aggression: {SuggestedAggression:P0})";
             
-            if (HasVendettaAgainstPlayer && !string.IsNullOrEmpty(CommanderTitle))
+            if (IsNemesisCommander)
+            {
+                string nemesisInfo = $"\nNemesis Commander: {CommanderTitle}";
+                
+                if (PreviousEncounters > 0)
+                {
+                    nemesisInfo += $" - Encountered {PreviousEncounters} times, {PreviousVictories} victories";
+                }
+                
+                if (HasVendettaAgainstPlayer)
+                {
+                    nemesisInfo += " - HAS VENDETTA AGAINST PLAYER";
+                }
+                
+                result += nemesisInfo;
+            }
+            else if (HasVendettaAgainstPlayer && !string.IsNullOrEmpty(CommanderTitle))
             {
                 result += $"\nCommander: {CommanderTitle} - Has vendetta against player";
             }
