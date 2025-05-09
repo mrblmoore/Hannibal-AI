@@ -1,10 +1,9 @@
+using System;
 using HarmonyLib;
 using TaleWorlds.MountAndBlade;
-using Hannibal;
-using Hannibal.AI;
-using Hannibal.Configuration;
+using HannibalAI;
 
-namespace Hannibal
+namespace HannibalAI.Patches
 {
     [HarmonyPatch(typeof(Mission), "Tick")]
     public class BattleUpdatePatch
@@ -17,35 +16,25 @@ namespace Hannibal
             {
                 if (_battleController == null)
                 {
-                    _battleController = new BattleController(__instance);
+                    // Create AIService to pass to BattleController
+                    var aiService = new AIService(ModConfig.Instance);
+                    _battleController = new BattleController(aiService);
                 }
 
                 try
                 {
-                    var commander = new AICommander(__instance.PlayerTeam);
-                    var decision = commander.GenerateAIDecision();
-
-                    if (decision != null)
+                    // Simply let the BattleController handle the AI update during mission tick
+                    // It has all the logic needed inside
+                    _battleController.OnMissionTick(dt);
+                    
+                    if (ModConfig.Instance.Debug)
                     {
-                        _battleController.ExecuteAIDecision(decision);
-
-                        // Update commander memory
-                        if (ModConfig.Instance.UseCommanderMemory)
-                        {
-                            var memoryService = new CommanderMemoryService();
-                            memoryService.RecordCommanderInteraction(commander.GetCommanderId());
-                            memoryService.DecayMemoryOverTime();
-                        }
-
-                        if (ModConfig.Instance.Debug)
-                        {
-                            Logger.Instance.Info($"Executed AI decision: {decision.Command.GetType().Name}");
-                        }
+                        Logger.Instance.Info("Harmony patch triggered battle controller tick");
                     }
                 }
                 catch (Exception e)
                 {
-                    Logger.Instance.Error($"Error during AI decision execution: {e}");
+                    Logger.Instance.Error($"Error during battle controller tick: {e.Message}");
                 }
             }
         }
