@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
@@ -10,22 +11,50 @@ namespace HannibalAI
     {
         private AIService _aiService;
         private ModConfig _config;
+        private string _logPath;
+        private static bool _hasLoggedGreeting = false;
 
         protected override void OnSubModuleLoad()
         {
             base.OnSubModuleLoad();
             try
             {
+                // Initialize logging
+                _logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Personal), 
+                    "Mount and Blade II Bannerlord", "Logs", "HannibalAI.log");
+                
+                // Ensure log directory exists
+                Directory.CreateDirectory(Path.GetDirectoryName(_logPath));
+                
+                // Initialize basic logger
+                Logger.Initialize(_logPath);
+                Logger.Instance.Info("HannibalAI mod starting up...");
+                
                 // Initialize mod configuration
                 _config = new ModConfig();
                 _config.LoadSettings();
+                
+                // Log configuration
+                Logger.Instance.Info($"Mod config loaded - AI Controls Enemies: {_config.AIControlsEnemies}, " +
+                    $"Use Commander Memory: {_config.UseCommanderMemory}, Debug: {_config.Debug}");
 
                 // Log mod initialization
                 InformationManager.DisplayMessage(new InformationMessage("HannibalAI is loading..."));
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error initializing HannibalAI: {ex.Message}"));
+                // Make sure we log errors even during initialization
+                if (Logger.Instance != null)
+                {
+                    Logger.Instance.Error($"Error in OnSubModuleLoad: {ex.Message}\n{ex.StackTrace}");
+                }
+                else
+                {
+                    // Fallback if logger isn't available yet
+                    File.AppendAllText(_logPath, $"[ERROR] {DateTime.Now}: Error in OnSubModuleLoad: {ex.Message}\n{ex.StackTrace}\n");
+                }
+                
+                InformationManager.DisplayMessage(new InformationMessage($"Error initializing HannibalAI: {ex.Message}", Colors.Red));
             }
         }
 
@@ -36,28 +65,68 @@ namespace HannibalAI
             {
                 // Initialize the AI service
                 _aiService = new AIService(_config);
+                Logger.Instance.Info("AI Service initialized successfully");
+
+                // Initialize memory service (it auto-initializes via Instance property)
+                Logger.Instance.Info("Commander Memory Service initialized");
+
+                // Register key handlers for settings menu
+                RegisterInputKeys();
 
                 // Print success message
-                InformationManager.DisplayMessage(new InformationMessage("HannibalAI has been initialized successfully!"));
+                InformationManager.DisplayMessage(new InformationMessage("HannibalAI has been initialized successfully!", Colors.Green));
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error initializing HannibalAI AI service: {ex.Message}"));
+                Logger.Instance.Error($"Error in OnBeforeInitialModuleScreenSetAsRoot: {ex.Message}\n{ex.StackTrace}");
+                InformationManager.DisplayMessage(new InformationMessage($"Error initializing HannibalAI AI service: {ex.Message}", Colors.Red));
             }
         }
-
+        
+        // Register keyboard shortcuts
+        private void RegisterInputKeys()
+        {
+            try
+            {
+                // We don't need to manually register keys as SettingsBehavior handles this in mission
+                Logger.Instance.Info("Key bindings will be managed by SettingsBehavior");
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error registering input keys: {ex.Message}");
+            }
+        }
+        
+        // Register mission behaviors for battles
         public override void OnMissionBehaviorInitialize(Mission mission)
         {
             base.OnMissionBehaviorInitialize(mission);
+            
             try
             {
-                // Add settings behavior to every mission
+                // Add settings behavior to every mission for key handling
                 mission.AddMissionBehavior(new SettingsBehavior());
                 
-                // Only add our battle controller to field battle missions
+                // Only add our battle controller to battles, not other mission types
                 if (mission.CombatType == Mission.MissionCombatType.Combat)
                 {
+                    // Log mission init
+                    Logger.Instance.Info($"Initializing HannibalAI for battle mission");
+                    
+                    // Add our battle controller as a mission behavior
                     mission.AddMissionBehavior(new BattleController(_aiService));
+                    
+                    // Log successful registration
+                    Logger.Instance.Info("BattleController registered successfully");
+                    
+                    // Show a greeting message only once per session
+                    if (!_hasLoggedGreeting)
+                    {
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            "HannibalAI: Tactical AI module is active. Press INSERT to access settings.", 
+                            Colors.Green));
+                        _hasLoggedGreeting = true;
+                    }
                     
                     if (_config.VerboseLogging)
                     {
@@ -73,7 +142,9 @@ namespace HannibalAI
             }
             catch (Exception ex)
             {
-                InformationManager.DisplayMessage(new InformationMessage($"Error adding HannibalAI to mission: {ex.Message}"));
+                Logger.Instance.Error($"Error adding battle controller: {ex.Message}\n{ex.StackTrace}");
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"HannibalAI Error: {ex.Message}", Colors.Red));
             }
         }
     }

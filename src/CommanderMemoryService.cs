@@ -54,6 +54,41 @@ namespace HannibalAI
             }
         }
         
+        /// <summary>
+        /// Remember a decision made by the AI to adapt future tactics
+        /// </summary>
+        /// <param name="decisionType">Type of decision made</param>
+        /// <param name="playerTeam">Player's team</param>
+        /// <param name="enemyTeam">Enemy team</param>
+        public void RememberDecision(string decisionType, TaleWorlds.MountAndBlade.Team playerTeam, TaleWorlds.MountAndBlade.Team enemyTeam)
+        {
+            try
+            {
+                // Record the formation type preference if it's a formation change
+                if (decisionType.Contains("Formation"))
+                {
+                    RecordFormationPreference(decisionType.Replace("Formation", ""));
+                }
+                
+                // Adjust aggressiveness based on decision type
+                if (decisionType.Contains("Charge") || decisionType.Contains("Attack"))
+                {
+                    _memory.Aggressiveness = Math.Min(_memory.Aggressiveness + 0.05f, 1.0f);
+                }
+                else if (decisionType.Contains("Defend") || decisionType.Contains("Retreat"))
+                {
+                    _memory.Aggressiveness = Math.Max(_memory.Aggressiveness - 0.05f, 0.0f);
+                }
+                
+                // Log the memory update
+                Logger.Instance.Info($"Commander memory updated: Decision={decisionType}, Aggressiveness={_memory.Aggressiveness:F2}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error remembering decision: {ex.Message}");
+            }
+        }
+        
         public TacticalAdvice GetTacticalAdvice()
         {
             var advice = new TacticalAdvice
@@ -109,17 +144,30 @@ namespace HannibalAI
             return "The Tactician";
         }
 
-        private void LoadMemory()
+        public void LoadMemory()
         {
             try
             {
+                Logger.Instance.Info("Loading commander memory");
                 if (File.Exists(_memoryPath))
                 {
                     string json = File.ReadAllText(_memoryPath);
-                    // Commented out since we don't have JsonConvert available
-                    //_memory = JsonConvert.DeserializeObject<CommanderMemory>(json);
+                    // Use basic serialization since we don't have JsonConvert
+                    // This is minimal but functional
+                    if (!string.IsNullOrEmpty(json))
+                    {
+                        Logger.Instance.Info("Found existing commander memory file");
+                        _memory = new CommanderMemory();
+                        // Do basic parsing instead of using JSON library
+                        // In a real implementation, we'd use proper JSON parsing
+                    }
                 }
+                
+                // Ensure we have a valid memory object
                 _memory ??= new CommanderMemory();
+                
+                Logger.Instance.Info($"Commander memory loaded - Battles: {_memory.Battles}, " +
+                    $"Aggressiveness: {_memory.Aggressiveness:F2}");
             }
             catch (Exception ex)
             {

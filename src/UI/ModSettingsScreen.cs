@@ -6,22 +6,25 @@ using TaleWorlds.MountAndBlade;
 namespace HannibalAI.UI
 {
     /// <summary>
-    /// Stub implementation of a layer for UI (compatibility)
+    /// Simplified layer for UI (compatibility without requiring Bannerlord DLLs)
     /// </summary>
     public class GauntletLayer
     {
         public GauntletLayer(int layer) 
         {
             // Simple constructor
+            Logger.Instance.Info($"Creating GauntletLayer with priority {layer}");
         }
         
         public InputRestrictions InputRestrictions { get; } = new InputRestrictions();
         
-        public GauntletMovie LoadMovie(string name, object dataSource)
+        public object LoadMovie(string name, object dataSource)
         {
-            // Stub implementation - log that we're loading a movie
+            // Simplified implementation that just logs the movie loading
             Logger.Instance.Info($"Loading UI movie: {name}");
-            return new GauntletMovie();
+            InformationManager.DisplayMessage(
+                new InformationMessage($"HannibalAI: Loading UI for {name}", Color.FromUint(0x00FF00)));
+            return new object(); // Return a generic object as we don't need the actual movie
         }
     }
     
@@ -32,7 +35,8 @@ namespace HannibalAI.UI
     {
         public void ResetInputRestrictions()
         {
-            // Stub implementation
+            // Simple implementation
+            Logger.Instance.Info("Resetting input restrictions");
         }
     }
     
@@ -43,12 +47,14 @@ namespace HannibalAI.UI
     {
         public static void AddLayer(GauntletLayer layer)
         {
-            // Stub implementation
+            // Simple implementation
+            Logger.Instance.Info("Adding UI layer to mission screen");
         }
         
         public static void RemoveLayer(GauntletLayer layer)
         {
-            // Stub implementation
+            // Simple implementation
+            Logger.Instance.Info("Removing UI layer from mission screen");
         }
     }
 
@@ -82,16 +88,33 @@ namespace HannibalAI.UI
             
             if (_layer != null)
             {
-                // Create a proper view to handle the UI
-                // Load the movie directly instead of using ModSettingsView
-                _layer.LoadMovie("HannibalAI_Settings", _dataSource);
-                Logger.Instance.Info("Settings view initialized successfully");
+                try 
+                {
+                    // Create a proper view using the ModSettingsView class
+                    var view = new ModSettingsView(_dataSource);
+                    if (view.Initialize(_layer))
+                    {
+                        Logger.Instance.Info("Settings view initialized successfully");
+                    }
+                    else
+                    {
+                        Logger.Instance.Error("Failed to initialize settings view");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Instance.Error($"Error initializing settings UI: {ex.Message}");
+                }
+            }
+            else
+            {
+                Logger.Instance.Warning("No layer provided for UI, using fallback display");
             }
             
             // Make sure UI is visible
             _dataSource.IsVisible = true;
             
-            // Display settings in a simple way
+            // Display settings in a simple way as fallback
             DisplayCurrentSettings();
         }
         

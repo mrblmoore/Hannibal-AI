@@ -20,41 +20,48 @@
   <ItemGroup>
     <Compile Include="src/**/*.cs" />
     <Compile Include="Properties/**/*.cs" />
+    <!-- Explicitly exclude stubs directory -->
+    <Compile Remove="stubs/**/*.cs" />
   </ItemGroup>
   
-  <!-- Reference the TaleWorlds assemblies if available -->
+  <!-- Reference the TaleWorlds assemblies from lib folder -->
   <ItemGroup>
-    <Reference Include="TaleWorlds.Library" Condition="Exists('lib/TaleWorlds.Library.dll')">
+    <Reference Include="TaleWorlds.Library">
       <HintPath>lib/TaleWorlds.Library.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="TaleWorlds.Core" Condition="Exists('lib/TaleWorlds.Core.dll')">
+    <Reference Include="TaleWorlds.Core">
       <HintPath>lib/TaleWorlds.Core.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="TaleWorlds.Engine" Condition="Exists('lib/TaleWorlds.Engine.dll')">
+    <Reference Include="TaleWorlds.Engine">
       <HintPath>lib/TaleWorlds.Engine.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="TaleWorlds.MountAndBlade" Condition="Exists('lib/TaleWorlds.MountAndBlade.dll')">
+    <Reference Include="TaleWorlds.MountAndBlade">
       <HintPath>lib/TaleWorlds.MountAndBlade.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="TaleWorlds.GauntletUI" Condition="Exists('lib/TaleWorlds.GauntletUI.dll')">
+    <Reference Include="TaleWorlds.GauntletUI">
       <HintPath>lib/TaleWorlds.GauntletUI.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="TaleWorlds.InputSystem" Condition="Exists('lib/TaleWorlds.InputSystem.dll')">
+    <Reference Include="TaleWorlds.InputSystem">
       <HintPath>lib/TaleWorlds.InputSystem.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="TaleWorlds.CampaignSystem" Condition="Exists('lib/TaleWorlds.CampaignSystem.dll')">
+    <Reference Include="TaleWorlds.CampaignSystem">
       <HintPath>lib/TaleWorlds.CampaignSystem.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="TaleWorlds.DotNet" Condition="Exists('lib/TaleWorlds.DotNet.dll')">
+    <Reference Include="TaleWorlds.DotNet">
       <HintPath>lib/TaleWorlds.DotNet.dll</HintPath>
       <Private>False</Private>
+    </Reference>
+    <!-- Add Harmony with CopyLocal set to true to ensure it's included in the mod -->
+    <Reference Include="0Harmony">
+      <HintPath>lib/0Harmony.dll</HintPath>
+      <Private>True</Private>
     </Reference>
   </ItemGroup>
 

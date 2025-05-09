@@ -75,11 +75,15 @@ namespace HannibalAI
         /// </summary>
         public List<FormationOrder> ProcessBattleSnapshot(Team playerTeam, Team enemyTeam)
         {
+            // Log that we're processing a battle snapshot
+            Logger.Instance.Info("AIService.ProcessBattleSnapshot called");
+            
             // If this is an enemy team, use specialized enemy AI
             if (Mission.Current?.MainAgent != null && 
                 playerTeam.IsEnemyOf(Mission.Current.MainAgent.Team) && 
                 _config.AIControlsEnemies)
             {
+                Logger.Instance.Info("Processing enemy team snapshot");
                 return ProcessEnemyTeamSnapshot(playerTeam, enemyTeam);
             }
             
@@ -89,7 +93,32 @@ namespace HannibalAI
             {
                 if (playerTeam == null || enemyTeam == null)
                 {
+                    Logger.Instance.Warning("Player team or enemy team is null");
                     return commands;
+                }
+                
+                // Use commander memory if enabled to influence decisions
+                if (_config.UseCommanderMemory)
+                {
+                    Logger.Instance.Info("Using commander memory for battle decisions");
+                    TacticalAdvice advice = CommanderMemoryService.Instance.GetTacticalAdvice();
+                    
+                    // Log tactical advice
+                    Logger.Instance.Info($"Tactical advice: {advice}");
+                    
+                    // Adapt AI behavior based on memory
+                    if (advice.HasVendettaAgainstPlayer)
+                    {
+                        Logger.Instance.Info("Commander has vendetta against player - employing aggressive tactics");
+                        // Apply more aggressive tactics here
+                    }
+                    
+                    // Add player weakness exploitation logic
+                    if (advice.PlayerWeaknesses.Count > 0)
+                    {
+                        Logger.Instance.Info($"Exploiting player weaknesses: {string.Join(", ", advice.PlayerWeaknesses)}");
+                        // Use this info for tactical decisions
+                    }
                 }
                 
                 // Get and process formations

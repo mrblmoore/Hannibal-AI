@@ -179,7 +179,10 @@ namespace HannibalAI
                             "HannibalAI active - Press INSERT for settings", Color.FromUint(0x33FF33)));
                     }
                     
-                    // Run the AI update for friendly team
+                    // Call the AI's decision-making process first - this is our new method
+                    _aiCommander.MakeDecision();
+                    
+                    // Then update ongoing AI activities
                     _aiCommander.Update(dt);
                     
                     // Add more verbose logging to help troubleshoot AI command execution

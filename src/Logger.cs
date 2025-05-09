@@ -26,17 +26,34 @@ namespace HannibalAI
             }
         }
         
+        /// <summary>
+        /// Initialize the logger with a specific log file path
+        /// </summary>
+        public static void Initialize(string logPath)
+        {
+            if (_instance == null)
+            {
+                ModConfig config = ModConfig.Instance;
+                _instance = new Logger(config, logPath);
+            }
+        }
+        
         private Logger(ModConfig config)
+            : this(config, "HannibalAI.log")
+        {
+        }
+        
+        private Logger(ModConfig config, string logPath)
         {
             _config = config;
-            _logFilePath = "HannibalAI.log";
+            _logFilePath = logPath;
             
             // Create or clear the log file
             try
             {
                 // Ensure directory exists
                 string directory = Path.GetDirectoryName(_logFilePath);
-                if (!Directory.Exists(directory))
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 {
                     Directory.CreateDirectory(directory);
                 }

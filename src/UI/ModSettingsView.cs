@@ -5,63 +5,89 @@ using TaleWorlds.Core;
 namespace HannibalAI.UI
 {
     /// <summary>
-    /// Stub for a movie object (compatibility)
-    /// </summary>
-    public class GauntletMovie
-    {
-        public void Release()
-        {
-            // Stub implementation
-        }
-    }
-    
-    /// <summary>
-    /// View class to manage Gauntlet UI for mod settings
+    /// Minimal implementation of a View class to display settings
+    /// Uses only standard Bannerlord namespaces that we know are available
     /// </summary>
     public class ModSettingsView : ViewModel
     {
-        private GauntletMovie _gauntletMovie;
-        private GauntletLayer _layer;
         private ModSettingsViewModel _dataSource;
         
         public ModSettingsView(ModSettingsViewModel dataSource)
         {
             _dataSource = dataSource;
+            Logger.Instance.Info("ModSettingsView constructor called");
         }
         
-        public bool Initialize(GauntletLayer layer)
+        public bool Initialize(GauntletLayer gauntletLayer)
         {
             try
             {
-                _layer = layer;
+                // Log the initialization attempt
+                Logger.Instance.Info("Initializing ModSettingsView");
                 
-                Logger.Instance.Info("Attempting to initialize ModSettingsView");
+                // Try to load the Gauntlet UI definition
+                Logger.Instance.Info("Attempting to load HannibalAI_Settings prefab");
                 
-                // In our stub implementation, we'll simulate successful movie loading
-                _gauntletMovie = new GauntletMovie();
+                try 
+                {
+                    // Create a movie using our prefab and view model
+                    var movie = gauntletLayer.LoadMovie("HannibalAI_Settings", _dataSource);
+                    if (movie != null)
+                    {
+                        Logger.Instance.Info("Successfully loaded HannibalAI_Settings prefab");
+                        return true;
+                    }
+                    else
+                    {
+                        Logger.Instance.Warning("Failed to load HannibalAI_Settings prefab, using fallback");
+                    }
+                }
+                catch (Exception uiEx)
+                {
+                    // Log the failure but continue with fallback
+                    Logger.Instance.Error($"Failed to load UI definition: {uiEx.Message}");
+                }
                 
-                // Log success
-                Logger.Instance.Info("ModSettingsView: Successfully loaded UI movie");
+                // Display settings as a fallback if we couldn't load the UI
+                DisplaySettings();
+                
                 return true;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"ModSettingsView: Error initializing - {ex.Message}");
+                Logger.Instance.Error($"Error initializing ModSettingsView: {ex.Message}\n{ex.StackTrace}");
                 return false;
             }
         }
         
-        public override void OnFinalize()
+        private void DisplaySettings()
         {
-            if (_gauntletMovie != null)
+            // Display current settings using the InformationManager
+            var settings = new[]
             {
-                _gauntletMovie.Release();
-                _gauntletMovie = null;
+                $"AI Controls Enemies: {(_dataSource.AIControlsEnemies ? "ON" : "off")}",
+                $"Use Commander Memory: {(_dataSource.UseCommanderMemory ? "ON" : "off")}",
+                $"Debug Mode: {(_dataSource.Debug ? "ON" : "off")}",
+                $"Aggressiveness: {_dataSource.Aggressiveness}%"
+            };
+            
+            // Show each setting as a separate message
+            foreach (var setting in settings)
+            {
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"HannibalAI Setting: {setting}", 
+                    Color.FromUint(0x00CCFF)));
             }
             
-            _layer = null;
+            // Final instruction
+            InformationManager.DisplayMessage(new InformationMessage(
+                "Press INSERT again to close settings", 
+                Color.FromUint(0x00FF00)));
+        }
+        
+        public override void OnFinalize()
+        {
             _dataSource = null;
-            
             base.OnFinalize();
         }
     }

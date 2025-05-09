@@ -1,0 +1,100 @@
+UI Integration Status:
+✅ Files Present:
+
+/src/UI/ModSettingsScreen.cs
+
+/src/UI/ModSettingsView.cs
+
+/src/UI/ModSettingsViewModel.cs
+
+/src/UI/SettingsBehavior.cs
+
+/UI/Components/NumericBox.cs
+
+⚠️ Concerns:
+
+Missing XAML/Gauntlet UI XML files that define UI layouts.
+
+UI relies on TaleWorlds.GauntletUI.ViewModel — but this namespace is stubbed in /stubs/ → this means no real GauntletUI implementation is linked!
+
+I didn’t see .xml or .xsd UI files like UI/Prefabs/*.xml that Bannerlord Gauntlet UI usually needs.
+
+The ViewModel class in /stubs/TaleWorlds/GauntletUI/ViewModel.cs is likely a placeholder → the game won’t recognize it in real execution.
+
+➡️ Why UI isn’t showing:
+
+Without valid Gauntlet UI bindings and no prefab xml definitions, the UI won’t render in-game.
+
+No registration of ModSettingsView in SubModule.cs found.
+
+🔧 Recommended:
+✅ Add proper .xml prefab for UI layouts.
+✅ Reference TaleWorlds.GauntletUI.ViewModel from real Bannerlord DLL instead of stubs.
+✅ Ensure UI layer injection in SubModule.OnGameStart().
+
+📝 2️⃣ AI Integration Status:
+✅ AICommander implemented in /src/AICommander.cs
+✅ AIService implemented
+✅ BattleController implemented
+✅ FallbackService implemented
+
+⚠️ Issues:
+
+AICommander.MakeDecision() and AIService.ProcessBattleSnapshot() have 0 external references → nothing is triggering them.
+
+BattleUpdatePatch.cs exists but not clear if it’s being patched by Harmony at runtime.
+
+➡️ Likely: no runtime hook is invoking the AI pipeline.
+
+🔧 Recommended:
+✅ Confirm Harmony patches in SubModule.cs.
+✅ Validate whether BattleUpdatePatch.Apply() is being called.
+✅ Verify if MissionBehavior hooks into OnMissionTick or similar game loop.
+
+📝 3️⃣ Memory System (CommanderMemoryService):
+✅ File exists
+✅ Has basic fields & methods
+
+⚠️ Issues:
+
+Methods like RememberDecision & GetMemory → no external calls detected (0 references).
+
+Memory state not persisted to file/database.
+
+➡️ Currently unused in live AI pipeline.
+
+🔧 Recommended:
+✅ Add integration in AIService → log decisions via CommanderMemoryService.RememberDecision().
+✅ Create load/save logic to persist memory per campaign.
+✅ Connect to ModConfig toggles for enabling/disabling.
+
+📝 4️⃣ References / Missing Dependencies:
+✅ Found libraries /lib/ (TaleWorlds.*.dll are present)
+✅ Harmony/Json.NET packaged
+⚠️ BUT:
+
+/stubs/ files like Vec3.cs, ViewModel.cs, FormationOrder.cs → being used instead of actual TaleWorlds.* DLL types.
+
+Any call to Vec3/ViewModel/FormationOrder from these stubs won’t work in Bannerlord engine at runtime → they’re dummy files.
+
+➡️ This is a critical issue:
+→ Code compiles because stubs exist, but those types don’t link to engine internals → null or empty behavior in-game.
+
+🔧 Recommended:
+✅ Remove /stubs/ from project reference path.
+✅ Reference real TaleWorlds.*.dll (already found in /lib/ folder).
+✅ Ensure Visual Studio/Replit project uses /lib/ DLLs for resolving types.
+
+🚩 ❓ Why is it failing in-game?
+→ UI isn’t registered, missing prefabs, no ViewModel binding.
+→ AI core isn’t connected to mission/game loop (no trigger points calling AI logic).
+→ Memory system not integrated or invoked.
+→ Stub files masking missing true engine references → → compiles but non-functional runtime.
+
+🏗️ Summary Next Steps:
+✅ Connect UI in SubModule.cs with GauntletLayer and prefab loading.
+✅ Replace stub references → link to /lib/ DLLs.
+✅ Wire AIService & BattleController into game events (MissionBehavior, Harmony patch or MBSubModuleBase overrides).
+✅ Integrate CommanderMemoryService call chain.
+✅ Confirm ModSettingsViewModel uses valid Gauntlet ViewModel inheritance.
+

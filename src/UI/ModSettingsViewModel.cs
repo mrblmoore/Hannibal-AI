@@ -15,6 +15,7 @@ namespace HannibalAI.UI
         // Flag properties (toggle controls)
         private bool _aiControlsEnemies;
         private bool _useCommanderMemory;
+        private bool _showHelpMessages;
         private bool _debug;
         
         // Slider properties
@@ -31,6 +32,7 @@ namespace HannibalAI.UI
             // Initialize properties from config
             _aiControlsEnemies = _config.AIControlsEnemies;
             _useCommanderMemory = _config.UseCommanderMemory;
+            _showHelpMessages = _config.ShowHelpMessages;
             _debug = _config.Debug;
             _aggressiveness = _config.Aggressiveness;
             
@@ -65,6 +67,22 @@ namespace HannibalAI.UI
                     _useCommanderMemory = value;
                     _config.UseCommanderMemory = value;
                     OnPropertyChanged(nameof(UseCommanderMemory));
+                }
+            }
+        }
+        
+        // Show Help Messages property
+        [DataSourceProperty]
+        public bool ShowHelpMessages
+        {
+            get => _showHelpMessages;
+            set
+            {
+                if (_showHelpMessages != value)
+                {
+                    _showHelpMessages = value;
+                    _config.ShowHelpMessages = value;
+                    OnPropertyChanged(nameof(ShowHelpMessages));
                 }
             }
         }
@@ -136,12 +154,19 @@ namespace HannibalAI.UI
             _onClose?.Invoke();
         }
         
+        // Additional method that matches the XML UI button command
+        public void ExecuteCloseSettings()
+        {
+            ExecuteClose();
+        }
+        
         // Reset to default settings
         public void ExecuteResetDefaults()
         {
             // Reset to defaults
             AIControlsEnemies = false;
             UseCommanderMemory = true;
+            ShowHelpMessages = true;
             Debug = false;
             Aggressiveness = 50;
             

@@ -29,6 +29,7 @@ namespace HannibalAI
         // AI behavior settings
         public bool EnableAI { get; set; } = true;
         public bool VerboseLogging { get; set; } = true;
+        public bool ShowHelpMessages { get; set; } = true;
         public float AIUpdateInterval { get; set; } = 3.0f;
         public bool AIControlsEnemies { get; set; } = false;
         public bool UseCommanderMemory { get; set; } = true;
@@ -67,6 +68,7 @@ namespace HannibalAI
                         // Copy loaded values to this instance
                         this.EnableAI = loadedConfig.EnableAI;
                         this.VerboseLogging = loadedConfig.VerboseLogging;
+                        this.ShowHelpMessages = loadedConfig.ShowHelpMessages;
                         this.AIUpdateInterval = loadedConfig.AIUpdateInterval;
                         this.AIControlsEnemies = loadedConfig.AIControlsEnemies;
                         this.UseCommanderMemory = loadedConfig.UseCommanderMemory;

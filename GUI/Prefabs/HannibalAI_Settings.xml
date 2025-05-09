@@ -1,0 +1,108 @@
+<![CDATA[<Prefab>
+  <Window>
+    <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="600" SuggestedHeight="400" 
+            HorizontalAlignment="Center" VerticalAlignment="Center" PositionYOffset="0" 
+            MarginLeft="100" MarginRight="100" MarginTop="100" MarginBottom="100">
+      <Children>
+        <!-- Background Panel -->
+        <Rectangle WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" 
+                  HorizontalAlignment="Center" VerticalAlignment="Center" 
+                  Sprite="StdAssets\Popup\popup_background_with_header" Color="#003366" ExtendBottom="25">
+          <Children>
+            <!-- Header -->
+            <TextWidget WidthSizePolicy="CoverChildren" HeightSizePolicy="Fixed" SuggestedHeight="50" 
+                        HorizontalAlignment="Center" VerticalAlignment="Top" 
+                        PositionYOffset="15" Text="HannibalAI Settings" 
+                        Brush="Title.Medium" Brush.FontSize="32" />
+            
+            <!-- Settings Content -->
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" 
+                    MarginTop="70" MarginLeft="30" MarginRight="30" MarginBottom="60">
+              <Children>
+                <!-- Enemy AI Control Setting -->
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" PositionYOffset="0">
+                  <Children>
+                    <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="200" 
+                                Text="AI Controls Enemies" VerticalAlignment="Center" />
+                    <CheckboxWidget DataSource="{AIControlsEnemies}" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" 
+                                   SuggestedWidth="40" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                  </Children>
+                </Widget>
+                
+                <!-- Memory System Setting -->
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" PositionYOffset="50">
+                  <Children>
+                    <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="200" 
+                                Text="Use Commander Memory" VerticalAlignment="Center" />
+                    <CheckboxWidget DataSource="{UseCommanderMemory}" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" 
+                                   SuggestedWidth="40" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                  </Children>
+                </Widget>
+                
+                <!-- Show Help Messages Setting -->
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" PositionYOffset="100">
+                  <Children>
+                    <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="200" 
+                                Text="Show Help Messages" VerticalAlignment="Center" />
+                    <CheckboxWidget DataSource="{ShowHelpMessages}" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" 
+                                   SuggestedWidth="40" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                  </Children>
+                </Widget>
+                
+                <!-- Debug Mode Setting -->
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" PositionYOffset="150">
+                  <Children>
+                    <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="200" 
+                                Text="Debug Mode" VerticalAlignment="Center" />
+                    <CheckboxWidget DataSource="{Debug}" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" 
+                                   SuggestedWidth="40" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                  </Children>
+                </Widget>
+                
+                <!-- Aggressiveness Slider -->
+                <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40" VerticalAlignment="Top" PositionYOffset="150">
+                  <Children>
+                    <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="200" 
+                                Text="Aggressiveness" VerticalAlignment="Center" />
+                    <SliderWidget DataSource="{Aggressiveness}" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" 
+                                 SuggestedWidth="200" SuggestedHeight="40" HorizontalAlignment="Right" VerticalAlignment="Center" 
+                                 MinValue="0" MaxValue="100" />
+                  </Children>
+                </Widget>
+              </Children>
+            </Widget>
+            
+            <!-- Button Container -->
+            <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="50"
+                    HorizontalAlignment="Center" VerticalAlignment="Bottom" MarginBottom="15">
+              <Children>
+                <!-- Reset Button -->
+                <ButtonWidget Command.Click="ExecuteResetDefaults" DoNotPassEventsToChildren="true" 
+                              WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="130" SuggestedHeight="40"
+                              HorizontalAlignment="Left" VerticalAlignment="Center" MarginLeft="70">
+                  <Children>
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" 
+                               HorizontalAlignment="Center" VerticalAlignment="Center" 
+                               Text="Reset to Default" Brush="ButtonText" />
+                  </Children>
+                </ButtonWidget>
+                
+                <!-- Close Button -->
+                <ButtonWidget Command.Click="ExecuteCloseSettings" DoNotPassEventsToChildren="true" 
+                              WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="130" SuggestedHeight="40"
+                              HorizontalAlignment="Right" VerticalAlignment="Center" MarginRight="70">
+                  <Children>
+                    <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" 
+                               HorizontalAlignment="Center" VerticalAlignment="Center" 
+                               Text="Close" Brush="ButtonText" />
+                  </Children>
+                </ButtonWidget>
+              </Children>
+            </Widget>
+          </Children>
+        </Rectangle>
+      </Children>
+    </Widget>
+  </Window>
+</Prefab>
+]]>

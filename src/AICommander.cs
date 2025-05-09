@@ -55,6 +55,73 @@ namespace HannibalAI
         }
         
         /// <summary>
+        /// Make a tactical decision for the AI - this is the entry point for the AI decision-making process
+        /// </summary>
+        public void MakeDecision()
+        {
+            if (_playerTeam == null || _enemyTeam == null)
+            {
+                return;
+            }
+
+            try
+            {
+                // Log that we're making a decision - helps with debugging
+                if (_config.VerboseLogging)
+                {
+                    _aiService.LogInfo("AICommander.MakeDecision called");
+                }
+                
+                // Refresh formation data
+                RefreshFormations();
+                
+                // Skip processing if battle is over
+                if (IsBattleDecided())
+                {
+                    return;
+                }
+                
+                // Get orders from the AIService
+                List<FormationOrder> orders = _aiService.ProcessBattleSnapshot(_playerTeam, _enemyTeam);
+                
+                // Execute the orders
+                ExecuteOrders(orders);
+                
+                // Record this decision in memory system if enabled
+                if (_config.UseCommanderMemory)
+                {
+                    RecordDecisionInMemory(orders);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error in AICommander.MakeDecision: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Record the decision in the memory system
+        /// </summary>
+        private void RecordDecisionInMemory(List<FormationOrder> orders)
+        {
+            try
+            {
+                // Get memory service
+                CommanderMemoryService memoryService = CommanderMemoryService.Instance;
+                
+                // Record each order
+                foreach (var order in orders)
+                {
+                    memoryService.RememberDecision(order.OrderType.ToString(), _playerTeam, _enemyTeam);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error recording decision in memory: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
         /// Update AI state and issue new orders as needed
         /// </summary>
         public void Update(float dt)
@@ -106,6 +173,12 @@ namespace HannibalAI
             
             // Execute the enhanced orders
             ExecuteOrders(orders);
+            
+            // Record this update in memory system if enabled
+            if (_config.UseCommanderMemory)
+            {
+                RecordDecisionInMemory(orders);
+            }
         }
         
         /// <summary>
