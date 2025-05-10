@@ -22,6 +22,25 @@ namespace HannibalAI.Command
         /// </summary>
         public bool IsEmergency { get; set; }
         
+        /// <summary>
+        /// Constructor that takes a specific retreat position
+        /// </summary>
+        /// <param name="retreatPosition">The position to retreat to</param>
+        public RetreatCommand(TaleWorlds.Library.Vec3 retreatPosition)
+        {
+            RetreatPosition = retreatPosition;
+            IsEmergency = false;
+        }
+        
+        /// <summary>
+        /// Default constructor
+        /// </summary>
+        public RetreatCommand()
+        {
+            RetreatPosition = TaleWorlds.Library.Vec3.Zero;
+            IsEmergency = false;
+        }
+        
         public override void Execute(Formation formation)
         {
             if (formation == null)

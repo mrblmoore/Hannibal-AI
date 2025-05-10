@@ -74,8 +74,8 @@ namespace HannibalAI.Command
                     
                 case HannibalOrderType.Hold:
                 case HannibalOrderType.StandGround:
-                    // Use value 0 (default/none) for Hold/StandGround
-                    result.OrderType = (FormationOrderType)0;
+                    // Use value 9 for Hold/StandGround (custom value)
+                    result.OrderType = (FormationOrderType)9;
                     break;
                     
                 case HannibalOrderType.FollowMe:

@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using TaleWorlds.Library;
+using Vec3 = TaleWorlds.Library.Vec3;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Core;
 using TaleWorlds.Engine;
@@ -49,6 +49,45 @@ namespace HannibalAI
             System.Diagnostics.Debug.Print("[HannibalAI] FallbackService initialized");
         }
         
+        /// <summary>
+        /// Generate fallback orders for all formations in a team
+        /// </summary>
+        /// <param name="playerTeam">The player team</param>
+        /// <param name="enemyTeam">The enemy team</param>
+        /// <returns>A list of formation orders for fallback</returns>
+        public List<FormationOrder> GenerateFallbackOrders(Team playerTeam, Team enemyTeam)
+        {
+            List<FormationOrder> commands = new List<FormationOrder>();
+            
+            try
+            {
+                // Generate fallback commands for each formation in the player team
+                foreach (Formation formation in playerTeam.FormationsIncludingEmpty)
+                {
+                    if (formation == null || formation.CountOfUnits == 0) continue;
+                    
+                    // Generate a fallback order for this formation
+                    FormationOrder fallbackOrder = GetFallbackOrder(formation);
+                    
+                    if (fallbackOrder != null)
+                    {
+                        // Add the fallback order directly
+                        commands.Add(fallbackOrder);
+                        
+                        // Log the fallback order
+                        Logger.Instance.Info($"Generated fallback order for formation {formation.Index}: " +
+                            $"Retreat to {fallbackOrder.TargetPosition}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error generating fallback orders: {ex.Message}");
+            }
+            
+            return commands;
+        }
+
         /// <summary>
         /// Gets a fallback order for a formation
         /// </summary>

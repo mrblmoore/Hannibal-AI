@@ -2,44 +2,10 @@
 using System;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Library;
+using HannibalAI.Adapters;
 
 namespace HannibalAI.Command
 {
-    /// <summary>
-    /// Base class for AI commands
-    /// </summary>
-    public abstract class AICommand
-    {
-        public abstract void Execute(Formation formation);
-    }
-    
-    /// <summary>
-    /// Alias for Vec3 for compatibility
-    /// </summary>
-    public class Vec3
-    {
-        public float x;
-        public float y;
-        public float z;
-        
-        public Vec3(float x, float y, float z)
-        {
-            this.x = x;
-            this.y = y;
-            this.z = z;
-        }
-        
-        public static Vec3 Zero => new Vec3(0, 0, 0);
-        
-        public float Distance(Vec3 other)
-        {
-            float dx = x - other.x;
-            float dy = y - other.y;
-            float dz = z - other.z;
-            return (float)Math.Sqrt(dx * dx + dy * dy + dz * dz);
-        }
-    }
-    
     public class RallyCommand : AICommand
     {
         private readonly TaleWorlds.Library.Vec3 _rallyPoint;
@@ -50,7 +16,7 @@ namespace HannibalAI.Command
         }
         
         // Overload for our custom Vec3
-        public RallyCommand(Vec3 customRallyPoint)
+        public RallyCommand(HannibalVec3 customRallyPoint)
         {
             _rallyPoint = new TaleWorlds.Library.Vec3(
                 customRallyPoint.x, 

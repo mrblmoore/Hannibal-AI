@@ -27,7 +27,7 @@ namespace HannibalAI
         public AIService(ModConfig config)
         {
             _config = config;
-            _fallbackService = new FallbackService(config, this);
+            _fallbackService = FallbackService.Instance;
 
             // Log creation of AIService
             Logger.Instance.Info($"AIService created with config: Debug={config.Debug}, AIControlsEnemies={config.AIControlsEnemies}");

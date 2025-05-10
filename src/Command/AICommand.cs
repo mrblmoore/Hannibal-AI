@@ -44,6 +44,19 @@ namespace HannibalAI.Command
             return !VecEquals(v1, v2);
         }
     }
+
+    /// <summary>
+    /// Base class for AI commands
+    /// </summary>
+    public abstract class AICommand
+    {
+        /// <summary>
+        /// Execute the command on the given formation
+        /// </summary>
+        /// <param name="formation">The formation to execute the command on</param>
+        public abstract void Execute(Formation formation);
+    }
+
     /// <summary>
     /// Command to move a formation to a specific position
     /// </summary>
@@ -436,7 +449,7 @@ namespace HannibalAI.Command
                         success = true;
                         break;
                         
-                    case (FormationOrderType)0: // None/StandGround
+                    case (FormationOrderType)9: // Special case for our StandGround
                         // Hold position is equivalent to stop
                         formation.SetMovementOrder(MovementOrder.MovementOrderStop);
                         success = true;
