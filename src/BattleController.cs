@@ -126,7 +126,7 @@ namespace HannibalAI
                 TerrainAnalyzer.Instance.AnalyzeCurrentTerrain();
                 
                 // Get terrain information for tactical assessment
-                OurTerrainType battlefieldType = TerrainAnalyzer.Instance.GetTerrainType();
+                HannibalAI.Terrain.TerrainType battlefieldType = TerrainAnalyzer.Instance.GetTerrainType();
                 bool hasTerrainAdvantage = TerrainAnalyzer.Instance.HasTerrainAdvantage();
                 
                 // Log terrain analysis results

@@ -5,6 +5,7 @@ using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Engine;
+using HannibalAI.Adapters;
 
 namespace HannibalAI.Terrain
 {
@@ -58,6 +59,22 @@ namespace HannibalAI.Terrain
             
             Logger.Instance.Info("TerrainAnalyzer created");
         }
+        
+        /// <summary>
+        /// Get the current terrain type
+        /// </summary>
+        public TerrainType GetTerrainType()
+        {
+            if (!_terrainAnalyzed)
+            {
+                AnalyzeCurrentTerrain();
+            }
+            return _currentTerrainType;
+        }
+        
+
+        
+
         
         /// <summary>
         /// Analyze the current terrain to identify tactical features
@@ -179,19 +196,107 @@ namespace HannibalAI.Terrain
         }
         
         /// <summary>
-        /// Get current terrain type
+        /// Check if the player has a terrain advantage
         /// </summary>
-        public TerrainType GetTerrainType()
+        public bool HasTerrainAdvantage()
         {
             if (!_terrainAnalyzed)
             {
                 AnalyzeCurrentTerrain();
             }
             
-            return _currentTerrainType;
+            // Check high ground control
+            var highGroundFeatures = _terrainFeatures
+                .Where(f => f.FeatureType == TerrainFeatureType.HighGround)
+                .ToList();
+                
+            foreach (var feature in highGroundFeatures)
+            {
+                if (IsPositionControlledByPlayer(feature.Position))
+                {
+                    return true;
+                }
+            }
+            
+            // Check forest cover for archer advantage
+            if (_currentTerrainType == TerrainType.Forest)
+            {
+                var archerFormations = Mission.Current?.PlayerTeam?.FormationsIncludingEmpty
+                    .Where(f => f.CountOfUnits > 0 && f.QuerySystem.IsRangedFormation)
+                    .ToList();
+                    
+                if (archerFormations != null && archerFormations.Count > 0)
+                {
+                    foreach (var formation in archerFormations)
+                    {
+                        // If archers are in forest, they have advantage
+                        var forestFeatures = _terrainFeatures
+                            .Where(f => f.FeatureType == TerrainFeatureType.Forest)
+                            .ToList();
+                            
+                        foreach (var forest in forestFeatures)
+                        {
+                            if ((FormationAdapter.GetMedianPosition(formation) - forest.Position).Length < forest.Size)
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return false;
         }
         
-
+        /// <summary>
+        /// Check if a position is in forest
+        /// </summary>
+        private bool IsPositionInForest(Vec3 position)
+        {
+            return _terrainFeatures
+                .Any(f => f.FeatureType == TerrainFeatureType.Forest && 
+                     (f.Position - position).Length < f.Size);
+        }
+        
+        /// <summary>
+        /// Check if a position is controlled by the player
+        /// </summary>
+        private bool IsPositionControlledByPlayer(Vec3 position)
+        {
+            if (Mission.Current?.PlayerTeam == null)
+            {
+                return false;
+            }
+            
+            float minDistToPlayer = float.MaxValue;
+            float minDistToEnemy = float.MaxValue;
+            
+            // Check player formations
+            foreach (var formation in Mission.Current.PlayerTeam.FormationsIncludingEmpty)
+            {
+                if (formation.CountOfUnits > 0)
+                {
+                    float dist = (FormationAdapter.GetMedianPosition(formation) - position).Length;
+                    minDistToPlayer = Math.Min(minDistToPlayer, dist);
+                }
+            }
+            
+            // Check enemy formations
+            if (Mission.Current.EnemyTeam != null)
+            {
+                foreach (var formation in Mission.Current.EnemyTeam.FormationsIncludingEmpty)
+                {
+                    if (formation.CountOfUnits > 0)
+                    {
+                        float dist = (FormationAdapter.GetMedianPosition(formation) - position).Length;
+                        minDistToEnemy = Math.Min(minDistToEnemy, dist);
+                    }
+                }
+            }
+            
+            // Position is controlled by player if player formations are closer
+            return minDistToPlayer < minDistToEnemy;
+        }
         
         /// <summary>
         /// Get the best high ground position for tactical advantage
@@ -263,7 +368,7 @@ namespace HannibalAI.Terrain
             {
                 // Get player and enemy positions
                 Vec3 playerPos = GetPlayerStartPosition();
-                Vec3 enemyPos = GetEnemyStartPosition();
+                Vec3 enemyPos = GetEnemyStartPositionPrimary();
                 
                 // Direction vectors
                 Vec3 battleDirection = new Vec3(
@@ -328,7 +433,7 @@ namespace HannibalAI.Terrain
         private Vec3 GetDefaultFlankingPosition(bool rightSide)
         {
             Vec3 playerPos = GetPlayerStartPosition();
-            Vec3 enemyPos = GetEnemyStartPosition();
+            Vec3 enemyPos = GetEnemyStartPositionPrimary();
             
             // Direction vectors
             Vec3 battleDirection = new Vec3(
@@ -364,44 +469,85 @@ namespace HannibalAI.Terrain
         }
         
         /// <summary>
-        /// Analyze terrain to determine if we have a height advantage over the enemy
+        /// Calculate distance between two positions
         /// </summary>
-        public bool HasTerrainAdvantage()
+        private float CalculateDistance(Vec3 pos1, Vec3 pos2)
         {
-            if (!_terrainAnalyzed)
+            float dx = pos1.x - pos2.x;
+            float dy = pos1.y - pos2.y;
+            return (float)Math.Sqrt(dx * dx + dy * dy);
+        }
+        
+        /// <summary>
+        /// Get player start position (center of player formations)
+        /// </summary>
+        private Vec3 GetPlayerStartPosition()
+        {
+            if (Mission.Current?.PlayerTeam == null)
             {
-                AnalyzeCurrentTerrain();
+                // Default position
+                return new Vec3(_battlefieldWidth * 0.25f, _battlefieldLength * 0.5f, 0f);
             }
             
-            // Check if there are significant high ground features
-            var highGroundFeatures = _terrainFeatures
-                .Where(f => f.FeatureType == TerrainFeatureType.HighGround && f.Value >= HIGH_GROUND_THRESHOLD)
-                .ToList();
-                
-            if (highGroundFeatures.Count == 0)
+            Vec3 center = Vec3.Zero;
+            int count = 0;
+            
+            foreach (var formation in Mission.Current.PlayerTeam.FormationsIncludingEmpty)
             {
-                return false;
+                if (formation.CountOfUnits > 0)
+                {
+                    center += formation.Current.MedianPosition.AsVec3;
+                    count++;
+                }
             }
             
-            // Get player and enemy positions
-            Vec3 playerPos = GetPlayerStartPosition();
-            Vec3 enemyPos = GetEnemyStartPosition();
-            
-            // Check if our high ground is closer to player than enemy
-            float closestToPlayer = float.MaxValue;
-            float closestToEnemy = float.MaxValue;
-            
-            foreach (var hg in highGroundFeatures)
+            if (count > 0)
             {
-                float distToPlayer = CalculateDistance(hg.Position, playerPos);
-                float distToEnemy = CalculateDistance(hg.Position, enemyPos);
-                
-                closestToPlayer = Math.Min(closestToPlayer, distToPlayer);
-                closestToEnemy = Math.Min(closestToEnemy, distToEnemy);
+                center /= count;
+            }
+            else
+            {
+                // Default position
+                center = new Vec3(_battlefieldWidth * 0.25f, _battlefieldLength * 0.5f, 0f);
             }
             
-            // We have advantage if our closest high ground is significantly closer to us
-            return closestToPlayer * 1.3f < closestToEnemy;
+            return center;
+        }
+        
+        /// <summary>
+        /// Get enemy start position (center of enemy formations)
+        /// </summary>
+        private Vec3 GetEnemyStartPositionPrimary()
+        {
+            if (Mission.Current?.EnemyTeam == null)
+            {
+                // Default position
+                return new Vec3(_battlefieldWidth * 0.75f, _battlefieldLength * 0.5f, 0f);
+            }
+            
+            Vec3 center = Vec3.Zero;
+            int count = 0;
+            
+            foreach (var formation in Mission.Current.EnemyTeam.FormationsIncludingEmpty)
+            {
+                if (formation.CountOfUnits > 0)
+                {
+                    center += formation.Current.MedianPosition.AsVec3;
+                    count++;
+                }
+            }
+            
+            if (count > 0)
+            {
+                center /= count;
+            }
+            else
+            {
+                // Default position
+                center = new Vec3(_battlefieldWidth * 0.75f, _battlefieldLength * 0.5f, 0f);
+            }
+            
+            return center;
         }
         
         /// <summary>
@@ -835,7 +981,7 @@ namespace HannibalAI.Terrain
                 
                 // First, determine the enemy's relative position and direction
                 Vec3 playerStartPosition = GetPlayerStartPosition();
-                Vec3 enemyStartPosition = GetEnemyStartPosition();
+                Vec3 enemyStartPosition = GetEnemyStartPositionPrimary();
                 
                 // Direction vector from player to enemy
                 Vec3 directionToEnemy = new Vec3(
@@ -954,7 +1100,7 @@ namespace HannibalAI.Terrain
                 // Get battle info to understand the tactical situation
                 BattleSideEnum playerSide = GetPlayerSide();
                 Vec3 playerStartPosition = GetPlayerStartPosition();
-                Vec3 enemyStartPosition = GetEnemyStartPosition();
+                Vec3 enemyStartPosition = GetEnemyStartPositionPrimary();
                 float battlefieldDepth = _battlefieldLength;
                 
                 // Direction vectors - from player to enemy and perpendicular
@@ -1279,9 +1425,9 @@ namespace HannibalAI.Terrain
         }
         
         /// <summary>
-        /// Get the player's starting position in the battle
+        /// Get the player's starting position in the battle (legacy method)
         /// </summary>
-        private Vec3 GetPlayerStartPosition()
+        private Vec3 GetPlayerStartPositionLegacy()
         {
             try
             {
@@ -1312,9 +1458,9 @@ namespace HannibalAI.Terrain
         }
         
         /// <summary>
-        /// Get the enemy's starting position in the battle
+        /// Get the enemy's starting position in the battle (legacy method)
         /// </summary>
-        private Vec3 GetEnemyStartPosition()
+        private Vec3 GetEnemyStartPositionLegacy()
         {
             try
             {
@@ -1346,9 +1492,9 @@ namespace HannibalAI.Terrain
         
 
         /// <summary>
-        /// Calculate the distance between two points
+        /// Calculate the distance between two points (alt version)
         /// </summary>
-        private float CalculateDistance(Vec3 a, Vec3 b)
+        private float CalculateDistanceAlt(Vec3 a, Vec3 b)
         {
             float dx = a.x - b.x;
             float dy = a.y - b.y;
