@@ -45,22 +45,25 @@ namespace HannibalAI.Command
                 };
                 Logger.Instance.DiagnosticInfo("RetreatCommand", formationState);
                 
-                // Get fallback order from service
-                var fallbackOrder = FallbackService.Instance.GetFallbackOrder(formation);
+                // Create our custom retreat order
+                HannibalFormationOrder hannibalOrder;
                 
                 // If we have a specific retreat position, use it
-                if (HannibalAI.Command.VectorUtility.VecNotEquals(RetreatPosition, Vec3.Zero))
+                if (HannibalAI.Command.VectorUtility.VecNotEquals(RetreatPosition, TaleWorlds.Library.Vec3.Zero))
                 {
                     System.Diagnostics.Debug.Print($"[HannibalAI] Retreating to position: ({RetreatPosition.x:F1}, {RetreatPosition.y:F1}, {RetreatPosition.z:F1})");
                     
                     // Create retreat order to specified position
-                    fallbackOrder = new FormationOrder
-                    {
-                        OrderType = FormationOrderType.Retreat,
-                        TargetFormation = formation,
-                        TargetPosition = RetreatPosition
-                    };
+                    hannibalOrder = HannibalFormationOrder.CreateRetreatOrder(formation, RetreatPosition);
                 }
+                else
+                {
+                    // Get fallback position from service if we don't have a specific one
+                    hannibalOrder = HannibalFormationOrder.CreateRetreatOrder(formation);
+                }
+                
+                // Convert to vanilla FormationOrder
+                var fallbackOrder = hannibalOrder.ToFormationOrder();
                 
                 if (fallbackOrder != null)
                 {

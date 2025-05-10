@@ -293,18 +293,13 @@ namespace HannibalAI.Command
                 };
                 Logger.Instance.DiagnosticInfo("HoldCommand", formationState);
                 
-                // Create the order - either at current position or specified position
-                FormationOrder order;
+                // Create our custom order using the HannibalFormationOrder adapter
+                HannibalFormationOrder hannibalOrder;
                 
-                if (VectorUtility.VecNotEquals(Position, Vec3.Zero))
+                if (VectorUtility.VecNotEquals(Position, TaleWorlds.Library.Vec3.Zero))
                 {
-                    // Move to position first, then hold
-                    order = new FormationOrder
-                    {
-                        OrderType = FormationOrderType.Move,
-                        TargetFormation = formation,
-                        TargetPosition = Position
-                    };
+                    // If we have a specific position, create a hold order at that position
+                    hannibalOrder = HannibalFormationOrder.CreateHoldOrder(formation, Position);
                     
                     // Log position information
                     System.Diagnostics.Debug.Print($"[HannibalAI] Hold position at: ({Position.x:F1}, {Position.y:F1}, {Position.z:F1})");
@@ -313,15 +308,12 @@ namespace HannibalAI.Command
                 else
                 {
                     // Hold at current position
-                    order = new FormationOrder
-                    {
-                        // Use a valid enum value and handle it properly in switch case
-                        OrderType = FormationOrderType.StandYourGround,
-                        TargetFormation = formation
-                    };
-                    
+                    hannibalOrder = HannibalFormationOrder.CreateHoldOrder(formation);
                     Logger.Instance.Info($"Holding formation {formation.Index} at current position");
                 }
+                
+                // Convert our custom order to the vanilla FormationOrder for API compatibility
+                var order = hannibalOrder.ToFormationOrder();
                 
                 // Apply the order
                 CommandUtility.ApplyOrderToFormation(formation, order);
@@ -378,7 +370,7 @@ namespace HannibalAI.Command
                 switch (order.OrderType)
                 {
                     case FormationOrderType.Move:
-                        if (VectorUtility.VecEquals(order.TargetPosition, Vec3.Zero))
+                        if (VectorUtility.VecEquals(order.TargetPosition, TaleWorlds.Library.Vec3.Zero))
                         {
                             System.Diagnostics.Debug.Print("[HannibalAI] ERROR: Move order with zero target position");
                             return;
@@ -418,9 +410,17 @@ namespace HannibalAI.Command
                             }
                             else
                             {
-                                // Direct property setting as last resort
-                                System.Diagnostics.Debug.Print("[HannibalAI] Using OrderPosition direct property");
-                                formation.OrderPosition = pos;
+                                // Try to use SetPosition method as last resort
+                                System.Diagnostics.Debug.Print("[HannibalAI] Using reflection to set position");
+                                var setPositionMethod = formation.GetType().GetMethod("SetPosition");
+                                if (setPositionMethod != null)
+                                {
+                                    setPositionMethod.Invoke(formation, new object[] { pos });
+                                }
+                                else
+                                {
+                                    Logger.Instance.Error("Could not find any method to set formation position");
+                                }
                             }
                         }
                         catch (Exception ex)
@@ -436,7 +436,7 @@ namespace HannibalAI.Command
                         success = true;
                         break;
                         
-                    case FormationOrderType.StandYourGround:
+                    case (FormationOrderType)0: // None/StandGround
                         // Hold position is equivalent to stop
                         formation.SetMovementOrder(MovementOrder.MovementOrderStop);
                         success = true;

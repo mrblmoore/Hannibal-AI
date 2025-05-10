@@ -1,398 +1,397 @@
 using System;
 using System.Collections.Generic;
-using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
+using TaleWorlds.Core;
+using TaleWorlds.Engine;
 using HannibalAI.Command;
+using HannibalAI.Adapters;
 
 namespace HannibalAI
 {
     /// <summary>
-    /// Service to manage fallback decisions when primary AI logic fails
+    /// Service that provides fallback positions for retreating formations
     /// </summary>
     public class FallbackService
     {
-        private ModConfig _config;
-        private AIService _aiService;
         private static FallbackService _instance;
-
-        // Get singleton instance, lazy initialized with default values if not explicitly created
-        public static FallbackService Instance 
-        { 
-            get 
+        
+        /// <summary>
+        /// Singleton instance of the FallbackService
+        /// </summary>
+        public static FallbackService Instance
+        {
+            get
             {
                 if (_instance == null)
                 {
-                    _instance = new FallbackService(ModConfig.Instance, null);
+                    _instance = new FallbackService();
                 }
                 return _instance;
             }
         }
-
-
-        public FallbackService(ModConfig config, AIService aiService)
-        {
-            _config = config;
-            _aiService = aiService;
-        }
-
+        
+        // Store cached retreat points for each team
+        private Dictionary<Team, List<Vec3>> _retreatPointsByTeam = new Dictionary<Team, List<Vec3>>();
+        
+        // Time of last retreat point refresh
+        private DateTime _lastRetreatPointsRefresh = DateTime.MinValue;
+        
+        // Refresh interval for retreat points (in seconds)
+        private const int RETREAT_POINT_REFRESH_INTERVAL = 10;
+        
         /// <summary>
-        /// Generate fallback formation orders when primary decision making fails
+        /// Private constructor to enforce singleton
         /// </summary>
-        public List<FormationOrder> GenerateFallbackOrders(Team team, Team enemyTeam)
+        private FallbackService()
         {
-            List<FormationOrder> fallbackOrders = new List<FormationOrder>();
-
-            try
-            {
-                if (team == null || team.FormationsIncludingEmpty == null || team.FormationsIncludingEmpty.Count == 0)
-                {
-                    return fallbackOrders;
-                }
-
-                // Determine team situation
-                bool isDefensive = ShouldDefend(team, enemyTeam);
-
-                // Get various formation types
-                List<Formation> infantryFormations = GetFormationsByClass(team, FormationClass.Infantry);
-                List<Formation> rangedFormations = GetFormationsByClass(team, FormationClass.Ranged);
-                List<Formation> cavalryFormations = GetFormationsByClass(team, FormationClass.Cavalry);
-
-                // Apply nemesis system influence if enabled
-                bool preferFlankingOverCharge = false;
-                bool preferDefensivePositioning = false;
-
-                if (_config.UseCommanderMemory && CommanderMemoryService.Instance.TimesDefeatedPlayer >= 3)
-                {
-                    // Commander who has defeated player 3+ times adapts tactics
-                    preferFlankingOverCharge = true;
-
-                    // Commander with vendetta is more aggressive
-                    if (CommanderMemoryService.Instance.HasVendettaAgainstPlayer)
-                    {
-                        isDefensive = false;
-                    }
-                }
-
-                // Less aggressive commanders prefer defensive positioning
-                if (_config.UseCommanderMemory && CommanderMemoryService.Instance.AggressivenessScore < 0.4f)
-                {
-                    preferDefensivePositioning = true;
-                    isDefensive = true;
-                }
-
-                // Generate basic orders based on formation type
-                if (isDefensive)
-                {
-                    GenerateDefensiveFallbackOrders(fallbackOrders, infantryFormations, rangedFormations, cavalryFormations, preferDefensivePositioning);
-                }
-                else
-                {
-                    GenerateOffensiveFallbackOrders(fallbackOrders, infantryFormations, rangedFormations, cavalryFormations, preferFlankingOverCharge);
-                }
-
-                // If we have a preferred formation from memory, use it
-                if (_config.UseCommanderMemory && !string.IsNullOrEmpty(CommanderMemoryService.Instance.PreferredFormation))
-                {
-                    ApplyPreferredFormation(fallbackOrders, CommanderMemoryService.Instance.PreferredFormation);
-                }
-
-                // Log fallback scenario
-                if (_config.Debug)
-                {
-                    _aiService.LogInfo("Using fallback orders: " + (isDefensive ? "Defensive" : "Offensive"));
-                }
-            }
-            catch (Exception ex)
-            {
-                _aiService.LogError($"Error generating fallback orders: {ex.Message}");
-            }
-
-            return fallbackOrders;
+            Logger.Instance.Info("FallbackService initialized");
+            System.Diagnostics.Debug.Print("[HannibalAI] FallbackService initialized");
         }
-
+        
         /// <summary>
-        /// Determine if team should use defensive tactics
+        /// Gets a fallback order for a formation
         /// </summary>
-        private bool ShouldDefend(Team team, Team enemyTeam)
-        {
-            if (team == null || enemyTeam == null)
-            {
-                return true; // Default to defensive if missing data
-            }
-
-            // Check unit count advantage
-            int teamCount = CountActiveAgents(team);
-            int enemyCount = CountActiveAgents(enemyTeam);
-
-            // Default defensiveness check
-            bool isOutnumbered = teamCount < enemyCount;
-
-            // Apply commander memory if enabled
-            if (_config.UseCommanderMemory)
-            {
-                // More aggressive commanders are less likely to defend
-                float aggressionModifier = CommanderMemoryService.Instance.AggressivenessScore;
-
-                // If significantly aggressive, might attack even when outnumbered
-                if (aggressionModifier > 0.7f)
-                {
-                    isOutnumbered = teamCount < enemyCount * 1.3f;
-                }
-                // If very cautious, more likely to defend
-                else if (aggressionModifier < 0.3f)
-                {
-                    isOutnumbered = teamCount < enemyCount * 0.8f;
-                }
-            }
-
-            return isOutnumbered;
-        }
-
-        /// <summary>
-        /// Generate defensive fallback orders
-        /// </summary>
-        private void GenerateDefensiveFallbackOrders(
-            List<FormationOrder> orders,
-            List<Formation> infantryFormations,
-            List<Formation> rangedFormations,
-            List<Formation> cavalryFormations,
-            bool preferDefensivePositioning)
-        {
-            // Infantry forms shield wall in front
-            foreach (var formation in infantryFormations)
-            {
-                orders.Add(new FormationOrder
-                {
-                    OrderType = preferDefensivePositioning ? FormationOrderType.FormShieldWall : FormationOrderType.FormLine,
-                    TargetFormation = formation,
-                    TargetPosition = TaleWorlds.Library.Vec3.Zero, // Current position
-                    AdditionalData = preferDefensivePositioning ? "ShieldWall" : "Line"
-                });
-            }
-
-            // Ranged units in loose formation behind infantry
-            foreach (var formation in rangedFormations)
-            {
-                orders.Add(new FormationOrder
-                {
-                    OrderType = FormationOrderType.FormLoose,
-                    TargetFormation = formation,
-                    TargetPosition = TaleWorlds.Library.Vec3.Zero, // Current position
-                    AdditionalData = "Loose"
-                });
-            }
-
-            // Cavalry in reserve on the flanks
-            foreach (var formation in cavalryFormations)
-            {
-                FormationOrderType orderType = FormationOrderType.Move;
-                string formationType = "Column";
-
-                // If extra defensive, keep cavalry in tighter formations
-                if (preferDefensivePositioning)
-                {
-                    orderType = FormationOrderType.Move;
-                    formationType = "Column";
-                }
-                else
-                {
-                    // Otherwise, allow for more flexible positioning
-                    orderType = FormationOrderType.FormWedge;
-                    formationType = "Wedge";
-                }
-
-                orders.Add(new FormationOrder
-                {
-                    OrderType = orderType,
-                    TargetFormation = formation,
-                    TargetPosition = TaleWorlds.Library.Vec3.Zero, // Current position
-                    AdditionalData = formationType
-                });
-            }
-        }
-
-        /// <summary>
-        /// Generate offensive fallback orders
-        /// </summary>
-        private void GenerateOffensiveFallbackOrders(
-            List<FormationOrder> orders,
-            List<Formation> infantryFormations,
-            List<Formation> rangedFormations,
-            List<Formation> cavalryFormations,
-            bool preferFlankingOverCharge)
-        {
-            // Infantry advances in line formation
-            foreach (var formation in infantryFormations)
-            {
-                orders.Add(new FormationOrder
-                {
-                    OrderType = FormationOrderType.Advance,
-                    TargetFormation = formation,
-                    TargetPosition = TaleWorlds.Library.Vec3.Zero,
-                    AdditionalData = "Line"
-                });
-            }
-
-            // Ranged units provide covering fire
-            foreach (var formation in rangedFormations)
-            {
-                orders.Add(new FormationOrder
-                {
-                    OrderType = FormationOrderType.FormLoose,
-                    TargetFormation = formation,
-                    TargetPosition = TaleWorlds.Library.Vec3.Zero,
-                    AdditionalData = "Loose"
-                });
-            }
-
-            // Cavalry charges or flanks based on strategy
-            foreach (var formation in cavalryFormations)
-            {
-                if (preferFlankingOverCharge)
-                {
-                    orders.Add(new FormationOrder
-                    {
-                        OrderType = FormationOrderType.FormWedge,
-                        TargetFormation = formation,
-                        TargetPosition = TaleWorlds.Library.Vec3.Zero,
-                        AdditionalData = "Wedge"
-                    });
-                }
-                else
-                {
-                    orders.Add(new FormationOrder
-                    {
-                        OrderType = FormationOrderType.Charge,
-                        TargetFormation = formation,
-                        TargetPosition = TaleWorlds.Library.Vec3.Zero,
-                        AdditionalData = null
-                    });
-                }
-            }
-        }
-
-        /// <summary>
-        /// Apply preferred formation from commander memory
-        /// </summary>
-        private void ApplyPreferredFormation(List<FormationOrder> orders, string preferredFormationType)
-        {
-            foreach (var order in orders)
-            {
-                // Only override formation type for move and advance orders
-                if (order.OrderType == FormationOrderType.Move || order.OrderType == FormationOrderType.Advance)
-                {
-                    order.AdditionalData = preferredFormationType;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Get formations by class
-        /// </summary>
-        private List<Formation> GetFormationsByClass(Team team, FormationClass formationClass)
-        {
-            List<Formation> result = new List<Formation>();
-
-            if (team?.FormationsIncludingEmpty == null)
-            {
-                return result;
-            }
-
-            foreach (Formation formation in team.FormationsIncludingEmpty)
-            {
-                // Skip empty formations
-                if (formation.CountOfUnits <= 0)
-                {
-                    continue;
-                }
-
-                if (formation.FormationIndex == formationClass)
-                {
-                    result.Add(formation);
-                }
-            }
-
-            return result;
-        }
-
-        /// <summary>
-        /// Count active agents in a team
-        /// </summary>
-        private int CountActiveAgents(Team team)
-        {
-            if (team?.ActiveAgents == null)
-            {
-                return 0;
-            }
-
-            return team.ActiveAgents.Count;
-        }
-
+        /// <param name="formation">The formation to get a fallback order for</param>
+        /// <returns>A FormationOrder for fallback, or null if no fallback is possible</returns>
         public FormationOrder GetFallbackOrder(Formation formation)
         {
-            if (formation == null) return null;
-
+            if (formation == null)
+            {
+                Logger.Instance.Warning("FallbackService.GetFallbackOrder: formation is null");
+                return null;
+            }
+            
             try
             {
-                var currentPos = formation.CurrentPosition;
-                var fallbackPos = GetSafePosition(formation);
-
-                return new FormationOrder
+                // Refresh retreat points if needed
+                RefreshRetreatPointsIfNeeded();
+                
+                // Get the formation's team
+                var team = formation.Team;
+                if (team == null)
                 {
-                    OrderType = FormationOrderType.Move,
-                    TargetFormation = formation,
-                    TargetPosition = fallbackPos,
-                    AdditionalData = "High Priority" // Using AdditionalData instead of Urgency
-                };
+                    Logger.Instance.Warning($"FallbackService.GetFallbackOrder: formation {formation.Index} has no team");
+                    return null;
+                }
+                
+                // Find a safe retreat position for this team
+                Vec3 retreatPos = GetRetreatPosition(team);
+                
+                // Create our custom retreat order
+                var hannibalOrder = HannibalFormationOrder.CreateRetreatOrder(formation, retreatPos);
+                
+                // Convert to vanilla formation order
+                return hannibalOrder.ToFormationOrder();
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error in FallbackService: {ex.Message}");
+                Logger.Instance.Error($"Error getting fallback order: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] FallbackService error: {ex.Message}");
                 return null;
             }
         }
-
-        // Helper method to create Vec3 from position
-        private TaleWorlds.Library.Vec3 CreateVec3FromPosition(Vec2 position)
+        
+        /// <summary>
+        /// Refreshes retreat points if needed
+        /// </summary>
+        private void RefreshRetreatPointsIfNeeded()
         {
-            // Extract x and y components from Vec2
-            float x = position.x;
-            float y = position.y;
-            return new TaleWorlds.Library.Vec3(x, y, 0f);
+            // Check if we need to refresh retreat points
+            if ((DateTime.Now - _lastRetreatPointsRefresh).TotalSeconds >= RETREAT_POINT_REFRESH_INTERVAL)
+            {
+                RefreshRetreatPoints();
+                _lastRetreatPointsRefresh = DateTime.Now;
+            }
         }
-
-        private TaleWorlds.Library.Vec3 GetSafePosition(Formation formation)
+        
+        /// <summary>
+        /// Refreshes retreat points for all teams
+        /// </summary>
+        private void RefreshRetreatPoints()
         {
-            // Use hardcoded position for testing since we can't convert between WorldPosition and Vec3 reliably
-            return new TaleWorlds.Library.Vec3(100f, 100f, 0f);
+            try
+            {
+                System.Diagnostics.Debug.Print("[HannibalAI] Refreshing retreat points");
+                
+                // Clear existing retreat points
+                _retreatPointsByTeam.Clear();
+                
+                // Get all teams in the current mission
+                if (Mission.Current != null)
+                {
+                    foreach (var team in Mission.Current.Teams)
+                    {
+                        // Find retreat points for this team
+                        List<Vec3> retreatPoints = CalculateRetreatPointsForTeam(team);
+                        
+                        // Store retreat points for this team
+                        _retreatPointsByTeam[team] = retreatPoints;
+                        
+                        System.Diagnostics.Debug.Print($"[HannibalAI] Found {retreatPoints.Count} retreat points for team {team.TeamIndex}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error refreshing retreat points: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error refreshing retreat points: {ex.Message}");
+            }
         }
-
-        private TaleWorlds.Library.Vec3 GetSafeDirection(Formation formation)
+        
+        /// <summary>
+        /// Calculates retreat points for a team
+        /// </summary>
+        /// <param name="team">The team to calculate retreat points for</param>
+        /// <returns>A list of retreat points</returns>
+        private List<Vec3> CalculateRetreatPointsForTeam(Team team)
         {
-            // Return a simple direction vector for testing
-            return new TaleWorlds.Library.Vec3(0f, 1f, 0f);
+            List<Vec3> retreatPoints = new List<Vec3>();
+            
+            try
+            {
+                // Find the team's spawn point as a fallback
+                Vec3 teamSpawnPoint = GetTeamSpawnPoint(team);
+                if (teamSpawnPoint != Vec3.Zero)
+                {
+                    retreatPoints.Add(teamSpawnPoint);
+                }
+                
+                // Find defensive positions based on terrain
+                List<Vec3> defensivePositions = FindDefensivePositions(team);
+                retreatPoints.AddRange(defensivePositions);
+                
+                // If no retreat points were found, add a default fallback based on team positions
+                if (retreatPoints.Count == 0)
+                {
+                    Vec3 defaultFallback = CalculateDefaultFallbackPosition(team);
+                    retreatPoints.Add(defaultFallback);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error calculating retreat points for team {team.TeamIndex}: {ex.Message}");
+                
+                // Add a very basic fallback in case of error - retreat 100 units behind team center
+                retreatPoints.Add(CalculateSimpleFallbackPosition(team));
+            }
+            
+            return retreatPoints;
         }
-
-        private TaleWorlds.Library.Vec3 GetEnemyCenter(Formation formation)
+        
+        /// <summary>
+        /// Gets the team's spawn point
+        /// </summary>
+        /// <param name="team">The team</param>
+        /// <returns>The team's spawn point</returns>
+        private Vec3 GetTeamSpawnPoint(Team team)
         {
-            var enemyTeam = formation.Team.IsAttacker ?
-                Mission.Current.DefenderTeam : Mission.Current.AttackerTeam;
-
-            if (enemyTeam == null || enemyTeam.FormationsIncludingEmpty == null || enemyTeam.FormationsIncludingEmpty.Count == 0)
-                return new TaleWorlds.Library.Vec3(120f, 120f, 0f); // Hardcoded fallback position
-
-            // For compatibility, just return a fixed position
-            return new TaleWorlds.Library.Vec3(120f, 120f, 0f);
+            if (team == null || Mission.Current == null)
+                return Vec3.Zero;
+            
+            try
+            {
+                // Try to find the team's spawn point through reflection
+                var teamSpawnMethod = team.GetType().GetMethod("GetTeamSpawnPosition");
+                if (teamSpawnMethod != null)
+                {
+                    var result = teamSpawnMethod.Invoke(team, null);
+                    if (result is Vec3 pos)
+                    {
+                        return pos;
+                    }
+                }
+                
+                // Fallback: use the position of the team's agents at the start
+                if (team.TeamAgents.Count > 0)
+                {
+                    float sumX = 0f, sumY = 0f, sumZ = 0f;
+                    foreach (var agent in team.TeamAgents)
+                    {
+                        var agentPos = agent.Position;
+                        sumX += agentPos.x;
+                        sumY += agentPos.y;
+                        sumZ += agentPos.z;
+                    }
+                    
+                    if (team.TeamAgents.Count > 0)
+                    {
+                        return new Vec3(
+                            sumX / team.TeamAgents.Count,
+                            sumY / team.TeamAgents.Count,
+                            sumZ / team.TeamAgents.Count
+                        );
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Warning($"Error getting spawn point for team {team.TeamIndex}: {ex.Message}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error getting spawn point: {ex.Message}");
+            }
+            
+            return Vec3.Zero;
         }
-
-        public AIDecision GetFallbackDecision()
+        
+        /// <summary>
+        /// Finds defensive positions based on terrain
+        /// </summary>
+        /// <param name="team">The team</param>
+        /// <returns>A list of defensive positions</returns>
+        private List<Vec3> FindDefensivePositions(Team team)
         {
-            Logger.Instance.Info("[HannibalAI] Fallback decision retrieved.");
-            // Create a simple hold position command as fallback
-            return new AIDecision(new HoldCommand { 
-                HoldPosition = new TaleWorlds.Library.Vec3(100f, 100f, 0f) 
-            });
+            List<Vec3> defensivePositions = new List<Vec3>();
+            
+            // This is a placeholder for more advanced terrain analysis
+            // In a full implementation, this would analyze terrain features like hills, cover, etc.
+            
+            return defensivePositions;
+        }
+        
+        /// <summary>
+        /// Calculates a default fallback position
+        /// </summary>
+        /// <param name="team">The team</param>
+        /// <returns>The default fallback position</returns>
+        private Vec3 CalculateDefaultFallbackPosition(Team team)
+        {
+            if (team == null || Mission.Current == null)
+                return Vec3.Zero;
+            
+            try
+            {
+                // Find enemy team
+                Team enemyTeam = null;
+                foreach (var otherTeam in Mission.Current.Teams)
+                {
+                    if (otherTeam != team && team.IsEnemyOf(otherTeam))
+                    {
+                        enemyTeam = otherTeam;
+                        break;
+                    }
+                }
+                
+                if (enemyTeam != null)
+                {
+                    // Get positions of all team members
+                    Vec3 teamCenter = CalculateTeamCenter(team);
+                    
+                    // Get positions of all enemy team members
+                    Vec3 enemyCenter = CalculateTeamCenter(enemyTeam);
+                    
+                    if (teamCenter != Vec3.Zero && enemyCenter != Vec3.Zero)
+                    {
+                        // Calculate direction vector away from enemy
+                        Vec3 direction = new Vec3(
+                            teamCenter.x - enemyCenter.x,
+                            teamCenter.y - enemyCenter.y,
+                            teamCenter.z - enemyCenter.z
+                        );
+                        
+                        // Normalize direction
+                        float magnitude = (float)Math.Sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
+                        if (magnitude > 0.001f)
+                        {
+                            direction.x /= magnitude;
+                            direction.y /= magnitude;
+                            direction.z /= magnitude;
+                            
+                            // Move 100 units in that direction
+                            return new Vec3(
+                                teamCenter.x + direction.x * 100f,
+                                teamCenter.y + direction.y * 100f,
+                                teamCenter.z + direction.z * 100f
+                            );
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Warning($"Error calculating fallback position: {ex.Message}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error in fallback calc: {ex.Message}");
+            }
+            
+            // Couldn't calculate based on enemy position, use simple fallback
+            return CalculateSimpleFallbackPosition(team);
+        }
+        
+        /// <summary>
+        /// Calculates a simple fallback position (last resort)
+        /// </summary>
+        /// <param name="team">The team</param>
+        /// <returns>A simple fallback position</returns>
+        private Vec3 CalculateSimpleFallbackPosition(Team team)
+        {
+            Vec3 teamCenter = CalculateTeamCenter(team);
+            
+            // Check if we could get the team center
+            if (teamCenter == Vec3.Zero)
+            {
+                // No team center, use the center of the map
+                if (Mission.Current != null && Mission.Current.Scene != null)
+                {
+                    return new Vec3(0, 0, 0);
+                }
+                else
+                {
+                    // No mission or scene, just return zero
+                    return Vec3.Zero;
+                }
+            }
+            
+            // Move back 100 units in X direction as an absolute last resort
+            return new Vec3(teamCenter.x - 100f, teamCenter.y, teamCenter.z);
+        }
+        
+        /// <summary>
+        /// Calculates the center position of a team
+        /// </summary>
+        /// <param name="team">The team</param>
+        /// <returns>The center position</returns>
+        private Vec3 CalculateTeamCenter(Team team)
+        {
+            if (team == null || team.TeamAgents.Count == 0)
+                return Vec3.Zero;
+            
+            float sumX = 0f, sumY = 0f, sumZ = 0f;
+            int count = 0;
+            
+            foreach (var agent in team.TeamAgents)
+            {
+                var pos = agent.Position;
+                sumX += pos.x;
+                sumY += pos.y;
+                sumZ += pos.z;
+                count++;
+            }
+            
+            if (count > 0)
+            {
+                return new Vec3(sumX / count, sumY / count, sumZ / count);
+            }
+            
+            return Vec3.Zero;
+        }
+        
+        /// <summary>
+        /// Gets a retreat position for a team
+        /// </summary>
+        /// <param name="team">The team</param>
+        /// <returns>A retreat position</returns>
+        private Vec3 GetRetreatPosition(Team team)
+        {
+            // Check if we have retreat points for this team
+            if (_retreatPointsByTeam.TryGetValue(team, out List<Vec3> retreatPoints) && retreatPoints.Count > 0)
+            {
+                // For now, just return the first retreat point
+                // In a more advanced implementation, this would select the best retreat point
+                // based on the formation's current position, enemy positions, terrain, etc.
+                return retreatPoints[0];
+            }
+            
+            // No retreat points for this team, calculate a simple fallback
+            return CalculateSimpleFallbackPosition(team);
         }
     }
 }
