@@ -33,65 +33,105 @@ namespace HannibalAI
         
         /// <summary>
         /// Execute a formation order with optional aggression factor
+        /// Returns true if the order was successfully executed, false otherwise
         /// </summary>
-        public void ExecuteOrder(FormationOrder order, float aggressionFactor = 0.5f)
+        public bool ExecuteOrder(FormationOrder order, float aggressionFactor = 0.5f)
         {
+            if (order == null)
+            {
+                Logger.Instance.Error("Cannot execute null order");
+                System.Diagnostics.Debug.Print("[HannibalAI] ExecuteOrder received null order");
+                return false;
+            }
+            
+            if (order.TargetFormation == null)
+            {
+                Logger.Instance.Error($"Order {order.OrderType} has null target formation");
+                System.Diagnostics.Debug.Print($"[HannibalAI] ExecuteOrder: {order.OrderType} has null target formation");
+                return false;
+            }
+            
+            if (Mission.Current == null)
+            {
+                Logger.Instance.Error("Cannot execute order: No active mission");
+                System.Diagnostics.Debug.Print("[HannibalAI] ExecuteOrder: No active mission");
+                return false;
+            }
+            
+            // Additional validation for formation
+            if (order.TargetFormation.CountOfUnits <= 0)
+            {
+                Logger.Instance.Warning($"Skipping {order.OrderType} order for empty formation {order.TargetFormation.FormationIndex}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Skipping {order.OrderType} for empty formation {order.TargetFormation.FormationIndex}");
+                return false;
+            }
+            
             try
             {
+                // Log detailed diagnostic info
+                System.Diagnostics.Debug.Print($"[HannibalAI] Executing {order.OrderType} order for formation {order.TargetFormation.FormationIndex} with {order.TargetFormation.CountOfUnits} units");
+                
+                // Execute the appropriate order based on type
                 switch (order.OrderType)
                 {
                     case FormationOrderType.Move:
-                        ExecuteMoveOrder(order);
-                        break;
+                        return ExecuteMoveOrder(order);
                     case FormationOrderType.Advance:
-                        ExecuteAdvanceOrder(order);
-                        break;
+                        return ExecuteAdvanceOrder(order);
                     case FormationOrderType.Charge:
-                        ExecuteChargeOrder(order);
-                        break;
+                        return ExecuteChargeOrder(order);
                     case FormationOrderType.Retreat:
-                        ExecuteRetreatOrder(order);
-                        break;
+                        return ExecuteRetreatOrder(order);
                     case FormationOrderType.FireAt:
-                        ExecuteFireAtOrder(order);
-                        break;
+                        return ExecuteFireAtOrder(order);
                     case FormationOrderType.FormLine:
-                        ExecuteFormLineOrder(order);
-                        break;
+                        return ExecuteFormLineOrder(order);
                     case FormationOrderType.FormCircle:
-                        ExecuteFormCircleOrder(order);
-                        break;
+                        return ExecuteFormCircleOrder(order);
                     case FormationOrderType.FormWedge:
-                        ExecuteFormWedgeOrder(order);
-                        break;
+                        return ExecuteFormWedgeOrder(order);
                     case FormationOrderType.FormColumn:
-                        ExecuteFormColumnOrder(order);
-                        break;
+                        return ExecuteFormColumnOrder(order);
                     case FormationOrderType.FormShieldWall:
-                        ExecuteFormShieldWallOrder(order);
-                        break;
+                        return ExecuteFormShieldWallOrder(order);
                     case FormationOrderType.FormLoose:
-                        ExecuteFormLooseOrder(order);
-                        break;
+                        return ExecuteFormLooseOrder(order);
                     default:
-                        throw new NotImplementedException($"Order type {order.OrderType} not implemented");
+                        Logger.Instance.Error($"Order type {order.OrderType} not implemented");
+                        System.Diagnostics.Debug.Print($"[HannibalAI] Unimplemented order type: {order.OrderType}");
+                        return false;
                 }
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error executing order: {ex.Message}");
+                Logger.Instance.Error($"Error executing {order.OrderType} order: {ex.Message}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error executing {order.OrderType} order: {ex.Message}");
+                return false;
             }
         }
         
         /// <summary>
         /// Execute a move order
         /// </summary>
-        private void ExecuteMoveOrder(FormationOrder order)
+        /// <returns>True if successful, false otherwise</returns>
+        private bool ExecuteMoveOrder(FormationOrder order)
         {
             try
             {
                 Formation formation = order.TargetFormation;
                 Vec3 position = order.TargetPosition;
+                
+                // Validate position
+                if (position == Vec3.Zero)
+                {
+                    Logger.Instance.Warning("Move order has zero/invalid target position");
+                    System.Diagnostics.Debug.Print("[HannibalAI] Move order has zero target position");
+                    return false;
+                }
+                
+                // Log the operation
+                Logger.Instance.Info($"Moving formation {formation.FormationIndex} to ({position.x:F1}, {position.y:F1}, {position.z:F1})");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Moving formation {formation.FormationIndex} to position ({position.x:F1}, {position.y:F1}, {position.z:F1})");
                 
                 // Standard movement order to position
                 WorldPosition worldPosition = new WorldPosition(Mission.Current.Scene, position);
@@ -101,83 +141,136 @@ namespace HannibalAI
                 if (!string.IsNullOrEmpty(order.AdditionalData))
                 {
                     ApplyFormationArrangement(formation, order.AdditionalData);
+                    Logger.Instance.Info($"Applied formation arrangement: {order.AdditionalData}");
                 }
+                
+                return true;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error executing move order: {ex.Message}");
+                Logger.Instance.Error($"Error executing move order: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error in ExecuteMoveOrder: {ex.Message}");
+                return false;
             }
         }
         
         /// <summary>
         /// Execute an advance order
         /// </summary>
-        private void ExecuteAdvanceOrder(FormationOrder order)
+        /// <returns>True if successful, false otherwise</returns>
+        private bool ExecuteAdvanceOrder(FormationOrder order)
         {
             try
             {
                 Formation formation = order.TargetFormation;
                 
-                // Use the most basic form of advance order
+                // Log the advance order
+                Logger.Instance.Info($"Ordering formation {formation.FormationIndex} to advance");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Setting formation {formation.FormationIndex} to advance");
+                
+                // Use the advance movement order
                 formation.SetMovementOrder(MovementOrder.MovementOrderAdvance);
+                
+                // If there's a target position, log it for informational purposes
+                if (order.TargetPosition != Vec3.Zero)
+                {
+                    Vec3 position = order.TargetPosition;
+                    Logger.Instance.Info($"Advance direction toward ({position.x:F1}, {position.y:F1}, {position.z:F1})");
+                }
                 
                 // Apply formation type if specified
                 if (!string.IsNullOrEmpty(order.AdditionalData))
                 {
                     ApplyFormationArrangement(formation, order.AdditionalData);
+                    Logger.Instance.Info($"Applied formation arrangement: {order.AdditionalData}");
                 }
+                
+                return true;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error executing advance order: {ex.Message}");
+                Logger.Instance.Error($"Error executing advance order: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error in ExecuteAdvanceOrder: {ex.Message}");
+                return false;
             }
         }
         
         /// <summary>
         /// Execute a charge order
         /// </summary>
-        private void ExecuteChargeOrder(FormationOrder order)
+        /// <returns>True if successful, false otherwise</returns>
+        private bool ExecuteChargeOrder(FormationOrder order)
         {
             try
             {
                 Formation formation = order.TargetFormation;
                 
+                // Log the charge order
+                Logger.Instance.Info($"Ordering formation {formation.FormationIndex} to charge");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Setting formation {formation.FormationIndex} to charge");
+                
                 // Standard charge command
                 formation.SetMovementOrder(MovementOrder.MovementOrderCharge);
+                
+                return true;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error executing charge order: {ex.Message}");
+                Logger.Instance.Error($"Error executing charge order: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error in ExecuteChargeOrder: {ex.Message}");
+                return false;
             }
         }
         
         /// <summary>
         /// Execute a retreat order
         /// </summary>
-        private void ExecuteRetreatOrder(FormationOrder order)
+        /// <returns>True if successful, false otherwise</returns>
+        private bool ExecuteRetreatOrder(FormationOrder order)
         {
             try
             {
                 Formation formation = order.TargetFormation;
                 
+                // Log the retreat order
+                Logger.Instance.Info($"Ordering formation {formation.FormationIndex} to retreat");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Setting formation {formation.FormationIndex} to retreat");
+                
                 // Standard retreat command
                 formation.SetMovementOrder(MovementOrder.MovementOrderRetreat);
+                
+                return true;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error executing retreat order: {ex.Message}");
+                Logger.Instance.Error($"Error executing retreat order: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error in ExecuteRetreatOrder: {ex.Message}");
+                return false;
             }
         }
         
         /// <summary>
         /// Execute a fire at order for ranged units
         /// </summary>
-        private void ExecuteFireAtOrder(FormationOrder order)
+        /// <returns>True if successful, false otherwise</returns>
+        private bool ExecuteFireAtOrder(FormationOrder order)
         {
             try
             {
                 Formation formation = order.TargetFormation;
                 Vec3 targetPosition = order.TargetPosition;
+                
+                // Validate target position
+                if (targetPosition == Vec3.Zero)
+                {
+                    Logger.Instance.Warning("Fire at order has invalid target position");
+                    System.Diagnostics.Debug.Print("[HannibalAI] Fire at order has zero target position");
+                    return false;
+                }
+                
+                // Log the fire at order
+                Logger.Instance.Info($"Ordering formation {formation.FormationIndex} to fire at position ({targetPosition.x:F1}, {targetPosition.y:F1}, {targetPosition.z:F1})");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Setting formation {formation.FormationIndex} to fire at position");
                 
                 // Set the target position by moving slightly toward it
                 Vec2 formationPos = formation.CurrentPosition;
@@ -193,154 +286,238 @@ namespace HannibalAI
                 if (string.IsNullOrEmpty(order.AdditionalData))
                 {
                     ApplyFormationArrangement(formation, "Loose");
+                    Logger.Instance.Info("Applied loose formation for archers");
                 }
                 else
                 {
                     ApplyFormationArrangement(formation, order.AdditionalData);
+                    Logger.Instance.Info($"Applied {order.AdditionalData} formation");
                 }
+                
+                return true;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error executing fire at order: {ex.Message}");
+                Logger.Instance.Error($"Error executing fire at order: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error in ExecuteFireAtOrder: {ex.Message}");
+                return false;
             }
         }
         
         /// <summary>
         /// Execute a form line order
         /// </summary>
-        private void ExecuteFormLineOrder(FormationOrder order)
+        /// <returns>True if successful, false otherwise</returns>
+        private bool ExecuteFormLineOrder(FormationOrder order)
         {
             try
             {
                 Formation formation = order.TargetFormation;
+                
+                // Log the form line order
+                Logger.Instance.Info($"Setting formation {formation.FormationIndex} to line arrangement");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Setting formation {formation.FormationIndex} to line arrangement");
+                
                 formation.ArrangementOrder = ArrangementOrder.ArrangementOrderLine;
                 
                 // If position is specified, also move to that position
                 if (order.TargetPosition != Vec3.Zero)
                 {
+                    Vec3 position = order.TargetPosition;
+                    Logger.Instance.Info($"Moving formation to ({position.x:F1}, {position.y:F1}, {position.z:F1})");
+                    
                     WorldPosition worldPosition = new WorldPosition(Mission.Current.Scene, order.TargetPosition);
                     formation.SetMovementOrder(MovementOrder.MovementOrderMove(worldPosition));
                 }
+                
+                return true;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error executing form line order: {ex.Message}");
+                Logger.Instance.Error($"Error executing form line order: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error in ExecuteFormLineOrder: {ex.Message}");
+                return false;
             }
         }
         
         /// <summary>
         /// Execute a form circle order
         /// </summary>
-        private void ExecuteFormCircleOrder(FormationOrder order)
+        /// <returns>True if successful, false otherwise</returns>
+        private bool ExecuteFormCircleOrder(FormationOrder order)
         {
             try
             {
                 Formation formation = order.TargetFormation;
+                
+                // Log the form circle order
+                Logger.Instance.Info($"Setting formation {formation.FormationIndex} to circle arrangement");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Setting formation {formation.FormationIndex} to circle arrangement");
+                
                 formation.ArrangementOrder = ArrangementOrder.ArrangementOrderCircle;
                 
                 // If position is specified, also move to that position
                 if (order.TargetPosition != Vec3.Zero)
                 {
+                    Vec3 position = order.TargetPosition;
+                    Logger.Instance.Info($"Moving formation to ({position.x:F1}, {position.y:F1}, {position.z:F1})");
+                    
                     WorldPosition worldPosition = new WorldPosition(Mission.Current.Scene, order.TargetPosition);
                     formation.SetMovementOrder(MovementOrder.MovementOrderMove(worldPosition));
                 }
+                
+                return true;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error executing form circle order: {ex.Message}");
+                Logger.Instance.Error($"Error executing form circle order: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error in ExecuteFormCircleOrder: {ex.Message}");
+                return false;
             }
         }
         
         /// <summary>
         /// Execute a form wedge order
         /// </summary>
-        private void ExecuteFormWedgeOrder(FormationOrder order)
+        /// <returns>True if successful, false otherwise</returns>
+        private bool ExecuteFormWedgeOrder(FormationOrder order)
         {
             try
             {
                 Formation formation = order.TargetFormation;
+                
+                // Log the form wedge order
+                Logger.Instance.Info($"Setting formation {formation.FormationIndex} to wedge/skein arrangement");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Setting formation {formation.FormationIndex} to wedge/skein arrangement");
+                
                 formation.ArrangementOrder = ArrangementOrder.ArrangementOrderSkein;
                 
                 // If position is specified, also move to that position
                 if (order.TargetPosition != Vec3.Zero)
                 {
+                    Vec3 position = order.TargetPosition;
+                    Logger.Instance.Info($"Moving formation to ({position.x:F1}, {position.y:F1}, {position.z:F1})");
+                    
                     WorldPosition worldPosition = new WorldPosition(Mission.Current.Scene, order.TargetPosition);
                     formation.SetMovementOrder(MovementOrder.MovementOrderMove(worldPosition));
                 }
+                
+                return true;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error executing form wedge order: {ex.Message}");
+                Logger.Instance.Error($"Error executing form wedge order: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error in ExecuteFormWedgeOrder: {ex.Message}");
+                return false;
             }
         }
         
         /// <summary>
         /// Execute a form column order
         /// </summary>
-        private void ExecuteFormColumnOrder(FormationOrder order)
+        /// <returns>True if successful, false otherwise</returns>
+        private bool ExecuteFormColumnOrder(FormationOrder order)
         {
             try
             {
                 Formation formation = order.TargetFormation;
+                
+                // Log the form column order
+                Logger.Instance.Info($"Setting formation {formation.FormationIndex} to column arrangement");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Setting formation {formation.FormationIndex} to column arrangement");
+                
                 formation.ArrangementOrder = ArrangementOrder.ArrangementOrderColumn;
                 
                 // If position is specified, also move to that position
                 if (order.TargetPosition != Vec3.Zero)
                 {
+                    Vec3 position = order.TargetPosition;
+                    Logger.Instance.Info($"Moving formation to ({position.x:F1}, {position.y:F1}, {position.z:F1})");
+                    
                     WorldPosition worldPosition = new WorldPosition(Mission.Current.Scene, order.TargetPosition);
                     formation.SetMovementOrder(MovementOrder.MovementOrderMove(worldPosition));
                 }
+                
+                return true;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error executing form column order: {ex.Message}");
+                Logger.Instance.Error($"Error executing form column order: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error in ExecuteFormColumnOrder: {ex.Message}");
+                return false;
             }
         }
         
         /// <summary>
         /// Execute a form shield wall order
         /// </summary>
-        private void ExecuteFormShieldWallOrder(FormationOrder order)
+        /// <returns>True if successful, false otherwise</returns>
+        private bool ExecuteFormShieldWallOrder(FormationOrder order)
         {
             try
             {
                 Formation formation = order.TargetFormation;
+                
+                // Log the form shield wall order
+                Logger.Instance.Info($"Setting formation {formation.FormationIndex} to shield wall");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Setting formation {formation.FormationIndex} to shield wall");
+                
                 formation.ArrangementOrder = ArrangementOrder.ArrangementOrderLine;
                 formation.FormOrder = FormOrder.FormOrderWide;
                 
                 // If position is specified, also move to that position
                 if (order.TargetPosition != Vec3.Zero)
                 {
+                    Vec3 position = order.TargetPosition;
+                    Logger.Instance.Info($"Moving formation to ({position.x:F1}, {position.y:F1}, {position.z:F1})");
+                    
                     WorldPosition worldPosition = new WorldPosition(Mission.Current.Scene, order.TargetPosition);
                     formation.SetMovementOrder(MovementOrder.MovementOrderMove(worldPosition));
                 }
+                
+                return true;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error executing form shield wall order: {ex.Message}");
+                Logger.Instance.Error($"Error executing form shield wall order: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error in ExecuteFormShieldWallOrder: {ex.Message}");
+                return false;
             }
         }
         
         /// <summary>
         /// Execute a form loose order
         /// </summary>
-        private void ExecuteFormLooseOrder(FormationOrder order)
+        /// <returns>True if successful, false otherwise</returns>
+        private bool ExecuteFormLooseOrder(FormationOrder order)
         {
             try
             {
                 Formation formation = order.TargetFormation;
+                
+                // Log the form loose order
+                Logger.Instance.Info($"Setting formation {formation.FormationIndex} to loose arrangement");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Setting formation {formation.FormationIndex} to loose arrangement");
+                
                 formation.ArrangementOrder = ArrangementOrder.ArrangementOrderLoose;
                 
                 // If position is specified, also move to that position
                 if (order.TargetPosition != Vec3.Zero)
                 {
+                    Vec3 position = order.TargetPosition;
+                    Logger.Instance.Info($"Moving formation to ({position.x:F1}, {position.y:F1}, {position.z:F1})");
+                    
                     WorldPosition worldPosition = new WorldPosition(Mission.Current.Scene, order.TargetPosition);
                     formation.SetMovementOrder(MovementOrder.MovementOrderMove(worldPosition));
                 }
+                
+                return true;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error executing form loose order: {ex.Message}");
+                Logger.Instance.Error($"Error executing form loose order: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error in ExecuteFormLooseOrder: {ex.Message}");
+                return false;
             }
         }
         

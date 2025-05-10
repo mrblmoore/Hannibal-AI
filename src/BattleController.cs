@@ -48,14 +48,90 @@ namespace HannibalAI
         {
             base.OnMissionTick(dt);
             
-            // Debug print to confirm OnMissionTick is firing
-            System.Diagnostics.Debug.Print("[HannibalAI] OnMissionTick fired.");
+            // Tick counter to limit debug output
+            _updateTimer += dt;
             
-            // Debug print to check registered mission behaviors
-            System.Diagnostics.Debug.Print($"[HannibalAI] Registered in MissionBehaviors: {Mission.Current.MissionBehaviors.Count}");
+            // Use the mission time to determine when to log
+            float currentTime = Mission.Current?.CurrentTime ?? 0f;
             
-            // Debug print to check if AI is configured to control enemy formations
-            System.Diagnostics.Debug.Print($"[HannibalAI] AIControlsEnemies setting: {ModConfig.Instance.AIControlsEnemies}");
+            // Only output basic debug info every 3 seconds to reduce log spam
+            // or during the first 5 seconds for initialization diagnostics
+            bool shouldLogDetails = currentTime < 5.0f || _updateTimer >= 3.0f;
+            
+            // Reset timer if it's time to log details
+            if (shouldLogDetails && _updateTimer >= 3.0f)
+            {
+                _updateTimer = 0f;
+            }
+            
+            // Enhanced debug output to confirm OnMissionTick is firing only in verbose mode or on occasional ticks
+            if (shouldLogDetails && ModConfig.Instance != null && ModConfig.Instance.VerboseLogging)
+            {
+                System.Diagnostics.Debug.Print("[HannibalAI] OnMissionTick fired.");
+                Logger.Instance.Info("[HannibalAI] OnMissionTick firing regularly.");
+            }
+            
+            // Display to player every 5 seconds if in debug mode
+            if (ModConfig.Instance != null && ModConfig.Instance.Debug && Mission.Current.CurrentTime % 5 < 0.1f)
+            {
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"HannibalAI: Controller active [{Mission.Current.CurrentTime:F0}s]", 
+                    Color.FromUint(0x88FF88U)));
+            }
+            
+            // Only log diagnostic information occasionally
+            if (shouldLogDetails)
+            {
+                // Debug print to check registered mission behaviors
+                System.Diagnostics.Debug.Print($"[HannibalAI] Registered in MissionBehaviors: {Mission.Current.MissionBehaviors.Count}");
+                
+                if (ModConfig.Instance != null && ModConfig.Instance.VerboseLogging)
+                {
+                    // Log basic mission state
+                    Logger.Instance.Info($"[HannibalAI] Mission.Current time: {Mission.Current.CurrentTime:F2}, Mission behaviors: {Mission.Current.MissionBehaviors.Count}");
+                    
+                    // Debug print to check if AI is configured to control enemy formations
+                    Logger.Instance.Info($"[HannibalAI] AIControlsEnemies setting: {ModConfig.Instance.AIControlsEnemies}");
+                    
+                    // Add battle state information
+                    if (_playerTeam != null && _enemyTeam != null)
+                    {
+                        int playerFormations = _playerTeam.FormationsIncludingEmpty?.Count ?? 0;
+                        int enemyFormations = _enemyTeam.FormationsIncludingEmpty?.Count ?? 0;
+                        Logger.Instance.Info($"[HannibalAI] Battle state: Player team: {playerFormations} formations, Enemy team: {enemyFormations} formations");
+                        
+                        // Count active formations with units
+                        int activePlayerFormations = 0;
+                        int totalPlayerUnits = 0;
+                        foreach (var formation in _playerTeam.FormationsIncludingEmpty)
+                        {
+                            if (formation != null && formation.CountOfUnits > 0)
+                            {
+                                activePlayerFormations++;
+                                totalPlayerUnits += formation.CountOfUnits;
+                            }
+                        }
+                        
+                        // Include AI Commander status
+                        Logger.Instance.Info($"[HannibalAI] Player active formations: {activePlayerFormations} with {totalPlayerUnits} total units. AI Commander initialized: {(_aiCommander != null)}");
+                    }
+                }
+            }
+            
+            // Log mission type for debugging
+            if (!_isInitialized)
+            {
+                Logger.Instance.Info($"[HannibalAI] Mission mode: {Mission.Current.Mode}");
+                Logger.Instance.Info($"[HannibalAI] Combat type: {Mission.Current.CombatType}");
+                
+                // Log the mission behaviors to help diagnose integration issues
+                Logger.Instance.Info("[HannibalAI] Mission behaviors:");
+                int index = 0;
+                foreach (var behavior in Mission.Current.MissionBehaviors)
+                {
+                    Logger.Instance.Info($"  {index++}: {behavior.GetType().Name}");
+                }
+            }
 
             if (!_isInitialized)
             {
@@ -151,11 +227,20 @@ namespace HannibalAI
                 Vec3 rightFlankPosition = Terrain.TerrainAnalyzer.Instance.GetBestFlankingPosition(true);
                 Vec3 leftFlankPosition = Terrain.TerrainAnalyzer.Instance.GetBestFlankingPosition(false);
                 
+                // Track initialization start time for profiling
+                float initStartTime = Mission.Current?.CurrentTime ?? 0f;
+                Logger.Instance.Info("Beginning AI commander initialization");
+                System.Diagnostics.Debug.Print("[HannibalAI] Beginning AI commander initialization");
+                
                 // Initialize AI commander with terrain information
                 _aiCommander = _aiService.CreateCommander();
-                _aiCommander.Initialize(_playerTeam, _enemyTeam);
+                Logger.Instance.Info($"AI commander instance created: {(_aiCommander != null ? "Success" : "Failed")}");
                 
-                // Pass tactical positions to AI commander
+                // Initialize the commander with teams
+                _aiCommander.Initialize(_playerTeam, _enemyTeam);
+                Logger.Instance.Info($"AI commander initialized with player team (size: {_playerTeam?.FormationsIncludingEmpty?.Count ?? 0}) and enemy team (size: {_enemyTeam?.FormationsIncludingEmpty?.Count ?? 0})");
+                
+                // Build tactical positions dictionary
                 Dictionary<string, Vec3> tacticalPositions = new Dictionary<string, Vec3>
                 {
                     { "HighGround", bestHighGround },
@@ -164,13 +249,23 @@ namespace HannibalAI
                     { "LeftFlank", leftFlankPosition }
                 };
                 
+                // Pass tactical positions to AI commander
                 _aiCommander.SetTacticalPositions(tacticalPositions);
+                Logger.Instance.Info($"Tactical positions set: {tacticalPositions.Count} positions");
                 
                 // Set battlefield type for AI decision making
                 _aiCommander.SetBattlefieldType(battlefieldType);
+                Logger.Instance.Info($"Battlefield type set: {battlefieldType}");
                 
                 // Inform the AI commander if we have terrain advantage
                 _aiCommander.SetTerrainAdvantage(hasTerrainAdvantage);
+                Logger.Instance.Info($"Terrain advantage set: {hasTerrainAdvantage}");
+                
+                // Track initialization end time for profiling
+                float initEndTime = Mission.Current?.CurrentTime ?? 0f;
+                float initDuration = initEndTime - initStartTime;
+                Logger.Instance.Info($"AI commander initialization completed in {initDuration:F3} seconds");
+                System.Diagnostics.Debug.Print($"[HannibalAI] AI commander initialization completed in {initDuration:F3} seconds");
 
                 _isInitialized = true;
 
@@ -229,6 +324,16 @@ namespace HannibalAI
         {
             try
             {
+                // Track performance of AI update
+                float startTime = Mission.Current.CurrentTime;
+                
+                // Debug performance tracking
+                if (ModConfig.Instance.Debug)
+                {
+                    Logger.Instance.Info($"[HannibalAI] Starting AI update at {startTime:F2}s");
+                    System.Diagnostics.Debug.Print($"[HannibalAI] Starting AI update at {startTime:F2}s");
+                }
+                
                 // Display active AI status at battle start for player awareness
                 if (Mission.Current.CurrentTime < 1.0f)
                 {
@@ -237,6 +342,11 @@ namespace HannibalAI
                         "=== HANNIBAL AI ACTIVE ===", Color.FromUint(0xFFCC00U)));
                     
                     Logger.Instance.Info("HannibalAI is running in this battle");
+                    
+                    // Log AI settings and configuration for debugging
+                    Logger.Instance.Info($"[HannibalAI] Debug mode: {ModConfig.Instance.Debug}, Verbose logging: {ModConfig.Instance.VerboseLogging}");
+                    Logger.Instance.Info($"[HannibalAI] AI Controls player formations: true, AI Controls enemy formations: {ModConfig.Instance.AIControlsEnemies}");
+                    Logger.Instance.Info($"[HannibalAI] UseTerrainAnalysis: {ModConfig.Instance.UseTerrainAnalysis}, UseCommanderMemory: {ModConfig.Instance.UseCommanderMemory}");
                 }
                 
                 // Second notification with more details

@@ -63,45 +63,116 @@ namespace HannibalAI
         {
             if (_playerTeam == null || _enemyTeam == null)
             {
+                Logger.Instance.Warning("AICommander.MakeDecision called with null team(s)");
+                System.Diagnostics.Debug.Print("[HannibalAI] MakeDecision aborted: One or both teams are null");
                 return;
             }
 
             try
             {
-                // Debug print to confirm MakeDecision is firing with detailed formation info
-                System.Diagnostics.Debug.Print("[HannibalAI] MakeDecision called for formation: " + (_playerTeam?.FormationsIncludingEmpty.Count ?? -1));
+                // Enhanced debug print to confirm MakeDecision is firing with detailed formation info
+                System.Diagnostics.Debug.Print("[HannibalAI] MakeDecision called for team: " + 
+                    (_playerTeam?.TeamIndex ?? -1) + " with " + (_playerTeam?.FormationsIncludingEmpty.Count ?? -1) + " formations");
+                
+                Logger.Instance.Info($"AICommander.MakeDecision processing team {_playerTeam?.TeamIndex} with {_playerTeam?.FormationsIncludingEmpty.Count} formations");
                 
                 // Add detailed formation class information for debugging
                 if (_playerTeam != null && _playerTeam.FormationsIncludingEmpty.Count > 0)
                 {
                     string formationDebug = "[HannibalAI] Player formations: ";
+                    int activeFormations = 0;
+                    int totalUnits = 0;
+                    
                     foreach (var formation in _playerTeam.FormationsIncludingEmpty)
                     {
                         if (formation != null && formation.CountOfUnits > 0)
                         {
+                            activeFormations++;
+                            totalUnits += formation.CountOfUnits;
                             formationDebug += $"{formation.FormationIndex}(Units:{formation.CountOfUnits}) ";
                         }
                     }
+                    
                     System.Diagnostics.Debug.Print(formationDebug);
+                    Logger.Instance.Info($"Active formations: {activeFormations} with total {totalUnits} units");
+                    
+                    // Display in-game debug message if enabled
+                    if (_config.Debug)
+                    {
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            $"HannibalAI: AI Commander active - {activeFormations} formations, {totalUnits} units", 
+                            Color.FromUint(0xAAFFAAU)));
+                    }
                 }
                 
-                // Log that we're making a decision - helps with debugging
-                if (_config.VerboseLogging)
-                {
-                    _aiService.LogInfo("AICommander.MakeDecision called");
-                }
-
                 // Refresh formation data
                 RefreshFormations();
+                
+                // Log battlefield and terrain information
+                Logger.Instance.Info($"Battlefield type: {_battlefieldType}, Terrain advantage: {_hasTerrainAdvantage}");
+                if (_config.Debug)
+                {
+                    string terrainInfo = $"Terrain: {_battlefieldType}";
+                    if (_hasTerrainAdvantage)
+                    {
+                        terrainInfo += " (Advantage)";
+                    }
+                    System.Diagnostics.Debug.Print($"[HannibalAI] {terrainInfo}");
+                }
 
                 // Skip processing if battle is over
                 if (IsBattleDecided())
                 {
+                    Logger.Instance.Info("Battle appears to be decided, skipping AI processing");
                     return;
                 }
 
                 // Get orders from the AIService
                 List<FormationOrder> orders = _aiService.ProcessBattleSnapshot(_playerTeam, _enemyTeam);
+                
+                // Log the orders we're about to execute
+                if (orders.Count > 0)
+                {
+                    string orderSummary = $"Generated {orders.Count} orders: ";
+                    foreach (var order in orders)
+                    {
+                        orderSummary += $"{order.OrderType}({order.TargetFormation?.FormationIndex}), ";
+                    }
+                    // Remove trailing comma and space
+                    if (orderSummary.Length > 2)
+                    {
+                        orderSummary = orderSummary.Substring(0, orderSummary.Length - 2);
+                    }
+                    
+                    Logger.Instance.Info(orderSummary);
+                    System.Diagnostics.Debug.Print($"[HannibalAI] {orderSummary}");
+                    
+                    // Show brief order summary to player in debug mode
+                    if (_config.Debug)
+                    {
+                        string shortSummary = $"Orders: {orders.Count} - ";
+                        int infantryOrders = 0, archerOrders = 0, cavalryOrders = 0;
+                        
+                        foreach (var order in orders)
+                        {
+                            if (order.TargetFormation.FormationIndex == FormationClass.Infantry)
+                                infantryOrders++;
+                            else if (order.TargetFormation.FormationIndex == FormationClass.Ranged)
+                                archerOrders++;
+                            else if (order.TargetFormation.FormationIndex == FormationClass.Cavalry)
+                                cavalryOrders++;
+                        }
+                        
+                        shortSummary += $"Inf:{infantryOrders} Arc:{archerOrders} Cav:{cavalryOrders}";
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            shortSummary, Color.FromUint(0xCCFFAAU)));
+                    }
+                }
+                else
+                {
+                    Logger.Instance.Warning("No orders generated by AIService");
+                    System.Diagnostics.Debug.Print("[HannibalAI] No orders generated");
+                }
 
                 // Execute the orders
                 ExecuteOrders(orders);
@@ -110,11 +181,20 @@ namespace HannibalAI
                 if (_config.UseCommanderMemory)
                 {
                     RecordDecisionInMemory(orders);
+                    Logger.Instance.Info("Decision recorded in commander memory");
                 }
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error in AICommander.MakeDecision: {ex.Message}");
+                Logger.Instance.Error($"Error in AICommander.MakeDecision: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Error in MakeDecision: {ex.Message}");
+                
+                // Display error in debug mode
+                if (_config.Debug)
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"HannibalAI Error: {ex.Message}", Color.FromUint(0xFF3333U)));
+                }
             }
         }
 
@@ -262,16 +342,150 @@ namespace HannibalAI
         /// </summary>
         private void ExecuteOrders(List<FormationOrder> orders)
         {
+            if (orders == null || orders.Count == 0)
+            {
+                System.Diagnostics.Debug.Print("[HannibalAI] ExecuteOrders called with no orders");
+                return;
+            }
+
+            int successfulOrders = 0;
+            
             foreach (var order in orders)
             {
-                _commandExecutor.ExecuteOrder(order);
-
-                if (_config.VerboseLogging)
+                try
                 {
-                    // Log order execution
-                    string message = $"Order: {order.OrderType} to formation {order.TargetFormation.Index}";
-                    InformationManager.DisplayMessage(new InformationMessage(message));
+                    // Sanity check before executing
+                    if (order.TargetFormation == null || order.TargetFormation.CountOfUnits <= 0)
+                    {
+                        Logger.Instance.Warning($"Skipping order {order.OrderType} for invalid/empty formation");
+                        continue;
+                    }
+                    
+                    // Check if position is valid
+                    if (order.TargetPosition == Vec3.Zero && 
+                        (order.OrderType == FormationOrderType.Move || order.OrderType == FormationOrderType.Advance))
+                    {
+                        Logger.Instance.Warning($"Skipping {order.OrderType} order with zero target position");
+                        continue;
+                    }
+                    
+                    // Debug output before execution
+                    System.Diagnostics.Debug.Print($"[HannibalAI] Executing order: {order.OrderType} for {order.TargetFormation.FormationIndex}");
+                    Logger.Instance.Info($"Executing {order.OrderType} order for {order.TargetFormation.FormationIndex} formation");
+                    
+                    // Actually execute the order
+                    bool success = _commandExecutor.ExecuteOrder(order);
+                    
+                    if (success)
+                    {
+                        successfulOrders++;
+                        
+                        // Additional debug info for successful orders
+                        if (order.TargetPosition != Vec3.Zero)
+                        {
+                            Logger.Instance.Info($"  Target position: ({order.TargetPosition.x:F1}, {order.TargetPosition.y:F1}, {order.TargetPosition.z:F1})");
+                        }
+                        
+                        // Add formation-specific details to log
+                        if (order.AdditionalData != null)
+                        {
+                            Logger.Instance.Info($"  Formation style: {order.AdditionalData}");
+                        }
+                    }
+                    else
+                    {
+                        Logger.Instance.Warning($"Failed to execute {order.OrderType} order");
+                    }
+
+                    // Display in-game feedback if verbose logging enabled
+                    if (_config.VerboseLogging)
+                    {
+                        // Determine formation type for more informative messages
+                        string formationType = "formation";
+                        switch (order.TargetFormation.FormationIndex)
+                        {
+                            case FormationClass.Infantry:
+                                formationType = "infantry";
+                                break;
+                            case FormationClass.Ranged:
+                                formationType = "archers";
+                                break;
+                            case FormationClass.Cavalry:
+                                formationType = "cavalry";
+                                break;
+                            case FormationClass.HorseArcher:
+                                formationType = "horse archers";
+                                break;
+                        }
+                        
+                        // Create a more readable order description
+                        string orderDesc = order.OrderType.ToString();
+                        switch (order.OrderType)
+                        {
+                            case FormationOrderType.Move:
+                                orderDesc = "Move";
+                                break;
+                            case FormationOrderType.Charge:
+                                orderDesc = "Charge";
+                                break;
+                            case FormationOrderType.Advance:
+                                orderDesc = "Advance";
+                                break;
+                            case FormationOrderType.Retreat:
+                                orderDesc = "Fall Back";
+                                break;
+                            case FormationOrderType.FormLine:
+                                orderDesc = "Form Line";
+                                break;
+                            case FormationOrderType.FormShieldWall:
+                                orderDesc = "Form Shield Wall";
+                                break;
+                            case FormationOrderType.FormCircle:
+                                orderDesc = "Form Circle";
+                                break;
+                            case FormationOrderType.FormWedge:
+                                orderDesc = "Form Wedge";
+                                break;
+                            case FormationOrderType.FormColumn:
+                                orderDesc = "Form Column";
+                                break;
+                            case FormationOrderType.FormLoose:
+                                orderDesc = "Form Loose";
+                                break;
+                            case FormationOrderType.FireAt:
+                                orderDesc = "Fire At Target";
+                                break;
+                        }
+                        
+                        // Display a user-friendly message
+                        string message = $"Order: {orderDesc} to {formationType}";
+                        
+                        // Add formation style information if available
+                        if (order.AdditionalData != null)
+                        {
+                            message += $" ({order.AdditionalData})";
+                        }
+                        
+                        InformationManager.DisplayMessage(new InformationMessage(message));
+                    }
                 }
+                catch (Exception ex)
+                {
+                    Logger.Instance.Error($"Error executing order: {ex.Message}");
+                    System.Diagnostics.Debug.Print($"[HannibalAI] Error executing order: {ex.Message}");
+                }
+            }
+            
+            // Log summary of order execution
+            Logger.Instance.Info($"Executed {successfulOrders} of {orders.Count} orders successfully");
+            System.Diagnostics.Debug.Print($"[HannibalAI] Executed {successfulOrders} of {orders.Count} orders successfully");
+            
+            // Display completion message in debug mode
+            if (_config.Debug && orders.Count > 0)
+            {
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"HannibalAI: {successfulOrders}/{orders.Count} orders executed", 
+                    Color.FromUint(0xAAEEAAU)));
             }
         }
 

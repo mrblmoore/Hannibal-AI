@@ -618,54 +618,132 @@ namespace HannibalAI.Terrain
             // Default to plains
             _currentTerrainType = TerrainType.Plains;
             
+            Logger.Instance.Info("Begin terrain type detection");
+            System.Diagnostics.Debug.Print("[HannibalAI] TerrainAnalyzer: Beginning terrain type detection");
+            
             try
             {
                 // In a real implementation, would analyze the distribution of terrain textures
                 // and elevation variations to determine the terrain type
-                // For now, use a simplified approach
-                
-                // In a real implementation, we would count terrain features by type
-                // These would be incremented during scene analysis
+                // For now, use a more deterministic approach based on mission name/properties
                 
                 // Simulate terrain detection through scene analysis
                 Scene scene = Mission.Current?.Scene;
                 if (scene != null)
                 {
-                    // Placeholder for actual terrain detection code
-                    // This would use texture identification, flora density, and elevation changes
+                    // Check mission properties such as terrain or environment type if possible
+                    // Mission doesn't have a direct Name property, use MissionName from terrain if available or empty string
+                    string missionName = Mission.Current.Scene?.GetName()?.ToLower() ?? "";
                     
-                    // For testing, use randomization to simulate different terrain types
-                    Random random = new Random();
-                    int terrainValue = random.Next(0, 5);
+                    // Log the mission name for debugging
+                    Logger.Instance.Info($"Analyzing terrain for mission: {missionName}");
+                    System.Diagnostics.Debug.Print($"[HannibalAI] Mission name: {missionName}");
                     
-                    switch (terrainValue)
+                    // More realistic determination based on mission name keywords
+                    if (missionName.Contains("forest") || missionName.Contains("wood"))
                     {
-                        case 0:
-                            _currentTerrainType = TerrainType.Plains;
-                            break;
-                        case 1:
-                            _currentTerrainType = TerrainType.Forest;
-                            break;
-                        case 2:
-                            _currentTerrainType = TerrainType.Hills;
-                            break;
-                        case 3:
-                            _currentTerrainType = TerrainType.Mountains;
-                            break;
-                        case 4:
-                            _currentTerrainType = TerrainType.River;
-                            break;
+                        _currentTerrainType = TerrainType.Forest;
+                        Logger.Instance.Info("Detected Forest terrain from mission name");
+                    }
+                    else if (missionName.Contains("mountain") || missionName.Contains("highland"))
+                    {
+                        _currentTerrainType = TerrainType.Mountains;
+                        Logger.Instance.Info("Detected Mountain terrain from mission name");
+                    }
+                    else if (missionName.Contains("hill") || missionName.Contains("rolling"))
+                    {
+                        _currentTerrainType = TerrainType.Hills;
+                        Logger.Instance.Info("Detected Hills terrain from mission name");
+                    }
+                    else if (missionName.Contains("river") || missionName.Contains("stream") || missionName.Contains("cross"))
+                    {
+                        _currentTerrainType = TerrainType.River;
+                        Logger.Instance.Info("Detected River terrain from mission name");
+                    }
+                    else
+                    {
+                        // Default to Plains if no specific keywords match
+                        _currentTerrainType = TerrainType.Plains;
+                        Logger.Instance.Info("No specific terrain markers found, defaulting to Plains");
                     }
                     
-                    // Override with more realistic detection in actual implementation
+                    // If mission name doesn't provide clues, do a deterministic analysis based on
+                    // mission time/ID to ensure consistent terrain type for same battles
+                    if (_currentTerrainType == TerrainType.Plains && string.IsNullOrEmpty(missionName))
+                    {
+                        // Use a more deterministic approach based on mission time or other factors
+                        // This ensures consistent terrain type for same battle
+                        int missionHash = Mission.Current.GetHashCode();
+                        int terrainValue = Math.Abs(missionHash) % 5;
+                        
+                        switch (terrainValue)
+                        {
+                            case 0:
+                                _currentTerrainType = TerrainType.Plains;
+                                break;
+                            case 1:
+                                _currentTerrainType = TerrainType.Forest;
+                                break;
+                            case 2:
+                                _currentTerrainType = TerrainType.Hills;
+                                break;
+                            case 3:
+                                _currentTerrainType = TerrainType.Mountains;
+                                break;
+                            case 4:
+                                _currentTerrainType = TerrainType.River;
+                                break;
+                        }
+                        
+                        Logger.Instance.Info($"Used deterministic terrain detection, result: {_currentTerrainType}");
+                    }
+                    
+                    // Debug visualization of terrain type - for testing purposes
+                    if (ModConfig.Instance.Debug)
+                    {
+                        string terrainDescription = GetTerrainDescription(_currentTerrainType);
+                        System.Diagnostics.Debug.Print($"[HannibalAI] Terrain Analysis: {_currentTerrainType} - {terrainDescription}");
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            $"HannibalAI: Terrain Analysis - {_currentTerrainType}", 
+                            Color.FromUint(0x00CCFF)));
+                    }
+                }
+                else
+                {
+                    Logger.Instance.Warning("No active scene found for terrain detection");
+                    System.Diagnostics.Debug.Print("[HannibalAI] No active scene found for terrain detection");
                 }
             }
             catch (Exception ex)
             {
                 Logger.Instance.Warning($"Failed to detect terrain type: {ex.Message}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Failed to detect terrain type: {ex.Message}");
             }
             
-            Logger.Instance.Info($"Detected terrain type: {_currentTerrainType}");
+            Logger.Instance.Info($"Terrain detection complete. Type: {_currentTerrainType}");
+            System.Diagnostics.Debug.Print($"[HannibalAI] Terrain detection complete. Type: {_currentTerrainType}");
+        }
+        
+        /// <summary>
+        /// Get a tactical description of the terrain type
+        /// </summary>
+        private string GetTerrainDescription(TerrainType terrainType)
+        {
+            switch (terrainType)
+            {
+                case TerrainType.Plains:
+                    return "Open terrain, favorable for cavalry and large formations";
+                case TerrainType.Forest:
+                    return "Dense woodland, restricts movement but provides cover";
+                case TerrainType.Hills:
+                    return "Rolling terrain with elevation changes, good for archers";
+                case TerrainType.Mountains:
+                    return "Rugged terrain with steep slopes, restricts movement";
+                case TerrainType.River:
+                    return "River crossing with potential chokepoints";
+                default:
+                    return "Standard battlefield";
+            }
         }
         
         /// <summary>
@@ -673,25 +751,83 @@ namespace HannibalAI.Terrain
         /// </summary>
         private void ScanForHighGround()
         {
+            Logger.Instance.Info("Begin scanning for high ground");
+            System.Diagnostics.Debug.Print("[HannibalAI] TerrainAnalyzer: Scanning for high ground features");
+            
             try
             {
                 // In an actual implementation, would use heightmap sampling from the terrain
                 // to identify significant high ground areas
-                // For now, create some test high ground points
+                // For now, create deterministic high ground points based on terrain type
                 
-                // Create some sample high ground features
-                Random random = new Random();
-                int highGroundCount = random.Next(2, 5); // 2-4 high ground features
+                // Create high ground features with characteristics appropriate for the terrain type
+                int highGroundCount;
+                float maxHeight;
+                float minRadius;
+                float maxRadius;
+                
+                // Adjust high ground parameters based on terrain type
+                switch (_currentTerrainType)
+                {
+                    case TerrainType.Mountains:
+                        highGroundCount = 4; // More high ground in mountains
+                        maxHeight = 15.0f;   // Higher elevations
+                        minRadius = 20.0f;   // Larger features
+                        maxRadius = 40.0f;
+                        Logger.Instance.Info("Using mountain terrain profile for high ground generation");
+                        break;
+                    case TerrainType.Hills:
+                        highGroundCount = 3;
+                        maxHeight = 8.0f;
+                        minRadius = 15.0f;
+                        maxRadius = 30.0f;
+                        Logger.Instance.Info("Using hills terrain profile for high ground generation");
+                        break;
+                    case TerrainType.Forest:
+                        highGroundCount = 2;
+                        maxHeight = 5.0f;    // Lower heights in forests
+                        minRadius = 10.0f;   // Smaller clearings
+                        maxRadius = 20.0f;
+                        Logger.Instance.Info("Using forest terrain profile for high ground generation");
+                        break;
+                    case TerrainType.River:
+                        highGroundCount = 2; // River banks
+                        maxHeight = 4.0f;
+                        minRadius = 15.0f;
+                        maxRadius = 25.0f;
+                        Logger.Instance.Info("Using river terrain profile for high ground generation");
+                        break;
+                    default: // Plains
+                        highGroundCount = 1; // Few high ground features in plains
+                        maxHeight = 3.0f;    // Lower heights
+                        minRadius = 10.0f;
+                        maxRadius = 20.0f;
+                        Logger.Instance.Info("Using plains terrain profile for high ground generation");
+                        break;
+                }
+                
+                System.Diagnostics.Debug.Print($"[HannibalAI] Creating {highGroundCount} high ground features for {_currentTerrainType} terrain");
+                
+                // Use deterministic seeding based on mission properties to ensure consistent features
+                int missionSeed = Mission.Current?.GetHashCode() ?? 0;
+                Random random = new Random(missionSeed);
                 
                 for (int i = 0; i < highGroundCount; i++)
                 {
-                    // Create a high ground feature at a random position
-                    float x = (random.Next(0, 100) / 100.0f) * _battlefieldWidth - (_battlefieldWidth / 2.0f);
-                    float y = (random.Next(0, 100) / 100.0f) * _battlefieldLength - (_battlefieldLength / 2.0f);
+                    // Create a high ground feature at a semi-random position
+                    // Use consistent spacing around the battlefield
+                    float spacing = 1.0f / (highGroundCount + 1);
+                    float variation = spacing * 0.5f;
+                    
+                    float baseX = (i + 1) * spacing;
+                    float baseY = (i % 2 == 0) ? 0.3f : 0.7f; // Alternate between closer and further from player
+                    
+                    float x = (baseX + (random.Next(-100, 100) / 1000.0f) * variation) * _battlefieldWidth - (_battlefieldWidth / 2.0f);
+                    float y = (baseY + (random.Next(-100, 100) / 1000.0f) * variation) * _battlefieldLength - (_battlefieldLength / 2.0f);
                     
                     Vec3 position = new Vec3(x, y, 0.0f);
-                    float radius = random.Next(10, 30); // 10-30m radius
-                    float height = random.Next(3, 10); // 3-10m height
+                    float radius = minRadius + (float)random.NextDouble() * (maxRadius - minRadius);
+                    float height = HIGH_GROUND_THRESHOLD + (float)random.NextDouble() * (maxHeight - HIGH_GROUND_THRESHOLD);
                     
                     TerrainFeature highGround = new TerrainFeature
                     {
@@ -707,13 +843,36 @@ namespace HannibalAI.Terrain
                     // High ground is good for archers and infantry
                     _optimalPositions[FormationClass.Ranged].Add(position);
                     _optimalPositions[FormationClass.Infantry].Add(position);
+                    
+                    // Log each high ground feature for debugging
+                    Logger.Instance.Info($"  High Ground {i+1}: Pos({position.x:F1}, {position.y:F1}), Height: {height:F1}m, Radius: {radius:F1}m");
+                    System.Diagnostics.Debug.Print($"[HannibalAI] High Ground {i+1}: Pos({position.x:F1}, {position.y:F1}), Height: {height:F1}m, Radius: {radius:F1}m");
+                    
+                    // Display high ground location in debug mode
+                    if (ModConfig.Instance.Debug && i == 0) // Only show the first one to avoid spam
+                    {
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            $"HannibalAI: Identified high ground at {position.x:F0}, {position.y:F0}", 
+                            Color.FromUint(0x88FF88U)));
+                    }
                 }
                 
-                Logger.Instance.Info($"Identified {highGroundCount} high ground features");
+                Logger.Instance.Info($"Identified {highGroundCount} high ground features for {_currentTerrainType} terrain");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Completed high ground analysis: {highGroundCount} features identified");
+                
+                // If debug mode is enabled, show total counts
+                if (ModConfig.Instance.Debug)
+                {
+                    // Display total high ground features
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"HannibalAI: {highGroundCount} high ground features identified", 
+                        Color.FromUint(0x88FF88U)));
+                }
             }
             catch (Exception ex)
             {
                 Logger.Instance.Warning($"Failed to scan for high ground: {ex.Message}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] High ground scan error: {ex.Message}");
             }
         }
         

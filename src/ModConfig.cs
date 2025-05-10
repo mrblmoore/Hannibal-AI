@@ -49,13 +49,13 @@ namespace HannibalAI
         public float AIUpdateInterval { get; set; } = 3.0f;
         
         [XmlElement("AIControlsEnemies")]
-        public bool AIControlsEnemies { get; set; } = false;
+        public bool AIControlsEnemies { get; set; } = true;
         
         [XmlElement("UseCommanderMemory")]
         public bool UseCommanderMemory { get; set; } = true;
         
         [XmlElement("Debug")]
-        public bool Debug { get; set; } = false;
+        public bool Debug { get; set; } = true;
         
         [XmlElement("Aggressiveness")]
         public int Aggressiveness { get; set; } = 50;
