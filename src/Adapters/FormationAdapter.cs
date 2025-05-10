@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using TaleWorlds.MountAndBlade;
 using TaleWorlds.Library;
+using TaleWorlds.Engine;
 
 namespace HannibalAI.Adapters
 {
@@ -107,6 +109,54 @@ namespace HannibalAI.Adapters
             }
             
             return null;
+        }
+        
+        /// <summary>
+        /// Creates a WorldPosition object from a Vec3, handling API differences
+        /// </summary>
+        /// <param name="scene">The current scene</param>
+        /// <param name="position">The Vec3 position</param>
+        /// <returns>A WorldPosition object</returns>
+        public static object CreateWorldPosition(Scene scene, Vec3 position)
+        {
+            try
+            {
+                // Get the WorldPosition type through reflection
+                var worldPosType = Type.GetType("TaleWorlds.Engine.WorldPosition, TaleWorlds.Engine");
+                if (worldPosType == null)
+                {
+                    worldPosType = AppDomain.CurrentDomain.GetAssemblies()
+                        .SelectMany(a => a.GetTypes())
+                        .FirstOrDefault(t => t.FullName == "TaleWorlds.Engine.WorldPosition");
+                }
+                
+                if (worldPosType == null)
+                {
+                    // Log if we can't find the type
+                    Logger.Instance.Warning("WorldPosition type not found, using fallback");
+                    return null;
+                }
+                
+                // Try to create WorldPosition using constructor with Scene and Vec3
+                var constructor = worldPosType.GetConstructor(new[] { 
+                    typeof(Scene), 
+                    typeof(Vec3) 
+                });
+                
+                if (constructor != null)
+                {
+                    return constructor.Invoke(new object[] { scene, position });
+                }
+                
+                // Log if we can't find the constructor
+                Logger.Instance.Warning("WorldPosition constructor not found, using fallback");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Error($"Error creating WorldPosition: {ex.Message}");
+                return null;
+            }
         }
     }
 }

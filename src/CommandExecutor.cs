@@ -178,36 +178,26 @@ namespace HannibalAI
                 Logger.Instance.Info(moveMessage);
                 System.Diagnostics.Debug.Print($"[HannibalAI] {moveMessage}");
                 
-                // Get current position for distance calculation
-                WorldPosition currentPosition = formation.OrderPosition;
-                Vec3 currentVec3 = Vec3.Zero;
+                // Skip distance calculation as it's causing compatibility issues
+                // We'll implement a simpler position logging approach
                 
-                // Safely get the current position
-                if (currentPosition != null)
-                {
-                    try
-                    {
-                        currentVec3 = currentPosition.GetGroundVec3();
-                    }
-                    catch (Exception)
-                    {
-                        // If we can't get the current position, just log and continue
-                        System.Diagnostics.Debug.Print("[HannibalAI] Could not get current formation position");
-                    }
-                }
+                System.Diagnostics.Debug.Print($"[HannibalAI] Target position: X={position.x:F1}, Y={position.y:F1}, Z={position.z:F1}");
                 
-                // Calculate distance to move if possible
-                if (currentVec3 != Vec3.Zero)
+                // Log current formation details
+                System.Diagnostics.Debug.Print($"[HannibalAI] Formation details: Index={formation.FormationIndex}, " +
+                    $"Units={formation.CountOfUnits}, Team={formation.Team?.TeamIndex ?? -1}");
+                
+                // Add information about the formation's team and arrangement
+                System.Diagnostics.Debug.Print($"[HannibalAI] Formation is controlled by team {formation.Team?.TeamIndex ?? -1}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Formation arrangement: {formation.ArrangementOrder}");
+                
+                // Log if the position seems out of normal game bounds (probably calculation errors)
+                bool positionSeemsValid = Math.Abs(position.x) < 1000 && Math.Abs(position.y) < 1000 && Math.Abs(position.z) < 200;
+                if (!positionSeemsValid)
                 {
-                    float distance = (position - currentVec3).Length;
-                    System.Diagnostics.Debug.Print($"[HannibalAI] Movement distance: {distance:F1} units");
-                    
-                    // Add warning for very long moves (probably calculation errors)
-                    if (distance > 500)
-                    {
-                        System.Diagnostics.Debug.Print($"[HannibalAI] WARNING: Unusually long movement distance!");
-                        Logger.Instance.Warning($"Unusually long movement distance: {distance:F1}");
-                    }
+                    string warning = "Target position appears to be outside normal game bounds";
+                    System.Diagnostics.Debug.Print($"[HannibalAI] WARNING: {warning}");
+                    Logger.Instance.Warning(warning);
                 }
                 
                 // Execute the move order

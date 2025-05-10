@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 
@@ -113,7 +114,52 @@ namespace HannibalAI
             if (_config.Debug)
             {
                 LogMessage("DEBUG", message);
-                InformationManager.DisplayMessage(new InformationMessage($"HannibalAI Debug: {message}"));
+                
+                // Automatically add [HannibalAI] prefix for consistency if not already present
+                if (!message.Contains("[HannibalAI]"))
+                {
+                    message = $"[HannibalAI] {message}";
+                }
+                
+                // Also output to system diagnostics for easier tracing in logs
+                System.Diagnostics.Debug.Print(message);
+                
+                // Show in game but with less visual noise than errors/warnings
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"Debug: {message}", Color.FromUint(0xAADDFFU)));
+            }
+        }
+        
+        /// <summary>
+        /// Log detailed diagnostic info with multiple values (only in debug mode)
+        /// </summary>
+        public void DiagnosticInfo(string context, Dictionary<string, object> values)
+        {
+            if (!_config.Debug)
+                return;
+                
+            // Create header
+            LogMessage("DIAGNOSTIC", $"=== {context} Diagnostic Info ===");
+            System.Diagnostics.Debug.Print($"[HannibalAI] === {context} Diagnostic Info ===");
+            
+            // Log each value
+            foreach (var pair in values)
+            {
+                string value = pair.Value?.ToString() ?? "null";
+                LogMessage("DIAGNOSTIC", $"{pair.Key}: {value}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] {pair.Key}: {value}");
+            }
+            
+            // Close diagnostic block
+            LogMessage("DIAGNOSTIC", $"=== End {context} Diagnostic Info ===");
+            System.Diagnostics.Debug.Print($"[HannibalAI] === End {context} Diagnostic Info ===");
+            
+            // Show short summary in game
+            if (_config.VerboseLogging)
+            {
+                InformationManager.DisplayMessage(new InformationMessage(
+                    $"Diagnostic info logged for {context} ({values.Count} values)",
+                    Color.FromUint(0x88CCEEU)));
             }
         }
         
