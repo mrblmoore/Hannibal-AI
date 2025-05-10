@@ -110,6 +110,7 @@ namespace HannibalAI.Terrain
                 
                 // Detect terrain type
                 DetectTerrainType();
+                _terrainAnalyzed = true;
                 
                 // Scan for high ground
                 ScanForHighGround();
@@ -282,9 +283,10 @@ namespace HannibalAI.Terrain
             }
             
             // Check enemy formations
-            if (Mission.Current.EnemyTeam != null)
+            var enemyTeam = FormationAdapter.GetEnemyTeam();
+            if (enemyTeam != null)
             {
-                foreach (var formation in Mission.Current.EnemyTeam.FormationsIncludingEmpty)
+                foreach (var formation in enemyTeam.FormationsIncludingEmpty)
                 {
                     if (formation.CountOfUnits > 0)
                     {
@@ -496,7 +498,7 @@ namespace HannibalAI.Terrain
             {
                 if (formation.CountOfUnits > 0)
                 {
-                    center += formation.Current.MedianPosition.AsVec3;
+                    center += FormationAdapter.GetMedianPosition(formation);
                     count++;
                 }
             }
@@ -519,7 +521,8 @@ namespace HannibalAI.Terrain
         /// </summary>
         private Vec3 GetEnemyStartPositionPrimary()
         {
-            if (Mission.Current?.EnemyTeam == null)
+            var enemyTeam = FormationAdapter.GetEnemyTeam();
+            if (enemyTeam == null)
             {
                 // Default position
                 return new Vec3(_battlefieldWidth * 0.75f, _battlefieldLength * 0.5f, 0f);
@@ -528,11 +531,11 @@ namespace HannibalAI.Terrain
             Vec3 center = Vec3.Zero;
             int count = 0;
             
-            foreach (var formation in Mission.Current.EnemyTeam.FormationsIncludingEmpty)
+            foreach (var formation in enemyTeam.FormationsIncludingEmpty)
             {
                 if (formation.CountOfUnits > 0)
                 {
-                    center += formation.Current.MedianPosition.AsVec3;
+                    center += FormationAdapter.GetMedianPosition(formation);
                     count++;
                 }
             }

@@ -35,13 +35,15 @@ namespace HannibalAI.Adapters
                 }
                 
                 // If we can't get the position directly, use the Order Position as fallback
-                return formation.OrderPosition.AsVec3;
+                var orderPos = formation.OrderPosition;
+                return new Vec3(orderPos.X, orderPos.Y, 0f);
             }
             catch (Exception ex)
             {
                 // Log the error but provide a usable result to avoid crashes
                 Logger.Instance.Warning($"Failed to get formation position: {ex.Message}");
-                return formation.OrderPosition.AsVec3;
+                var orderPos = formation.OrderPosition;
+                return new Vec3(orderPos.X, orderPos.Y, 0f);
             }
         }
         
