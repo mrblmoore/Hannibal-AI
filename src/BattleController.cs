@@ -162,8 +162,10 @@ namespace HannibalAI
 
                 _isInitialized = true;
 
-                // Log initialization
+                // Log initialization and debug info
                 Logger.Instance.Info("HannibalAI Controller initialized for battle");
+                Logger.Instance.Info($"[HannibalAI] AIControlsEnemies (at BattleController init): {ModConfig.Instance.AIControlsEnemies}");
+                Logger.Instance.Info($"[HannibalAI] Registered in MissionBehaviors: {Mission.Current.MissionBehaviors.Count}");
 
                 // Display enemy AI control status
                 string aiControlStatus = ModConfig.Instance.AIControlsEnemies ? 

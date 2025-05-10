@@ -14,7 +14,7 @@ namespace HannibalAI
         private ModConfig _config;
         private AIService _aiService;
         private static FallbackService _instance;
-        
+
         // Get singleton instance, lazy initialized with default values if not explicitly created
         public static FallbackService Instance 
         { 
@@ -360,7 +360,7 @@ namespace HannibalAI
             float y = position.y;
             return new Vec3(x, y, 0f);
         }
-        
+
         private Vec3 GetSafePosition(Formation formation)
         {
             // Use hardcoded position for testing since we can't convert between WorldPosition and Vec3 reliably
@@ -383,6 +383,12 @@ namespace HannibalAI
 
             // For compatibility, just return a fixed position
             return new Vec3(120f, 120f, 0f);
+        }
+
+        public AIDecision GetFallbackDecision()
+        {
+            Logger.Instance.Info("[HannibalAI] Fallback decision retrieved.");
+            return null;
         }
     }
 }

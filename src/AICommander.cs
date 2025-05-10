@@ -17,18 +17,18 @@ namespace HannibalAI
         private readonly ModConfig _config;
         private readonly CommandExecutor _commandExecutor;
         private readonly AIService _aiService;
-        
+
         // Current battle state tracking
         private Team _playerTeam;
         private List<Formation> _playerFormations;
         private Team _enemyTeam;
         private List<Formation> _enemyFormations;
-        
+
         // Terrain analysis cache
         private Dictionary<string, Vec3> _keyPositions;
         private HannibalAI.Terrain.TerrainType _battlefieldType;
         private bool _hasTerrainAdvantage;
-        
+
         public AICommander(ModConfig config)
         {
             _config = config;
@@ -38,7 +38,7 @@ namespace HannibalAI
             _playerFormations = new List<Formation>();
             _enemyFormations = new List<Formation>();
         }
-        
+
         /// <summary>
         /// Initialize the commander with the current battle state
         /// </summary>
@@ -46,16 +46,16 @@ namespace HannibalAI
         {
             _playerTeam = playerTeam;
             _enemyTeam = enemyTeam;
-            
+
             RefreshFormations();
             AnalyzeTerrain();
-            
+
             if (_config.VerboseLogging)
             {
                 LogBattleState();
             }
         }
-        
+
         /// <summary>
         /// Make a tactical decision for the AI - this is the entry point for the AI decision-making process
         /// </summary>
@@ -73,22 +73,22 @@ namespace HannibalAI
                 {
                     _aiService.LogInfo("AICommander.MakeDecision called");
                 }
-                
+
                 // Refresh formation data
                 RefreshFormations();
-                
+
                 // Skip processing if battle is over
                 if (IsBattleDecided())
                 {
                     return;
                 }
-                
+
                 // Get orders from the AIService
                 List<FormationOrder> orders = _aiService.ProcessBattleSnapshot(_playerTeam, _enemyTeam);
-                
+
                 // Execute the orders
                 ExecuteOrders(orders);
-                
+
                 // Record this decision in memory system if enabled
                 if (_config.UseCommanderMemory)
                 {
@@ -100,7 +100,7 @@ namespace HannibalAI
                 Logger.Instance.Error($"Error in AICommander.MakeDecision: {ex.Message}");
             }
         }
-        
+
         /// <summary>
         /// Record the decision in the memory system
         /// </summary>
@@ -110,7 +110,7 @@ namespace HannibalAI
             {
                 // Get memory service
                 CommanderMemoryService memoryService = CommanderMemoryService.Instance;
-                
+
                 // Record each order
                 foreach (var order in orders)
                 {
@@ -122,7 +122,7 @@ namespace HannibalAI
                 Logger.Instance.Error($"Error recording decision in memory: {ex.Message}");
             }
         }
-        
+
         /// <summary>
         /// Update AI state and issue new orders as needed
         /// </summary>
@@ -132,57 +132,57 @@ namespace HannibalAI
             {
                 return;
             }
-            
+
             RefreshFormations();
-            
+
             // Skip processing if battle is effectively over
             if (IsBattleDecided())
             {
                 return;
             }
-            
+
             // Determine tactical situation using enhanced approach
             TacticalSituation situation = AnalyzeTacticalSituation();
-            
+
             // Get tactical approach using new advanced system
             TacticalApproach approach = _aiService.DetermineTacticalApproach(_playerTeam, _enemyTeam);
-            
+
             // Generate orders based on the tactical situation
             List<FormationOrder> orders = GenerateOrders(situation);
-            
+
             // Apply terrain and tactical modifiers to the orders
             _aiService.ApplyTerrainTactics(orders, approach);
-            
+
             // Log the tactical approach if in debug mode
             if (_config.Debug)
             {
                 string tacticName = approach.RecommendedTactic.ToString();
                 string advantages = "";
-                
+
                 if (approach.HasHighGround) advantages += "High Ground, ";
                 if (approach.HasCavalryAdvantage) advantages += "Cavalry Advantage, ";
                 if (approach.HasArcherAdvantage) advantages += "Archer Advantage, ";
                 if (approach.HasInfantryAdvantage) advantages += "Infantry Advantage, ";
                 if (approach.HasForestCover) advantages += "Forest Cover, ";
-                
+
                 if (advantages.Length > 2)
                 {
                     advantages = advantages.Substring(0, advantages.Length - 2);
                 }
-                
+
                 _aiService.LogInfo($"Using tactical approach: {tacticName} | Advantages: {advantages}");
             }
-            
+
             // Execute the enhanced orders
             ExecuteOrders(orders);
-            
+
             // Record this update in memory system if enabled
             if (_config.UseCommanderMemory)
             {
                 RecordDecisionInMemory(orders);
             }
         }
-        
+
         /// <summary>
         /// Analyze the current tactical situation and classify it
         /// </summary>
@@ -192,7 +192,7 @@ namespace HannibalAI
             bool isOutnumbered = _playerFormations.Count < _enemyFormations.Count;
             bool hasHighGround = EvaluateTerrainAdvantage();
             bool hasRangedAdvantage = EvaluateRangedAdvantage();
-            
+
             if (isOutnumbered && !hasHighGround)
             {
                 return TacticalSituation.Defensive;
@@ -210,14 +210,14 @@ namespace HannibalAI
                 return TacticalSituation.Offensive;
             }
         }
-        
+
         /// <summary>
         /// Generate appropriate formation orders based on the tactical situation
         /// </summary>
         private List<FormationOrder> GenerateOrders(TacticalSituation situation)
         {
             List<FormationOrder> orders = new List<FormationOrder>();
-            
+
             switch (situation)
             {
                 case TacticalSituation.Defensive:
@@ -236,10 +236,10 @@ namespace HannibalAI
                     GenerateDefaultOrders(orders);
                     break;
             }
-            
+
             return orders;
         }
-        
+
         /// <summary>
         /// Execute the generated orders via the command executor
         /// </summary>
@@ -248,7 +248,7 @@ namespace HannibalAI
             foreach (var order in orders)
             {
                 _commandExecutor.ExecuteOrder(order);
-                
+
                 if (_config.VerboseLogging)
                 {
                     // Log order execution
@@ -257,7 +257,7 @@ namespace HannibalAI
                 }
             }
         }
-        
+
         /// <summary>
         /// Generate orders for a defensive posture
         /// </summary>
@@ -270,7 +270,7 @@ namespace HannibalAI
                 var defensivePosition = _keyPositions.ContainsKey("defensive") 
                     ? _keyPositions["defensive"] 
                     : GetTerrainHighPoint();
-                
+
                 foreach (var formation in infantry)
                 {
                     orders.Add(new FormationOrder
@@ -282,13 +282,13 @@ namespace HannibalAI
                     });
                 }
             }
-            
+
             // Position archers behind infantry
             var archers = GetFormationsByClass(FormationClass.Ranged);
             if (archers.Count > 0 && infantry.Count > 0)
             {
                 Vec3 archerPosition = GetPositionBehind(GetCenterPosition(infantry), 10f);
-                
+
                 foreach (var formation in archers)
                 {
                     orders.Add(new FormationOrder
@@ -300,13 +300,13 @@ namespace HannibalAI
                     });
                 }
             }
-            
+
             // Keep cavalry in reserve for counter-attacks
             var cavalry = GetFormationsByClass(FormationClass.Cavalry);
             if (cavalry.Count > 0)
             {
                 Vec3 cavalryPosition = GetFlankPosition(true);
-                
+
                 foreach (var formation in cavalry)
                 {
                     orders.Add(new FormationOrder
@@ -319,14 +319,14 @@ namespace HannibalAI
                 }
             }
         }
-        
+
         /// <summary>
         /// Generate orders for an offensive posture
         /// </summary>
         private void GenerateOffensiveOrders(List<FormationOrder> orders)
         {
             var enemyCenter = GetEnemyCenter();
-            
+
             // Order infantry to advance on enemy
             var infantry = GetFormationsByClass(FormationClass.Infantry);
             foreach (var formation in infantry)
@@ -339,13 +339,13 @@ namespace HannibalAI
                     AdditionalData = "Line"
                 });
             }
-            
+
             // Order archers to provide covering fire
             var archers = GetFormationsByClass(FormationClass.Ranged);
             if (archers.Count > 0)
             {
                 Vec3 archerPosition = GetPositionBehind(enemyCenter, -20f);
-                
+
                 foreach (var formation in archers)
                 {
                     orders.Add(new FormationOrder
@@ -357,13 +357,13 @@ namespace HannibalAI
                     });
                 }
             }
-            
+
             // Order cavalry to flank
             var cavalry = GetFormationsByClass(FormationClass.Cavalry);
             if (cavalry.Count > 0)
             {
                 Vec3 flankPosition = GetFlankPosition(false);
-                
+
                 foreach (var formation in cavalry)
                 {
                     orders.Add(new FormationOrder
@@ -376,20 +376,20 @@ namespace HannibalAI
                 }
             }
         }
-        
+
         /// <summary>
         /// Generate orders focusing on ranged advantage
         /// </summary>
         private void GenerateRangedFocusOrders(List<FormationOrder> orders)
         {
             var enemyCenter = GetEnemyCenter();
-            
+
             // Position infantry to protect archers
             var infantry = GetFormationsByClass(FormationClass.Infantry);
             if (infantry.Count > 0)
             {
                 Vec3 infantryPosition = GetPositionBetween(GetPlayerCenter(), enemyCenter, 0.7f);
-                
+
                 foreach (var formation in infantry)
                 {
                     orders.Add(new FormationOrder
@@ -401,13 +401,13 @@ namespace HannibalAI
                     });
                 }
             }
-            
+
             // Position archers for maximum effect
             var archers = GetFormationsByClass(FormationClass.Ranged);
             if (archers.Count > 0)
             {
                 Vec3 archerPosition = GetHighGroundPosition();
-                
+
                 foreach (var formation in archers)
                 {
                     orders.Add(new FormationOrder
@@ -418,7 +418,7 @@ namespace HannibalAI
                         AdditionalData = "Loose"
                     });
                 }
-                
+
                 // Add fire order
                 foreach (var formation in archers)
                 {
@@ -431,7 +431,7 @@ namespace HannibalAI
                     });
                 }
             }
-            
+
             // Position cavalry to protect flanks
             var cavalry = GetFormationsByClass(FormationClass.Cavalry);
             if (cavalry.Count > 0)
@@ -440,7 +440,7 @@ namespace HannibalAI
                 {
                     bool rightFlank = i % 2 == 0;
                     Vec3 position = GetFlankProtectionPosition(rightFlank);
-                    
+
                     orders.Add(new FormationOrder
                     {
                         OrderType = FormationOrderType.Move,
@@ -451,14 +451,14 @@ namespace HannibalAI
                 }
             }
         }
-        
+
         /// <summary>
         /// Generate orders exploiting high ground advantage
         /// </summary>
         private void GenerateHighGroundOrders(List<FormationOrder> orders)
         {
             Vec3 highGroundPosition = GetHighGroundPosition();
-            
+
             // Position infantry on high ground
             var infantry = GetFormationsByClass(FormationClass.Infantry);
             foreach (var formation in infantry)
@@ -471,13 +471,13 @@ namespace HannibalAI
                     AdditionalData = "Line"
                 });
             }
-            
+
             // Position archers behind infantry on high ground
             var archers = GetFormationsByClass(FormationClass.Ranged);
             if (archers.Count > 0 && infantry.Count > 0)
             {
                 Vec3 archerPosition = GetPositionBehind(highGroundPosition, 5f);
-                
+
                 foreach (var formation in archers)
                 {
                     orders.Add(new FormationOrder
@@ -489,7 +489,7 @@ namespace HannibalAI
                     });
                 }
             }
-            
+
             // Position cavalry for flanking when enemy approaches
             var cavalry = GetFormationsByClass(FormationClass.Cavalry);
             if (cavalry.Count > 0)
@@ -498,7 +498,7 @@ namespace HannibalAI
                 {
                     bool rightFlank = i % 2 == 0;
                     Vec3 position = GetFlankPosition(rightFlank);
-                    
+
                     orders.Add(new FormationOrder
                     {
                         OrderType = FormationOrderType.Move,
@@ -509,7 +509,7 @@ namespace HannibalAI
                 }
             }
         }
-        
+
         /// <summary>
         /// Generate default fallback orders when no specific situation is identified
         /// </summary>
@@ -517,7 +517,7 @@ namespace HannibalAI
         {
             var enemyCenter = GetEnemyCenter();
             var playerCenter = GetPlayerCenter();
-            
+
             // Simple formation setup
             var infantry = GetFormationsByClass(FormationClass.Infantry);
             foreach (var formation in infantry)
@@ -530,7 +530,7 @@ namespace HannibalAI
                     AdditionalData = "Line"
                 });
             }
-            
+
             var archers = GetFormationsByClass(FormationClass.Ranged);
             foreach (var formation in archers)
             {
@@ -542,7 +542,7 @@ namespace HannibalAI
                     AdditionalData = "Loose"
                 });
             }
-            
+
             var cavalry = GetFormationsByClass(FormationClass.Cavalry);
             foreach (var formation in cavalry)
             {
@@ -555,7 +555,7 @@ namespace HannibalAI
                 });
             }
         }
-        
+
         /// <summary>
         /// Refresh the cached formation lists
         /// </summary>
@@ -563,7 +563,7 @@ namespace HannibalAI
         {
             _playerFormations.Clear();
             _enemyFormations.Clear();
-            
+
             if (_playerTeam != null)
             {
                 foreach (Formation formation in _playerTeam.FormationsIncludingEmpty)
@@ -574,7 +574,7 @@ namespace HannibalAI
                     }
                 }
             }
-            
+
             if (_enemyTeam != null)
             {
                 foreach (Formation formation in _enemyTeam.FormationsIncludingEmpty)
@@ -586,14 +586,14 @@ namespace HannibalAI
                 }
             }
         }
-        
+
         /// <summary>
         /// Analyze terrain to identify key tactical positions
         /// </summary>
         private void AnalyzeTerrain()
         {
             _keyPositions.Clear();
-            
+
             // For now, just use simple positional calculations
             // In a complete implementation, this would analyze the actual terrain height map
             _keyPositions["highGround"] = GetTerrainHighPoint();
@@ -601,14 +601,14 @@ namespace HannibalAI
             _keyPositions["leftFlank"] = GetFlankPosition(false);
             _keyPositions["rightFlank"] = GetFlankPosition(true);
         }
-        
+
         /// <summary>
         /// Get all formations of a specific class from player team
         /// </summary>
         private List<Formation> GetFormationsByClass(FormationClass formationClass)
         {
             List<Formation> result = new List<Formation>();
-            
+
             foreach (var formation in _playerFormations)
             {
                 if (formation.FormationIndex == formationClass)
@@ -616,10 +616,10 @@ namespace HannibalAI
                     result.Add(formation);
                 }
             }
-            
+
             return result;
         }
-        
+
         /// <summary>
         /// Helper to get the center position of all enemy formations
         /// </summary>
@@ -629,7 +629,7 @@ namespace HannibalAI
             {
                 return new Vec3(0, 0, 0);
             }
-            
+
             Vec3 sum = new Vec3(0, 0, 0);
             foreach (var formation in _enemyFormations)
             {
@@ -637,10 +637,10 @@ namespace HannibalAI
                 Vec2 pos = formation.CurrentPosition;
                 sum += new Vec3(pos.X, pos.Y, 0);
             }
-            
+
             return sum / _enemyFormations.Count;
         }
-        
+
         /// <summary>
         /// Helper to get the center position of all player formations
         /// </summary>
@@ -650,7 +650,7 @@ namespace HannibalAI
             {
                 return new Vec3(0, 0, 0);
             }
-            
+
             Vec3 sum = new Vec3(0, 0, 0);
             foreach (var formation in _playerFormations)
             {
@@ -658,10 +658,10 @@ namespace HannibalAI
                 Vec2 pos = formation.CurrentPosition;
                 sum += new Vec3(pos.X, pos.Y, 0);
             }
-            
+
             return sum / _playerFormations.Count;
         }
-        
+
         /// <summary>
         /// Helper to get the center position of a list of formations
         /// </summary>
@@ -671,7 +671,7 @@ namespace HannibalAI
             {
                 return new Vec3(0, 0, 0);
             }
-            
+
             Vec3 sum = new Vec3(0, 0, 0);
             foreach (var formation in formations)
             {
@@ -679,10 +679,10 @@ namespace HannibalAI
                 Vec2 pos = formation.CurrentPosition;
                 sum += new Vec3(pos.X, pos.Y, 0);
             }
-            
+
             return sum / formations.Count;
         }
-        
+
         /// <summary>
         /// Helper to get a position behind another position
         /// </summary>
@@ -690,10 +690,10 @@ namespace HannibalAI
         {
             Vec3 directionToEnemy = GetEnemyCenter() - position;
             directionToEnemy.Normalize();
-            
+
             return position - directionToEnemy * distance;
         }
-        
+
         /// <summary>
         /// Helper to get a flank position
         /// </summary>
@@ -701,19 +701,19 @@ namespace HannibalAI
         {
             Vec3 enemyCenter = GetEnemyCenter();
             Vec3 playerCenter = GetPlayerCenter();
-            
+
             Vec3 forward = enemyCenter - playerCenter;
             forward.Normalize();
-            
+
             Vec3 right = new Vec3(-forward.y, forward.x, 0); // Perpendicular to forward
             if (!rightSide)
             {
                 right = -right; // Left side
             }
-            
+
             return enemyCenter + right * 50f;
         }
-        
+
         /// <summary>
         /// Helper to get a flank protection position
         /// </summary>
@@ -721,19 +721,19 @@ namespace HannibalAI
         {
             Vec3 playerCenter = GetPlayerCenter();
             Vec3 enemyCenter = GetEnemyCenter();
-            
+
             Vec3 forward = enemyCenter - playerCenter;
             forward.Normalize();
-            
+
             Vec3 right = new Vec3(-forward.y, forward.x, 0); // Perpendicular to forward
             if (!rightSide)
             {
                 right = -right; // Left side
             }
-            
+
             return playerCenter + right * 30f;
         }
-        
+
         /// <summary>
         /// Helper to get a position between two points with a weight
         /// </summary>
@@ -741,7 +741,7 @@ namespace HannibalAI
         {
             return a * (1 - weight) + b * weight;
         }
-        
+
         /// <summary>
         /// Estimate a high ground position
         /// In a full implementation, this would use terrain height data
@@ -750,11 +750,11 @@ namespace HannibalAI
         {
             Vec3 playerCenter = GetPlayerCenter();
             Vec3 enemyCenter = GetEnemyCenter();
-            
+
             // For simulation, just use a position between player and enemy
             return GetPositionBetween(playerCenter, enemyCenter, 0.4f);
         }
-        
+
         /// <summary>
         /// Estimate a good defensive position
         /// In a full implementation, this would use terrain analysis
@@ -763,7 +763,7 @@ namespace HannibalAI
         {
             return GetHighGroundPosition();
         }
-        
+
         /// <summary>
         /// Get best high ground position based on terrain analysis
         /// </summary>
@@ -773,7 +773,7 @@ namespace HannibalAI
                 ? _keyPositions["highGround"] 
                 : GetTerrainHighPoint();
         }
-        
+
         /// <summary>
         /// Check if terrain advantage exists
         /// </summary>
@@ -782,7 +782,7 @@ namespace HannibalAI
             // Use the terrain advantage information from TerrainAnalyzer
             return _hasTerrainAdvantage;
         }
-        
+
         /// <summary>
         /// Check if player has ranged advantage
         /// </summary>
@@ -790,17 +790,17 @@ namespace HannibalAI
         {
             int playerRanged = CountUnitsInFormationsOfClass(FormationClass.Ranged, _playerFormations);
             int enemyRanged = CountUnitsInFormationsOfClass(FormationClass.Ranged, _enemyFormations);
-            
+
             return playerRanged > enemyRanged * 1.2f;
         }
-        
+
         /// <summary>
         /// Count units in formations of a specific class
         /// </summary>
         private int CountUnitsInFormationsOfClass(FormationClass formationClass, List<Formation> formations)
         {
             int count = 0;
-            
+
             foreach (var formation in formations)
             {
                 // Use direct comparison since FormationIndex is already a FormationClass
@@ -809,10 +809,10 @@ namespace HannibalAI
                     count += formation.CountOfUnits;
                 }
             }
-            
+
             return count;
         }
-        
+
         /// <summary>
         /// Check if battle is already effectively decided
         /// </summary>
@@ -820,27 +820,27 @@ namespace HannibalAI
         {
             int playerCount = CountTotalUnits(_playerFormations);
             int enemyCount = CountTotalUnits(_enemyFormations);
-            
+
             return playerCount <= 5 || enemyCount <= 5 || 
                    playerCount >= enemyCount * 5 || 
                    enemyCount >= playerCount * 5;
         }
-        
+
         /// <summary>
         /// Count total units in a list of formations
         /// </summary>
         private int CountTotalUnits(List<Formation> formations)
         {
             int count = 0;
-            
+
             foreach (var formation in formations)
             {
                 count += formation.CountOfUnits;
             }
-            
+
             return count;
         }
-        
+
         /// <summary>
         /// Log current battle state for debugging
         /// </summary>
@@ -849,7 +849,7 @@ namespace HannibalAI
             string message = $"Battle state: {_playerFormations.Count} player formations vs {_enemyFormations.Count} enemy formations";
             Logger.Instance.Info(message);
         }
-        
+
         /// <summary>
         /// Tactical situation types for AI decision making
         /// </summary>
@@ -861,9 +861,9 @@ namespace HannibalAI
             HighGroundAdvantage,
             Default
         }
-        
+
         // Using TaleWorlds.MountAndBlade.FormationClass directly instead of private enum
-        
+
         /// <summary>
         /// Set tactical positions from terrain analysis
         /// </summary>
@@ -873,28 +873,28 @@ namespace HannibalAI
             {
                 return;
             }
-            
+
             // Map the terrain analyzer positions to our internal keys
             if (positions.ContainsKey("HighGround"))
             {
                 _keyPositions["high_ground"] = positions["HighGround"];
             }
-            
+
             if (positions.ContainsKey("DefensivePosition"))
             {
                 _keyPositions["defensive"] = positions["DefensivePosition"];
             }
-            
+
             if (positions.ContainsKey("LeftFlank"))
             {
                 _keyPositions["flank_left"] = positions["LeftFlank"];
             }
-            
+
             if (positions.ContainsKey("RightFlank"))
             {
                 _keyPositions["flank_right"] = positions["RightFlank"];
             }
-            
+
             // Log the tactical positions if verbose logging is enabled
             if (_config.VerboseLogging)
             {
@@ -905,31 +905,37 @@ namespace HannibalAI
                 }
             }
         }
-        
+
         /// <summary>
         /// Set the battlefield terrain type for AI decision-making
         /// </summary>
         public void SetBattlefieldType(HannibalAI.Terrain.TerrainType terrainType)
         {
             _battlefieldType = terrainType;
-            
+
             if (_config.VerboseLogging)
             {
                 Logger.Instance.Info($"Battlefield terrain type set to: {_battlefieldType}");
             }
         }
-        
+
         /// <summary>
         /// Set whether the AI has terrain advantage
         /// </summary>
         public void SetTerrainAdvantage(bool hasAdvantage)
         {
             _hasTerrainAdvantage = hasAdvantage;
-            
+
             if (_config.VerboseLogging)
             {
                 Logger.Instance.Info($"Terrain advantage status set to: {_hasTerrainAdvantage}");
             }
         }
+
+        // The placement of this method is unclear, so I am skipping it. It doesn't belong inside AICommander
+        // public AIDecision GenerateAIDecision()
+        // {
+        //     Logger.Instance.Info($"[HannibalAI] MakeDecision called for formations");
+        // }
     }
 }
