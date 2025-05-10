@@ -68,6 +68,23 @@ namespace HannibalAI
 
             try
             {
+                // Debug print to confirm MakeDecision is firing with detailed formation info
+                System.Diagnostics.Debug.Print("[HannibalAI] MakeDecision called for formation: " + (_playerTeam?.FormationsIncludingEmpty.Count ?? -1));
+                
+                // Add detailed formation class information for debugging
+                if (_playerTeam != null && _playerTeam.FormationsIncludingEmpty.Count > 0)
+                {
+                    string formationDebug = "[HannibalAI] Player formations: ";
+                    foreach (var formation in _playerTeam.FormationsIncludingEmpty)
+                    {
+                        if (formation != null && formation.CountOfUnits > 0)
+                        {
+                            formationDebug += $"{formation.FormationIndex}({formation.FormationClass}:{formation.CountOfUnits}) ";
+                        }
+                    }
+                    System.Diagnostics.Debug.Print(formationDebug);
+                }
+                
                 // Log that we're making a decision - helps with debugging
                 if (_config.VerboseLogging)
                 {

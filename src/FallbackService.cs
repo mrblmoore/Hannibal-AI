@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using TaleWorlds.Core;
 using TaleWorlds.Library;
 using TaleWorlds.MountAndBlade;
+using HannibalAI.Command;
 
 namespace HannibalAI
 {
@@ -165,7 +166,7 @@ namespace HannibalAI
                 {
                     OrderType = preferDefensivePositioning ? FormationOrderType.FormShieldWall : FormationOrderType.FormLine,
                     TargetFormation = formation,
-                    TargetPosition = Vec3.Zero, // Current position
+                    TargetPosition = TaleWorlds.Library.Vec3.Zero, // Current position
                     AdditionalData = preferDefensivePositioning ? "ShieldWall" : "Line"
                 });
             }
@@ -177,7 +178,7 @@ namespace HannibalAI
                 {
                     OrderType = FormationOrderType.FormLoose,
                     TargetFormation = formation,
-                    TargetPosition = Vec3.Zero, // Current position
+                    TargetPosition = TaleWorlds.Library.Vec3.Zero, // Current position
                     AdditionalData = "Loose"
                 });
             }
@@ -205,7 +206,7 @@ namespace HannibalAI
                 {
                     OrderType = orderType,
                     TargetFormation = formation,
-                    TargetPosition = Vec3.Zero, // Current position
+                    TargetPosition = TaleWorlds.Library.Vec3.Zero, // Current position
                     AdditionalData = formationType
                 });
             }
@@ -228,7 +229,7 @@ namespace HannibalAI
                 {
                     OrderType = FormationOrderType.Advance,
                     TargetFormation = formation,
-                    TargetPosition = Vec3.Zero,
+                    TargetPosition = TaleWorlds.Library.Vec3.Zero,
                     AdditionalData = "Line"
                 });
             }
@@ -240,7 +241,7 @@ namespace HannibalAI
                 {
                     OrderType = FormationOrderType.FormLoose,
                     TargetFormation = formation,
-                    TargetPosition = Vec3.Zero,
+                    TargetPosition = TaleWorlds.Library.Vec3.Zero,
                     AdditionalData = "Loose"
                 });
             }
@@ -254,7 +255,7 @@ namespace HannibalAI
                     {
                         OrderType = FormationOrderType.FormWedge,
                         TargetFormation = formation,
-                        TargetPosition = Vec3.Zero,
+                        TargetPosition = TaleWorlds.Library.Vec3.Zero,
                         AdditionalData = "Wedge"
                     });
                 }
@@ -264,7 +265,7 @@ namespace HannibalAI
                     {
                         OrderType = FormationOrderType.Charge,
                         TargetFormation = formation,
-                        TargetPosition = Vec3.Zero,
+                        TargetPosition = TaleWorlds.Library.Vec3.Zero,
                         AdditionalData = null
                     });
                 }
@@ -353,42 +354,45 @@ namespace HannibalAI
         }
 
         // Helper method to create Vec3 from position
-        private Vec3 CreateVec3FromPosition(Vec2 position)
+        private TaleWorlds.Library.Vec3 CreateVec3FromPosition(Vec2 position)
         {
             // Extract x and y components from Vec2
             float x = position.x;
             float y = position.y;
-            return new Vec3(x, y, 0f);
+            return new TaleWorlds.Library.Vec3(x, y, 0f);
         }
 
-        private Vec3 GetSafePosition(Formation formation)
+        private TaleWorlds.Library.Vec3 GetSafePosition(Formation formation)
         {
             // Use hardcoded position for testing since we can't convert between WorldPosition and Vec3 reliably
-            return new Vec3(100f, 100f, 0f);
+            return new TaleWorlds.Library.Vec3(100f, 100f, 0f);
         }
 
-        private Vec3 GetSafeDirection(Formation formation)
+        private TaleWorlds.Library.Vec3 GetSafeDirection(Formation formation)
         {
             // Return a simple direction vector for testing
-            return new Vec3(0f, 1f, 0f);
+            return new TaleWorlds.Library.Vec3(0f, 1f, 0f);
         }
 
-        private Vec3 GetEnemyCenter(Formation formation)
+        private TaleWorlds.Library.Vec3 GetEnemyCenter(Formation formation)
         {
             var enemyTeam = formation.Team.IsAttacker ?
                 Mission.Current.DefenderTeam : Mission.Current.AttackerTeam;
 
             if (enemyTeam == null || enemyTeam.FormationsIncludingEmpty == null || enemyTeam.FormationsIncludingEmpty.Count == 0)
-                return new Vec3(120f, 120f, 0f); // Hardcoded fallback position
+                return new TaleWorlds.Library.Vec3(120f, 120f, 0f); // Hardcoded fallback position
 
             // For compatibility, just return a fixed position
-            return new Vec3(120f, 120f, 0f);
+            return new TaleWorlds.Library.Vec3(120f, 120f, 0f);
         }
 
         public AIDecision GetFallbackDecision()
         {
             Logger.Instance.Info("[HannibalAI] Fallback decision retrieved.");
-            return null;
+            // Create a simple hold position command as fallback
+            return new AIDecision(new HoldCommand { 
+                HoldPosition = new TaleWorlds.Library.Vec3(100f, 100f, 0f) 
+            });
         }
     }
 }

@@ -47,6 +47,15 @@ namespace HannibalAI
         public override void OnMissionTick(float dt)
         {
             base.OnMissionTick(dt);
+            
+            // Debug print to confirm OnMissionTick is firing
+            System.Diagnostics.Debug.Print("[HannibalAI] OnMissionTick fired.");
+            
+            // Debug print to check registered mission behaviors
+            System.Diagnostics.Debug.Print($"[HannibalAI] Registered in MissionBehaviors: {Mission.Current.MissionBehaviors.Count}");
+            
+            // Debug print to check if AI is configured to control enemy formations
+            System.Diagnostics.Debug.Print($"[HannibalAI] AIControlsEnemies setting: {ModConfig.Instance.AIControlsEnemies}");
 
             if (!_isInitialized)
             {
@@ -91,10 +100,13 @@ namespace HannibalAI
         {
             try
             {
+                System.Diagnostics.Debug.Print("[HannibalAI] Initializing AI...");
+                
                 // Find player and enemy teams
                 Mission mission = Mission.Current;
                 if (mission == null || mission.Teams == null || mission.Teams.Count < 2)
                 {
+                    System.Diagnostics.Debug.Print("[HannibalAI] Mission or teams not ready yet.");
                     return;
                 }
 
@@ -246,6 +258,12 @@ namespace HannibalAI
                     _aiCommander.Update(dt);
                     
                     // Add verbose logging to help troubleshoot AI command execution
+                    System.Diagnostics.Debug.Print("[HannibalAI] AI commands executed for player team");
+                    
+                    if (ModConfig.Instance.Debug)
+                    {
+                        Logger.Instance.Info($"[HannibalAI] Player team has {_playerTeam.FormationsIncludingEmpty.Count} formations");
+                    }
                     if (ModConfig.Instance.Debug && Mission.Current.CurrentTime % 15 < 0.1f)
                     {
                         Logger.Instance.Info("HannibalAI friendly commander update executed");
@@ -255,11 +273,22 @@ namespace HannibalAI
                 // 2. Control enemy team if enabled in settings (using enhanced tactical system)
                 if (ModConfig.Instance.AIControlsEnemies && _enemyTeam != null)
                 {
+                    // Debug logging for enemy AI control
+                    System.Diagnostics.Debug.Print("[HannibalAI] Processing enemy AI. AIControlsEnemies=true");
+                    
                     // Get tactical plan from tactical planner
                     TacticalPlan enemyPlan = TacticalPlanner.Instance.DevelopTacticalPlan(_enemyTeam, _playerTeam);
                     
                     // Execute the tactical plan
                     ExecuteTacticalPlan(enemyPlan);
+                    
+                    // Debug information about enemy formations
+                    System.Diagnostics.Debug.Print($"[HannibalAI] Enemy team has {_enemyTeam.FormationsIncludingEmpty.Count} formations");
+                    
+                    if (ModConfig.Instance.Debug)
+                    {
+                        Logger.Instance.Info($"[HannibalAI] Executed tactical plan for enemy team with {_enemyTeam.FormationsIncludingEmpty.Count} formations");
+                    }
                     
                     // Record commander memory data for adaptive learning
                     if (ModConfig.Instance.UseCommanderMemory)

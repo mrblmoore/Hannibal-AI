@@ -83,6 +83,14 @@ namespace HannibalAI
         {
             // Log that we're processing a battle snapshot
             Logger.Instance.Info("AIService.ProcessBattleSnapshot called");
+            
+            // Debug print to confirm ProcessBattleSnapshot is firing
+            System.Diagnostics.Debug.Print("[HannibalAI] Processing battle snapshot.");
+            
+            // Print detailed team information for debugging
+            System.Diagnostics.Debug.Print($"[HannibalAI] Player team: {playerTeam?.TeamIndex}, formations: {playerTeam?.FormationsIncludingEmpty.Count}");
+            System.Diagnostics.Debug.Print($"[HannibalAI] Enemy team: {enemyTeam?.TeamIndex}, formations: {enemyTeam?.FormationsIncludingEmpty.Count}");
+            System.Diagnostics.Debug.Print($"[HannibalAI] AIControlsEnemies setting: {_config.AIControlsEnemies}");
 
             // If this is an enemy team, use specialized enemy AI
             if (Mission.Current?.MainAgent != null && 
