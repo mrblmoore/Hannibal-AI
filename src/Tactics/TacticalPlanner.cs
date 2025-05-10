@@ -326,8 +326,7 @@ namespace HannibalAI.Tactics
         {
             try
             {
-                // Default strategy
-                TacticalStrategy strategy = TacticalStrategy.Balanced;
+                // Default strategy is balanced, we'll change based on conditions
                 
                 // If we have vendetta against player, be aggressive
                 if (assessment.HasVendettaAgainstPlayer && assessment.IsAgainstPlayer)
@@ -1166,7 +1165,6 @@ namespace HannibalAI.Tactics
             try
             {
                 // Look for ranged units first, then infantry
-                FormationClass targetType = FormationClass.NumberOfAllFormations;
                 Formation bestTarget = null;
                 float bestScore = 0;
                 

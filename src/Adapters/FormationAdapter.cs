@@ -30,8 +30,28 @@ namespace HannibalAI.Adapters
                 var mediaPositionProperty = formation.GetType().GetProperty("MedianPosition");
                 if (mediaPositionProperty != null)
                 {
-                    var worldPosition = (WorldPosition)mediaPositionProperty.GetValue(formation);
-                    return worldPosition.AsVec3;
+                    // Try to get the position using reflection
+                    var positionObj = mediaPositionProperty.GetValue(formation);
+                    
+                    // Try to get AsVec3 property if it exists
+                    var asVec3Property = positionObj?.GetType().GetProperty("AsVec3");
+                    if (asVec3Property != null)
+                    {
+                        return (Vec3)asVec3Property.GetValue(positionObj);
+                    }
+                    
+                    // Try X, Y, Z properties as fallback
+                    var xProperty = positionObj?.GetType().GetProperty("X");
+                    var yProperty = positionObj?.GetType().GetProperty("Y");
+                    var zProperty = positionObj?.GetType().GetProperty("Z");
+                    
+                    if (xProperty != null && yProperty != null)
+                    {
+                        float x = (float)xProperty.GetValue(positionObj);
+                        float y = (float)yProperty.GetValue(positionObj);
+                        float z = zProperty != null ? (float)zProperty.GetValue(positionObj) : 0f;
+                        return new Vec3(x, y, z);
+                    }
                 }
                 
                 // If we can't get the position directly, use the Order Position as fallback

@@ -123,21 +123,21 @@ namespace HannibalAI
                 _isPlayerInPlayerTeam = IsPlayerInTeam(_playerTeam);
 
                 // Analyze terrain features
-                TerrainAnalyzer.Instance.AnalyzeCurrentTerrain();
+                Terrain.TerrainAnalyzer.Instance.AnalyzeCurrentTerrain();
                 
                 // Get terrain information for tactical assessment
-                HannibalAI.Terrain.TerrainType battlefieldType = TerrainAnalyzer.Instance.GetTerrainType();
-                bool hasTerrainAdvantage = TerrainAnalyzer.Instance.HasTerrainAdvantage();
+                HannibalAI.Terrain.TerrainType battlefieldType = Terrain.TerrainAnalyzer.Instance.GetTerrainType();
+                bool hasTerrainAdvantage = Terrain.TerrainAnalyzer.Instance.HasTerrainAdvantage();
                 
                 // Log terrain analysis results
                 Logger.Instance.Info($"Battle terrain type: {battlefieldType}");
                 Logger.Instance.Info($"Terrain advantage: {(hasTerrainAdvantage ? "Yes" : "No")}");
                 
                 // Get tactical positions
-                Vec3 bestHighGround = TerrainAnalyzer.Instance.GetBestHighGroundPosition();
-                Vec3 bestDefensivePosition = TerrainAnalyzer.Instance.GetBestDefensivePosition();
-                Vec3 rightFlankPosition = TerrainAnalyzer.Instance.GetBestFlankingPosition(true);
-                Vec3 leftFlankPosition = TerrainAnalyzer.Instance.GetBestFlankingPosition(false);
+                Vec3 bestHighGround = Terrain.TerrainAnalyzer.Instance.GetBestHighGroundPosition();
+                Vec3 bestDefensivePosition = Terrain.TerrainAnalyzer.Instance.GetBestDefensivePosition();
+                Vec3 rightFlankPosition = Terrain.TerrainAnalyzer.Instance.GetBestFlankingPosition(true);
+                Vec3 leftFlankPosition = Terrain.TerrainAnalyzer.Instance.GetBestFlankingPosition(false);
                 
                 // Initialize AI commander with terrain information
                 _aiCommander = _aiService.CreateCommander();
