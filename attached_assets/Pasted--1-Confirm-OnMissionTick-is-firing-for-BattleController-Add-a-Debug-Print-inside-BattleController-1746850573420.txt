@@ -1,0 +1,70 @@
+✅ 1️⃣ Confirm OnMissionTick is firing for BattleController
+Add a Debug.Print inside BattleController.OnMissionTick() method:
+
+csharp
+Copy
+Edit
+public override void OnMissionTick(float dt)
+{
+    Debug.Print("[HannibalAI] OnMissionTick fired.");
+    base.OnMissionTick(dt);
+}
+We need to see this print at runtime in the log.
+If this doesn’t fire → investigate why BattleController isn’t properly attached as a mission behavior.
+
+Also test adding:
+
+csharp
+Copy
+Edit
+Debug.Print($"[HannibalAI] Registered in MissionBehaviors: {Mission.Current.MissionBehaviors.Count}");
+✅ 2️⃣ Confirm AICommander.MakeDecision() is firing per tick
+Add debug inside AICommander.MakeDecision:
+
+csharp
+Copy
+Edit
+Debug.Print("[HannibalAI] MakeDecision called for formation: " + (formation?.Index ?? -1));
+We want to see per-formation decision logs when a battle is running.
+If this doesn’t log → investigate where MakeDecision() is being called or skipped.
+
+✅ 3️⃣ Validate ModConfig.Instance.AIControlsEnemies at runtime
+Insert log in BattleController constructor:
+
+csharp
+Copy
+Edit
+Debug.Print($"[HannibalAI] AIControlsEnemies (at BattleController init): {ModConfig.Instance.AIControlsEnemies}");
+If this prints false even after toggling UI → the UI isn’t updating config or BattleController is constructed before UI writes config.
+
+⚠️ → If necessary, add a setter or event system for the UI to notify config after initialization.
+
+✅ 4️⃣ Confirm FallbackService.GetFallbackDecision and AIService.ProcessBattleSnapshot firing
+Add debug inside these methods:
+
+csharp
+Copy
+Edit
+Debug.Print("[HannibalAI] Fallback decision retrieved.");
+Debug.Print("[HannibalAI] Processing battle snapshot.");
+We need to verify these paths are actively being hit per tick or at decision time.
+
+✅ 5️⃣ UI → Confirm checkbox binding updates ModConfig
+Validate that toggling “AI Controls Enemies” in the UI actually updates ModConfig.Instance.AIControlsEnemies.
+
+→ If it’s not updating the static instance, add an explicit setter like:
+
+csharp
+Copy
+Edit
+ModConfig.Instance.AIControlsEnemies = true; // or false depending on checkbox
+Make sure the data binding between the checkbox widget → ViewModel → ModConfig is two-way.
+
+🏗️ Optional Quick Test (Temporary):
+To force logic validation, add this temporarily in BattleController.OnMissionTick:
+
+csharp
+Copy
+Edit
+ExecuteAIDecision(new AIDecision { Command = new HoldCommand { Formation = 0, HoldPosition = Vec3.Zero } });
+If we see this log or action happen → confirms method path works → issue is earlier in logic flow.
