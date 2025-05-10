@@ -9,6 +9,8 @@ using MissionMode = TaleWorlds.Core.MissionMode;
 using HannibalAI.Tactics;
 using HannibalAI.Terrain;
 using HannibalAI.Memory;
+// Explicitly specify the TerrainType from our namespace to avoid ambiguity
+using OurTerrainType = HannibalAI.Terrain.TerrainType;
 
 namespace HannibalAI
 {
@@ -121,11 +123,42 @@ namespace HannibalAI
                 _isPlayerInPlayerTeam = IsPlayerInTeam(_playerTeam);
 
                 // Analyze terrain features
-                var terrainFeatures = TerrainAnalyzer.Instance.AnalyzeCurrentTerrain();
-
-                // Initialize AI commander
+                TerrainAnalyzer.Instance.AnalyzeCurrentTerrain();
+                
+                // Get terrain information for tactical assessment
+                OurTerrainType battlefieldType = TerrainAnalyzer.Instance.GetTerrainType();
+                bool hasTerrainAdvantage = TerrainAnalyzer.Instance.HasTerrainAdvantage();
+                
+                // Log terrain analysis results
+                Logger.Instance.Info($"Battle terrain type: {battlefieldType}");
+                Logger.Instance.Info($"Terrain advantage: {(hasTerrainAdvantage ? "Yes" : "No")}");
+                
+                // Get tactical positions
+                Vec3 bestHighGround = TerrainAnalyzer.Instance.GetBestHighGroundPosition();
+                Vec3 bestDefensivePosition = TerrainAnalyzer.Instance.GetBestDefensivePosition();
+                Vec3 rightFlankPosition = TerrainAnalyzer.Instance.GetBestFlankingPosition(true);
+                Vec3 leftFlankPosition = TerrainAnalyzer.Instance.GetBestFlankingPosition(false);
+                
+                // Initialize AI commander with terrain information
                 _aiCommander = _aiService.CreateCommander();
                 _aiCommander.Initialize(_playerTeam, _enemyTeam);
+                
+                // Pass tactical positions to AI commander
+                Dictionary<string, Vec3> tacticalPositions = new Dictionary<string, Vec3>
+                {
+                    { "HighGround", bestHighGround },
+                    { "DefensivePosition", bestDefensivePosition },
+                    { "RightFlank", rightFlankPosition },
+                    { "LeftFlank", leftFlankPosition }
+                };
+                
+                _aiCommander.SetTacticalPositions(tacticalPositions);
+                
+                // Set battlefield type for AI decision making
+                _aiCommander.SetBattlefieldType(battlefieldType);
+                
+                // Inform the AI commander if we have terrain advantage
+                _aiCommander.SetTerrainAdvantage(hasTerrainAdvantage);
 
                 _isInitialized = true;
 
@@ -154,9 +187,19 @@ namespace HannibalAI
                 }
 
                 // Log terrain features if in debug mode
-                if (ModConfig.Instance.Debug && terrainFeatures.Count > 0)
+                if (ModConfig.Instance.Debug)
                 {
-                    Logger.Instance.Info($"Terrain Analysis: Found {terrainFeatures.Count} tactical features");
+                    // Log tactical positions
+                    Logger.Instance.Info($"Terrain Analysis: Key Positions Found");
+                    Logger.Instance.Info($"  - High Ground: ({bestHighGround.x:F1}, {bestHighGround.y:F1}, {bestHighGround.z:F1})");
+                    Logger.Instance.Info($"  - Defensive Position: ({bestDefensivePosition.x:F1}, {bestDefensivePosition.y:F1}, {bestDefensivePosition.z:F1})");
+                    Logger.Instance.Info($"  - Right Flank: ({rightFlankPosition.x:F1}, {rightFlankPosition.y:F1}, {rightFlankPosition.z:F1})");
+                    Logger.Instance.Info($"  - Left Flank: ({leftFlankPosition.x:F1}, {leftFlankPosition.y:F1}, {leftFlankPosition.z:F1})");
+                    
+                    // Display terrain advantage in game
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"Terrain assessment: {(hasTerrainAdvantage ? "Advantage" : "Standard")} - {battlefieldType} terrain", 
+                        Color.FromUint(hasTerrainAdvantage ? 0x88FF88U : 0xFFFFAAU)));
                 }
             }
             catch (Exception ex)
@@ -177,7 +220,7 @@ namespace HannibalAI
                 {
                     // First notification - large and noticeable
                     InformationManager.DisplayMessage(new InformationMessage(
-                        "=== HANNIBAL AI ACTIVE ===", Color.FromUint(0xFFCC00)));
+                        "=== HANNIBAL AI ACTIVE ===", Color.FromUint(0xFFCC00U)));
                     
                     Logger.Instance.Info("HannibalAI is running in this battle");
                 }
@@ -186,7 +229,7 @@ namespace HannibalAI
                 if (Mission.Current.CurrentTime > 2.0f && Mission.Current.CurrentTime < 2.5f)
                 {
                     InformationManager.DisplayMessage(new InformationMessage(
-                        "HannibalAI active - Press INSERT for settings", Color.FromUint(0x33FF33)));
+                        "HannibalAI active - Press INSERT for settings", Color.FromUint(0x33FF33U)));
                 }
                 
                 // Update Tactical Planner with both original AICommander and enhanced Tactical system
@@ -230,7 +273,7 @@ namespace HannibalAI
                     if (Mission.Current.CurrentTime < 1.0f)
                     {
                         InformationManager.DisplayMessage(new InformationMessage(
-                            "HannibalAI is controlling enemy formations", Color.FromUint(0xFF3333)));
+                            "HannibalAI is controlling enemy formations", Color.FromUint(0xFF3333U)));
                     }
                     
                     // Repeat notification after 3 seconds for visibility
@@ -238,7 +281,7 @@ namespace HannibalAI
                     {
                         InformationManager.DisplayMessage(new InformationMessage(
                             $"HannibalAI active - Enemy AI using {enemyPlan.Strategy} tactics", 
-                            Color.FromUint(0xFF3333)));
+                            Color.FromUint(0xFF3333U)));
                     }
 
                     // Show enemy AI control status periodically (every 30 seconds)
@@ -257,7 +300,7 @@ namespace HannibalAI
 
                         // Display as game message so player can see it
                         InformationManager.DisplayMessage(new InformationMessage(
-                            $"Enemy Tactic: {enemyPlan.Strategy}{enemyCommanderInfo}", Color.FromUint(0xFF6600)));
+                            $"Enemy Tactic: {enemyPlan.Strategy}{enemyCommanderInfo}", Color.FromUint(0xFF6600U)));
                         
                         // Log additional details when in debug mode
                         if (ModConfig.Instance.Debug)
@@ -279,7 +322,7 @@ namespace HannibalAI
                 
                 // Display error to player so they're aware something went wrong
                 InformationManager.DisplayMessage(new InformationMessage(
-                    $"HannibalAI Error: {ex.Message}", Color.FromUint(0xFF0000)));
+                    $"HannibalAI Error: {ex.Message}", Color.FromUint(0xFF0000U)));
             }
         }
         

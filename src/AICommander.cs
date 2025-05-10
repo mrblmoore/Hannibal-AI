@@ -26,6 +26,8 @@ namespace HannibalAI
         
         // Terrain analysis cache
         private Dictionary<string, Vec3> _keyPositions;
+        private HannibalAI.Terrain.TerrainType _battlefieldType;
+        private bool _hasTerrainAdvantage;
         
         public AICommander(ModConfig config)
         {
@@ -777,8 +779,8 @@ namespace HannibalAI
         /// </summary>
         private bool EvaluateTerrainAdvantage()
         {
-            // Simplified evaluation
-            return true;
+            // Use the terrain advantage information from TerrainAnalyzer
+            return _hasTerrainAdvantage;
         }
         
         /// <summary>
@@ -861,5 +863,73 @@ namespace HannibalAI
         }
         
         // Using TaleWorlds.MountAndBlade.FormationClass directly instead of private enum
+        
+        /// <summary>
+        /// Set tactical positions from terrain analysis
+        /// </summary>
+        public void SetTacticalPositions(Dictionary<string, Vec3> positions)
+        {
+            if (positions == null || positions.Count == 0)
+            {
+                return;
+            }
+            
+            // Map the terrain analyzer positions to our internal keys
+            if (positions.ContainsKey("HighGround"))
+            {
+                _keyPositions["high_ground"] = positions["HighGround"];
+            }
+            
+            if (positions.ContainsKey("DefensivePosition"))
+            {
+                _keyPositions["defensive"] = positions["DefensivePosition"];
+            }
+            
+            if (positions.ContainsKey("LeftFlank"))
+            {
+                _keyPositions["flank_left"] = positions["LeftFlank"];
+            }
+            
+            if (positions.ContainsKey("RightFlank"))
+            {
+                _keyPositions["flank_right"] = positions["RightFlank"];
+            }
+            
+            // Log the tactical positions if verbose logging is enabled
+            if (_config.VerboseLogging)
+            {
+                Logger.Instance.Info("Tactical positions set:");
+                foreach (var position in _keyPositions)
+                {
+                    Logger.Instance.Info($"  {position.Key}: ({position.Value.x:F1}, {position.Value.y:F1}, {position.Value.z:F1})");
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Set the battlefield terrain type for AI decision-making
+        /// </summary>
+        public void SetBattlefieldType(HannibalAI.Terrain.TerrainType terrainType)
+        {
+            _battlefieldType = terrainType;
+            
+            if (_config.VerboseLogging)
+            {
+                Logger.Instance.Info($"Battlefield terrain type set to: {_battlefieldType}");
+            }
+        }
+        
+        /// <summary>
+        /// Set whether the AI has terrain advantage
+        /// </summary>
+        public void SetTerrainAdvantage(bool hasAdvantage)
+        {
+            _hasTerrainAdvantage = hasAdvantage;
+            
+            if (_config.VerboseLogging)
+            {
+                Logger.Instance.Info($"Terrain advantage status set to: {_hasTerrainAdvantage}");
+            }
+        }
     }
 }

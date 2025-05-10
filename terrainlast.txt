@@ -1,0 +1,123 @@
+                            Value = 0.5f, // Value represents tactical importance
+                            Description = $"Lake ({radius}m radius)"
+                        };
+                        
+                        _terrainFeatures.Add(lake);
+                    }
+                }
+                
+                Logger.Instance.Info($"Identified {waterCount} water features");
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Warning($"Failed to find water features: {ex.Message}");
+            }
+        }
+        
+        /// <summary>
+        /// Calculate optimal positions for each formation type based on terrain features
+        /// </summary>
+        private void CalculateOptimalPositions()
+        {
+            try
+            {
+                // In a real implementation, would weigh different terrain features
+                // based on formation types and current battle conditions
+                
+                // For cavalry, open flat ground away from forests
+                Random random = new Random();
+                int cavalryPositions = random.Next(2, 5);
+                
+                for (int i = 0; i < cavalryPositions; i++)
+                {
+                    float x = (random.Next(0, 100) / 100.0f) * _battlefieldWidth - (_battlefieldWidth / 2.0f);
+                    float y = (random.Next(0, 100) / 100.0f) * _battlefieldLength - (_battlefieldLength / 2.0f);
+                    
+                    // Ensure position is not in a forest
+                    bool inForest = false;
+                    foreach (TerrainFeature feature in _terrainFeatures)
+                    {
+                        if (feature.FeatureType == TerrainFeatureType.Forest)
+                        {
+                            float distSq = (feature.Position.x - x) * (feature.Position.x - x) + 
+                                           (feature.Position.y - y) * (feature.Position.y - y);
+                            if (distSq < feature.Size * feature.Size)
+                            {
+                                inForest = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (!inForest)
+                    {
+                        _optimalPositions[FormationClass.Cavalry].Add(new Vec3(x, y, 0.0f));
+                        _optimalPositions[FormationClass.HorseArcher].Add(new Vec3(x, y, 0.0f));
+                    }
+                }
+                
+                // Already added positions for other formation types during feature detection
+                
+                Logger.Instance.Info("Calculated optimal positions for all formation types");
+                
+                // Log counts in debug mode
+                if (ModConfig.Instance.Debug)
+                {
+                    foreach (FormationClass formationClass in _optimalPositions.Keys)
+                    {
+                        Logger.Instance.Info($"- {formationClass}: {_optimalPositions[formationClass].Count} optimal positions");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Warning($"Failed to calculate optimal positions: {ex.Message}");
+            }
+        }
+        
+        #endregion
+    }
+
+    /// <summary>
+    /// Types of terrain features that can be identified
+    /// </summary>
+    public enum TerrainFeatureType
+    {
+        HighGround,
+        Chokepoint,
+        Forest,
+        River,
+        Lake,
+        Bridge,
+        Cliff,
+        OpenField,
+        FlankingPosition
+    }
+    
+    /// <summary>
+    /// General terrain type of the battlefield
+    /// </summary>
+    public enum TerrainType
+    {
+        Plains,
+        Forest,
+        Hills,
+        Mountains,
+        River,
+        Coast,
+        Desert,
+        Snow
+    }
+    
+    /// <summary>
+    /// Tactical feature of the terrain
+    /// </summary>
+    public class TerrainFeature
+    {
+        public TerrainFeatureType FeatureType { get; set; }
+        public Vec3 Position { get; set; }
+        public float Size { get; set; } // Radius or width depending on feature type
+        public float Value { get; set; } // Height, density, or importance depending on feature type
+        public string Description { get; set; }
+    }
+}
