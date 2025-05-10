@@ -79,7 +79,7 @@ namespace HannibalAI
                     {
                         if (formation != null && formation.CountOfUnits > 0)
                         {
-                            formationDebug += $"{formation.FormationIndex}({formation.FormationClass}:{formation.CountOfUnits}) ";
+                            formationDebug += $"{formation.FormationIndex}(Units:{formation.CountOfUnits}) ";
                         }
                     }
                     System.Diagnostics.Debug.Print(formationDebug);

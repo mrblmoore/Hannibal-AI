@@ -109,26 +109,35 @@ namespace HannibalAI.Terrain
                 EstimateBattlefieldBounds();
                 
                 // Detect terrain type
+                System.Diagnostics.Debug.Print("[HannibalAI] Detecting terrain type...");
                 DetectTerrainType();
-                _terrainAnalyzed = true;
                 
                 // Scan for high ground
+                System.Diagnostics.Debug.Print("[HannibalAI] Scanning for high ground...");
                 ScanForHighGround();
                 
                 // Identify chokepoints
+                System.Diagnostics.Debug.Print("[HannibalAI] Identifying chokepoints...");
                 IdentifyChokepoints();
                 
                 // Find forest cover
+                System.Diagnostics.Debug.Print("[HannibalAI] Finding forest cover...");
                 FindForestCover();
                 
                 // Find water features
+                System.Diagnostics.Debug.Print("[HannibalAI] Identifying water features...");
                 FindWaterFeatures();
                 
                 // Identify flanking positions
+                System.Diagnostics.Debug.Print("[HannibalAI] Finding flanking positions...");
                 FindFlankingPositions();
                 
                 // Calculate optimal positions for each formation type
+                System.Diagnostics.Debug.Print("[HannibalAI] Calculating optimal positions for formations...");
                 CalculateOptimalPositions();
+                
+                // Log completion of terrain analysis
+                System.Diagnostics.Debug.Print("[HannibalAI] Terrain analysis complete. Terrain type: " + _currentTerrainType);
                 
                 _terrainAnalyzed = true;
                 
