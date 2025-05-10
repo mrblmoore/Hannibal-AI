@@ -51,6 +51,13 @@ if [ -d "GUI" ]; then
     cp -r GUI/* bin/GUI/
 fi
 
+# Copy ModuleData folder to bin directory if it exists
+if [ -d "ModuleData" ]; then
+    echo "Copying ModuleData files..."
+    mkdir -p bin/ModuleData
+    cp -r ModuleData/* bin/ModuleData/
+fi
+
 # Remove duplicate DLLs from bin root to avoid confusion (leave only SubModule.xml in root)
 echo "Cleaning up duplicate files..."
 rm -f bin/HannibalAI.dll bin/HannibalAI.pdb

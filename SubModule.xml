@@ -35,5 +35,8 @@
         <XmlNode>
             <XmlName id="Screens" path="GUI"/>
         </XmlNode>
+        <XmlNode>
+            <XmlName id="HannibalAI_Settings" path="ModuleData/UI"/>
+        </XmlNode>
     </Xmls>
 </Module>

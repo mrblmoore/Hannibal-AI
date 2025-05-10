@@ -104,8 +104,30 @@ namespace HannibalAI
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error executing {order.OrderType} order: {ex.Message}");
-                System.Diagnostics.Debug.Print($"[HannibalAI] Error executing {order.OrderType} order: {ex.Message}");
+                // Enhanced error logging with detailed order info and stack trace
+                string errorMsg = $"Error executing {order.OrderType} order for formation {order.TargetFormation.FormationIndex}: {ex.Message}";
+                Logger.Instance.Error($"{errorMsg}\n{ex.StackTrace}");
+                
+                // Detailed debug prints for diagnostics
+                System.Diagnostics.Debug.Print($"[HannibalAI] ERROR: {errorMsg}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Stack trace: {ex.StackTrace}");
+                
+                // Get order details for debugging
+                string orderDetails = $"Order details: Type={order.OrderType}";
+                if (order.TargetPosition != null)
+                {
+                    orderDetails += $", Position=({order.TargetPosition.x:F1}, {order.TargetPosition.y:F1}, {order.TargetPosition.z:F1})";
+                }
+                System.Diagnostics.Debug.Print($"[HannibalAI] {orderDetails}");
+                
+                // Display error message to player if debug is enabled
+                if (ModConfig.Instance.Debug)
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"HannibalAI order error: {ex.GetType().Name} in {order.OrderType}", 
+                        Color.FromUint(0xFF3333U)));
+                }
+                
                 return false;
             }
         }
@@ -118,38 +140,128 @@ namespace HannibalAI
         {
             try
             {
+                // Detailed entry point logging
+                System.Diagnostics.Debug.Print($"[HannibalAI] ExecuteMoveOrder entry point for formation {order.TargetFormation.FormationIndex}");
+                
                 Formation formation = order.TargetFormation;
                 Vec3 position = order.TargetPosition;
                 
-                // Validate position
+                // Enhanced position validation with detailed diagnostics
                 if (position == Vec3.Zero)
                 {
-                    Logger.Instance.Warning("Move order has zero/invalid target position");
-                    System.Diagnostics.Debug.Print("[HannibalAI] Move order has zero target position");
+                    string warning = "Move order has zero/invalid target position";
+                    Logger.Instance.Warning(warning);
+                    System.Diagnostics.Debug.Print($"[HannibalAI] ERROR: {warning}");
+                    
+                    // Show warning in game for debugging
+                    if (ModConfig.Instance.Debug)
+                    {
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            $"HannibalAI: {warning} for {formation.FormationIndex}", 
+                            Color.FromUint(0xFFAA00U)));
+                    }
+                    
                     return false;
                 }
                 
-                // Log the operation
-                Logger.Instance.Info($"Moving formation {formation.FormationIndex} to ({position.x:F1}, {position.y:F1}, {position.z:F1})");
-                System.Diagnostics.Debug.Print($"[HannibalAI] Moving formation {formation.FormationIndex} to position ({position.x:F1}, {position.y:F1}, {position.z:F1})");
+                // Check formation validity
+                if (formation.CountOfUnits <= 0)
+                {
+                    string warning = $"Formation {formation.FormationIndex} has no units";
+                    System.Diagnostics.Debug.Print($"[HannibalAI] WARNING: {warning}");
+                    return false;
+                }
                 
-                // Standard movement order to position
+                // Log the operation with more details
+                string moveMessage = $"Moving formation {formation.FormationIndex} ({formation.CountOfUnits} units) " + 
+                    $"to ({position.x:F1}, {position.y:F1}, {position.z:F1})";
+                Logger.Instance.Info(moveMessage);
+                System.Diagnostics.Debug.Print($"[HannibalAI] {moveMessage}");
+                
+                // Get current position for distance calculation
+                WorldPosition currentPosition = formation.OrderPosition;
+                Vec3 currentVec3 = Vec3.Zero;
+                
+                // Safely get the current position
+                if (currentPosition != null)
+                {
+                    try
+                    {
+                        currentVec3 = currentPosition.GetGroundVec3();
+                    }
+                    catch (Exception)
+                    {
+                        // If we can't get the current position, just log and continue
+                        System.Diagnostics.Debug.Print("[HannibalAI] Could not get current formation position");
+                    }
+                }
+                
+                // Calculate distance to move if possible
+                if (currentVec3 != Vec3.Zero)
+                {
+                    float distance = (position - currentVec3).Length;
+                    System.Diagnostics.Debug.Print($"[HannibalAI] Movement distance: {distance:F1} units");
+                    
+                    // Add warning for very long moves (probably calculation errors)
+                    if (distance > 500)
+                    {
+                        System.Diagnostics.Debug.Print($"[HannibalAI] WARNING: Unusually long movement distance!");
+                        Logger.Instance.Warning($"Unusually long movement distance: {distance:F1}");
+                    }
+                }
+                
+                // Execute the move order
                 WorldPosition worldPosition = new WorldPosition(Mission.Current.Scene, position);
+                System.Diagnostics.Debug.Print($"[HannibalAI] Executing SetMovementOrder");
                 formation.SetMovementOrder(MovementOrder.MovementOrderMove(worldPosition));
+                System.Diagnostics.Debug.Print($"[HannibalAI] SetMovementOrder completed successfully");
                 
                 // Check if additional data contains formation type instruction
                 if (!string.IsNullOrEmpty(order.AdditionalData))
                 {
+                    System.Diagnostics.Debug.Print($"[HannibalAI] Applying formation arrangement: {order.AdditionalData}");
                     ApplyFormationArrangement(formation, order.AdditionalData);
                     Logger.Instance.Info($"Applied formation arrangement: {order.AdditionalData}");
+                }
+                
+                // Show in-game confirmation in debug mode
+                if (ModConfig.Instance.Debug)
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"Moving {formation.FormationIndex} formation to new position", 
+                        Color.FromUint(0x00FF00U)));
                 }
                 
                 return true;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error executing move order: {ex.Message}\n{ex.StackTrace}");
-                System.Diagnostics.Debug.Print($"[HannibalAI] Error in ExecuteMoveOrder: {ex.Message}");
+                // Enhanced error logging with detailed move info
+                string errorMsg = $"Error executing move order for formation {order.TargetFormation.FormationIndex}: {ex.Message}";
+                Logger.Instance.Error($"{errorMsg}\n{ex.StackTrace}");
+                
+                // Detailed debug prints for diagnostics
+                System.Diagnostics.Debug.Print($"[HannibalAI] ERROR: {errorMsg}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Stack trace: {ex.StackTrace}");
+                
+                // Try to determine common error causes
+                if (ex.Message.Contains("NullReference"))
+                {
+                    System.Diagnostics.Debug.Print("[HannibalAI] Possible cause: Null formation or position reference");
+                }
+                else if (ex.Message.Contains("Scene"))
+                {
+                    System.Diagnostics.Debug.Print("[HannibalAI] Possible cause: Invalid scene reference");
+                }
+                
+                // Display error message to player if debug is enabled
+                if (ModConfig.Instance.Debug)
+                {
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"Move order error: {ex.GetType().Name}", 
+                        Color.FromUint(0xFF3333U)));
+                }
+                
                 return false;
             }
         }

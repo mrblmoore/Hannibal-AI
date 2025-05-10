@@ -61,10 +61,32 @@ namespace HannibalAI
         /// </summary>
         public void MakeDecision()
         {
+            // Critical debug information to confirm MakeDecision is being called with proper teams
+            System.Diagnostics.Debug.Print("[HannibalAI] MakeDecision ENTRY POINT - CONFIRMING EXECUTION");
+            System.Diagnostics.Debug.Print($"[HannibalAI] Mission Current: {(Mission.Current != null ? "Valid" : "NULL")}");
+            
             if (_playerTeam == null || _enemyTeam == null)
             {
                 Logger.Instance.Warning("AICommander.MakeDecision called with null team(s)");
                 System.Diagnostics.Debug.Print("[HannibalAI] MakeDecision aborted: One or both teams are null");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Player team: {(_playerTeam != null ? "Valid" : "NULL")}, Enemy team: {(_enemyTeam != null ? "Valid" : "NULL")}");
+                
+                // Try to diagnose why teams are null
+                if (Mission.Current != null)
+                {
+                    int teamCount = Mission.Current.Teams.Count;
+                    System.Diagnostics.Debug.Print($"[HannibalAI] Mission has {teamCount} teams available");
+                    
+                    foreach (Team team in Mission.Current.Teams)
+                    {
+                        if (team != null)
+                        {
+                            bool isPlayerTeam = team.IsPlayerTeam;
+                            int formationCount = team.FormationsIncludingEmpty?.Count ?? 0;
+                            System.Diagnostics.Debug.Print($"[HannibalAI] Team {team.TeamIndex}: IsPlayerTeam={isPlayerTeam}, Formations={formationCount}");
+                        }
+                    }
+                }
                 return;
             }
 
@@ -369,32 +391,70 @@ namespace HannibalAI
                         continue;
                     }
                     
-                    // Debug output before execution
+                    // Debug output before execution with detailed formation state info
+                    string formationState = $"Formation {order.TargetFormation.FormationIndex}: " +
+                        $"Units={order.TargetFormation.CountOfUnits}, " +
+                        $"Team={order.TargetFormation.Team?.TeamIndex ?? -1}";
+                        
                     System.Diagnostics.Debug.Print($"[HannibalAI] Executing order: {order.OrderType} for {order.TargetFormation.FormationIndex}");
-                    Logger.Instance.Info($"Executing {order.OrderType} order for {order.TargetFormation.FormationIndex} formation");
+                    System.Diagnostics.Debug.Print($"[HannibalAI] {formationState}");
                     
-                    // Actually execute the order
+                    // Log detailed position information if available
+                    if (order.TargetPosition != Vec3.Zero)
+                    {
+                        System.Diagnostics.Debug.Print($"[HannibalAI] Target position: ({order.TargetPosition.x:F1}, {order.TargetPosition.y:F1}, {order.TargetPosition.z:F1})");
+                    }
+                    
+                    // Full info to logger
+                    Logger.Instance.Info($"Executing {order.OrderType} order for {order.TargetFormation.FormationIndex} formation");
+                    Logger.Instance.Info($"  {formationState}");
+                    
+                    // Actually execute the order with timing information
+                    DateTime startTime = DateTime.Now;
                     bool success = _commandExecutor.ExecuteOrder(order);
+                    TimeSpan executionTime = DateTime.Now - startTime;
+                    
+                    // Debug log execution time for performance tracking
+                    System.Diagnostics.Debug.Print($"[HannibalAI] Order execution took {executionTime.TotalMilliseconds:F1}ms");
                     
                     if (success)
                     {
                         successfulOrders++;
                         
-                        // Additional debug info for successful orders
+                        // Enhanced debug info for successful orders
+                        string successDetails = $"Successfully executed {order.OrderType} for {order.TargetFormation.FormationIndex}";
+                        
                         if (order.TargetPosition != Vec3.Zero)
                         {
+                            successDetails += $" at ({order.TargetPosition.x:F1}, {order.TargetPosition.y:F1}, {order.TargetPosition.z:F1})";
                             Logger.Instance.Info($"  Target position: ({order.TargetPosition.x:F1}, {order.TargetPosition.y:F1}, {order.TargetPosition.z:F1})");
                         }
+                        
+                        System.Diagnostics.Debug.Print($"[HannibalAI] {successDetails}");
                         
                         // Add formation-specific details to log
                         if (order.AdditionalData != null)
                         {
                             Logger.Instance.Info($"  Formation style: {order.AdditionalData}");
+                            System.Diagnostics.Debug.Print($"[HannibalAI] Formation style: {order.AdditionalData}");
                         }
                     }
                     else
                     {
-                        Logger.Instance.Warning($"Failed to execute {order.OrderType} order");
+                        string failureDetails = $"Failed to execute {order.OrderType} order for {order.TargetFormation.FormationIndex}";
+                        Logger.Instance.Warning(failureDetails);
+                        System.Diagnostics.Debug.Print($"[HannibalAI] ERROR: {failureDetails}");
+                        
+                        // Try to determine why it failed
+                        if (order.TargetFormation.CountOfUnits <= 0)
+                        {
+                            System.Diagnostics.Debug.Print("[HannibalAI] Failure reason: Formation has no units");
+                        }
+                        else if (order.TargetPosition == Vec3.Zero && 
+                                (order.OrderType == FormationOrderType.Move || order.OrderType == FormationOrderType.Advance))
+                        {
+                            System.Diagnostics.Debug.Print("[HannibalAI] Failure reason: Zero target position for movement order");
+                        }
                     }
 
                     // Display in-game feedback if verbose logging enabled
@@ -471,8 +531,47 @@ namespace HannibalAI
                 }
                 catch (Exception ex)
                 {
-                    Logger.Instance.Error($"Error executing order: {ex.Message}");
-                    System.Diagnostics.Debug.Print($"[HannibalAI] Error executing order: {ex.Message}");
+                    // Enhanced error reporting with order details and stack trace
+                    string orderType = order?.OrderType.ToString() ?? "Unknown";
+                    string formationIndex = order?.TargetFormation?.FormationIndex.ToString() ?? "Unknown";
+                    string errorDetails = $"Error executing {orderType} order for formation {formationIndex}: {ex.Message}";
+                    
+                    // Log detailed error info
+                    Logger.Instance.Error($"{errorDetails}\n{ex.StackTrace}");
+                    System.Diagnostics.Debug.Print($"[HannibalAI] ERROR: {errorDetails}");
+                    System.Diagnostics.Debug.Print($"[HannibalAI] Stack trace: {ex.StackTrace}");
+                    
+                    // Show detailed error in debug mode
+                    if (_config.Debug)
+                    {
+                        string shortError = $"Error: {ex.GetType().Name} in {orderType} order";
+                        InformationManager.DisplayMessage(new InformationMessage(shortError, Color.FromUint(0xFF0000U)));
+                    }
+                }
+            }
+            
+            // Collect stats for debugging
+            Dictionary<FormationOrderType, int> orderTypeStats = new Dictionary<FormationOrderType, int>();
+            Dictionary<FormationClass, int> formationStats = new Dictionary<FormationClass, int>();
+            
+            foreach (var order in orders)
+            {
+                // Count by order type
+                if (!orderTypeStats.ContainsKey(order.OrderType))
+                {
+                    orderTypeStats[order.OrderType] = 0;
+                }
+                orderTypeStats[order.OrderType]++;
+                
+                // Count by formation type
+                if (order.TargetFormation != null)
+                {
+                    FormationClass formationClass = order.TargetFormation.FormationIndex;
+                    if (!formationStats.ContainsKey(formationClass))
+                    {
+                        formationStats[formationClass] = 0;
+                    }
+                    formationStats[formationClass]++;
                 }
             }
             
@@ -480,12 +579,41 @@ namespace HannibalAI
             Logger.Instance.Info($"Executed {successfulOrders} of {orders.Count} orders successfully");
             System.Diagnostics.Debug.Print($"[HannibalAI] Executed {successfulOrders} of {orders.Count} orders successfully");
             
+            // Log detailed stats
+            foreach (var stat in orderTypeStats)
+            {
+                System.Diagnostics.Debug.Print($"[HannibalAI] Order type {stat.Key}: {stat.Value} orders");
+            }
+            
+            foreach (var stat in formationStats)
+            {
+                System.Diagnostics.Debug.Print($"[HannibalAI] Formation type {stat.Key}: {stat.Value} orders");
+            }
+            
+            // Calculate success rate
+            float successRate = orders.Count > 0 ? (float)successfulOrders / orders.Count * 100 : 0;
+            
             // Display completion message in debug mode
             if (_config.Debug && orders.Count > 0)
             {
+                string resultColor = successRate > 80 ? "00FF00" : (successRate > 50 ? "FFFF00" : "FF8800");
+                
                 InformationManager.DisplayMessage(new InformationMessage(
-                    $"HannibalAI: {successfulOrders}/{orders.Count} orders executed", 
-                    Color.FromUint(0xAAEEAAU)));
+                    $"HannibalAI: {successfulOrders}/{orders.Count} orders executed ({successRate:F0}%)", 
+                    Color.FromUint(Convert.ToUInt32(resultColor, 16))));
+                
+                // Show summary of order types in debug mode
+                if (orderTypeStats.Count > 0)
+                {
+                    string orderSummary = "Orders: ";
+                    foreach (var stat in orderTypeStats)
+                    {
+                        orderSummary += $"{stat.Key}({stat.Value}) ";
+                    }
+                    
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        orderSummary, Color.FromUint(0xCCCCCCU)));
+                }
             }
         }
 

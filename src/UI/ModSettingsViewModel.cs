@@ -17,6 +17,9 @@ namespace HannibalAI.UI
         private bool _useCommanderMemory;
         private bool _showHelpMessages;
         private bool _debug;
+        private bool _verboseLogging;
+        private bool _preferHighGround;
+        private bool _preferRangedFormations;
         
         // Slider properties
         private int _aggressiveness;
@@ -34,6 +37,9 @@ namespace HannibalAI.UI
             _useCommanderMemory = _config.UseCommanderMemory;
             _showHelpMessages = _config.ShowHelpMessages;
             _debug = _config.Debug;
+            _verboseLogging = _config.VerboseLogging;
+            _preferHighGround = _config.PreferHighGround;
+            _preferRangedFormations = _config.PreferRangedFormations;
             _aggressiveness = _config.Aggressiveness;
             
             _isVisible = true;
@@ -103,6 +109,54 @@ namespace HannibalAI.UI
             }
         }
         
+        // VerboseLogging property
+        [DataSourceProperty]
+        public bool VerboseLogging
+        {
+            get => _verboseLogging;
+            set
+            {
+                if (_verboseLogging != value)
+                {
+                    _verboseLogging = value;
+                    _config.VerboseLogging = value;
+                    OnPropertyChanged(nameof(VerboseLogging));
+                }
+            }
+        }
+        
+        // PreferHighGround property
+        [DataSourceProperty]
+        public bool PreferHighGround
+        {
+            get => _preferHighGround;
+            set
+            {
+                if (_preferHighGround != value)
+                {
+                    _preferHighGround = value;
+                    _config.PreferHighGround = value;
+                    OnPropertyChanged(nameof(PreferHighGround));
+                }
+            }
+        }
+        
+        // PreferRangedFormations property
+        [DataSourceProperty]
+        public bool PreferRangedFormations
+        {
+            get => _preferRangedFormations;
+            set
+            {
+                if (_preferRangedFormations != value)
+                {
+                    _preferRangedFormations = value;
+                    _config.PreferRangedFormations = value;
+                    OnPropertyChanged(nameof(PreferRangedFormations));
+                }
+            }
+        }
+        
         // Aggressiveness property
         [DataSourceProperty]
         public int Aggressiveness
@@ -168,6 +222,9 @@ namespace HannibalAI.UI
             UseCommanderMemory = true;
             ShowHelpMessages = true;
             Debug = false;
+            VerboseLogging = false;
+            PreferHighGround = true;
+            PreferRangedFormations = true;
             Aggressiveness = 50;
             
             // Update text representation
@@ -175,12 +232,44 @@ namespace HannibalAI.UI
             
             // Display confirmation
             Logger.Instance.Info("HannibalAI settings reset to defaults");
+            InformationManager.DisplayMessage(new InformationMessage(
+                "HannibalAI settings reset to defaults", Color.FromUint(0xFFAA00)));
         }
         
         // Update the text representation when aggressiveness changes
         public void OnAggressivenessChange()
         {
             OnPropertyChanged(nameof(AggressivenessText));
+        }
+        
+        // Refresh all values from config (override base method)
+        public override void RefreshValues()
+        {
+            if (_config != null)
+            {
+                // Assign without triggering property changed
+                _aiControlsEnemies = _config.AIControlsEnemies;
+                _useCommanderMemory = _config.UseCommanderMemory;
+                _showHelpMessages = _config.ShowHelpMessages;
+                _debug = _config.Debug;
+                _verboseLogging = _config.VerboseLogging;
+                _preferHighGround = _config.PreferHighGround;
+                _preferRangedFormations = _config.PreferRangedFormations;
+                _aggressiveness = _config.Aggressiveness;
+                
+                // Notify UI about all changes at once
+                OnPropertyChanged(nameof(AIControlsEnemies));
+                OnPropertyChanged(nameof(UseCommanderMemory));
+                OnPropertyChanged(nameof(ShowHelpMessages));
+                OnPropertyChanged(nameof(Debug));
+                OnPropertyChanged(nameof(VerboseLogging));
+                OnPropertyChanged(nameof(PreferHighGround));
+                OnPropertyChanged(nameof(PreferRangedFormations));
+                OnPropertyChanged(nameof(Aggressiveness));
+                OnPropertyChanged(nameof(AggressivenessText));
+                
+                Logger.Instance.Info("[HannibalAI] UI values refreshed from config");
+            }
         }
         
         // Clean up

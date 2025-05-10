@@ -63,27 +63,67 @@ public class GauntletWrapper
     {
         try
         {
+            // Force movie name to point to our UI settings file
+            if (movieName == "ModSettings" || movieName.EndsWith("Settings"))
+            {
+                movieName = "HannibalAI_Settings";
+                
+                // Log that we're fixing the movie name
+                Logger.Instance.Info($"[HannibalAI] Remapping UI name to: {movieName}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Loading UI prefab: {movieName}");
+            }
+            
             if (_actualLayer != null)
             {
+                // Debug log to help diagnose UI loading issues
+                Logger.Instance.Info($"[HannibalAI] Attempting to load UI prefab: {movieName} with data source type: {dataSource?.GetType().Name ?? "null"}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Loading UI prefab: {movieName}");
+                
                 // Try to call LoadMovie on the actual layer
                 var method = _actualLayer.GetType().GetMethod("LoadMovie", new[] { typeof(string), typeof(object) });
                 if (method != null)
                 {
                     var result = method.Invoke(_actualLayer, new[] { movieName, dataSource });
-                    Logger.Instance.Info($"Loaded movie '{movieName}' using actual GauntletLayer");
+                    
+                    if (result != null)
+                    {
+                        Logger.Instance.Info($"[HannibalAI] Successfully loaded UI prefab: {movieName}");
+                        InformationManager.DisplayMessage(
+                            new InformationMessage($"HannibalAI: UI loaded successfully", Color.FromUint(0x00FF00)));
+                    }
+                    else
+                    {
+                        Logger.Instance.Error($"[HannibalAI] UI prefab loaded but returned null: {movieName}");
+                        InformationManager.DisplayMessage(
+                            new InformationMessage($"HannibalAI: UI failed to load (null result)", Color.FromUint(0xFF0000)));
+                    }
+                    
                     return result;
                 }
+                else
+                {
+                    Logger.Instance.Error($"[HannibalAI] LoadMovie method not found on GauntletLayer");
+                }
+            }
+            else
+            {
+                Logger.Instance.Error($"[HannibalAI] Actual GauntletLayer is null, cannot load UI");
             }
         }
         catch (Exception ex)
         {
-            Logger.Instance.Error($"Failed to load movie: {ex.Message}");
+            Logger.Instance.Error($"[HannibalAI] Failed to load UI prefab: {ex.Message}\n{ex.StackTrace}");
+            System.Diagnostics.Debug.Print($"[HannibalAI] UI loading error: {ex.Message}");
+            
+            // Show error to player
+            InformationManager.DisplayMessage(
+                new InformationMessage($"HannibalAI: UI loading error: {ex.Message}", Color.FromUint(0xFF0000)));
         }
         
         // Fallback implementation
-        Logger.Instance.Info($"Simulated loading of movie: {movieName}");
+        Logger.Instance.Info($"[HannibalAI] Using fallback UI for: {movieName}");
         InformationManager.DisplayMessage(
-            new InformationMessage($"HannibalAI: Loading UI for {movieName}", Color.FromUint(0x00FF00)));
+            new InformationMessage($"HannibalAI: Using backup UI system", Color.FromUint(0xFFAA00)));
         return new object();
     }
     
@@ -183,37 +223,77 @@ public class GauntletWrapper
         public void Initialize()
         {
             // Display a message when settings are opened
-            Logger.Instance.Info("HannibalAI settings opened");
+            Logger.Instance.Info("[HannibalAI] Settings UI initialization starting");
+            System.Diagnostics.Debug.Print("[HannibalAI] Settings UI initialization starting");
+            
+            // Make sure data source is prepared before UI init
+            _dataSource.RefreshValues();
+            
+            // Copy settings to data source for safety
+            if (ModConfig.Instance != null)
+            {
+                _dataSource.AIControlsEnemies = ModConfig.Instance.AIControlsEnemies;
+                _dataSource.Debug = ModConfig.Instance.Debug;
+                _dataSource.VerboseLogging = ModConfig.Instance.VerboseLogging;
+                _dataSource.UseCommanderMemory = ModConfig.Instance.UseCommanderMemory;
+                _dataSource.Aggressiveness = ModConfig.Instance.Aggressiveness;
+                _dataSource.PreferHighGround = ModConfig.Instance.PreferHighGround;
+                _dataSource.PreferRangedFormations = ModConfig.Instance.PreferRangedFormations;
+            }
             
             if (_layer != null)
             {
                 try 
                 {
-                    // Create a proper view using the ModSettingsView class
+                    // Create the UI view with more verbose logging
                     _view = new ModSettingsView(_dataSource);
+                    Logger.Instance.Info("[HannibalAI] ModSettingsView created");
+                    System.Diagnostics.Debug.Print("[HannibalAI] ModSettingsView created");
+                    
+                    // Set input handling in the layer (pass null for mask since we don't know the proper enum types at compile time)
+                    _layer.SetInputRestrictions(true, null);
+                    
+                    // Initialize the view with the layer
                     if (_view.Initialize(_layer))
                     {
-                        Logger.Instance.Info("Settings view initialized successfully");
+                        Logger.Instance.Info("[HannibalAI] Settings view initialized successfully");
+                        System.Diagnostics.Debug.Print("[HannibalAI] Settings view initialized successfully");
+                        
+                        // Force UI visibility flags
+                        _dataSource.IsVisible = true;
+                        
+                        // Notify player of successful UI load
+                        InformationManager.DisplayMessage(new InformationMessage(
+                            "HannibalAI: Settings UI opened - Press ESC to close", 
+                            Color.FromUint(0x00FF00)));
                     }
                     else
                     {
-                        Logger.Instance.Error("Failed to initialize settings view");
+                        Logger.Instance.Error("[HannibalAI] Failed to initialize settings view");
+                        System.Diagnostics.Debug.Print("[HannibalAI] Failed to initialize settings view");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Logger.Instance.Error($"Error initializing settings UI: {ex.Message}");
+                    Logger.Instance.Error($"[HannibalAI] Error initializing settings UI: {ex.Message}\n{ex.StackTrace}");
+                    System.Diagnostics.Debug.Print($"[HannibalAI] UI init error: {ex.Message}");
+                    
+                    // Notify player of the error
+                    InformationManager.DisplayMessage(new InformationMessage(
+                        $"HannibalAI: UI initialization error - {ex.Message}",
+                        Color.FromUint(0xFF0000)));
                 }
             }
             else
             {
-                Logger.Instance.Warning("No layer provided for UI, using fallback display");
+                Logger.Instance.Warning("[HannibalAI] No GauntletLayer provided for UI, using fallback display");
+                System.Diagnostics.Debug.Print("[HannibalAI] Using fallback UI (no layer)");
             }
             
             // Make sure UI is visible
             _dataSource.IsVisible = true;
             
-            // Display settings in a simple way as fallback
+            // Always display settings as fallback even if UI worked
             DisplayCurrentSettings();
         }
         

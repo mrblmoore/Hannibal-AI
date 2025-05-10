@@ -48,6 +48,20 @@ namespace HannibalAI
         {
             base.OnMissionTick(dt);
             
+            // Force debug settings to be enabled at startup for easier diagnostics
+            if (ModConfig.Instance != null && Mission.Current != null && Mission.Current.CurrentTime < 0.5f)
+            {
+                ModConfig.Instance.Debug = true;
+                ModConfig.Instance.AIControlsEnemies = true;
+                ModConfig.Instance.VerboseLogging = true;
+                
+                if (Mission.Current.CurrentTime < 0.1f)
+                {
+                    System.Diagnostics.Debug.Print("[HannibalAI] IMPORTANT: Debug settings forced to true for diagnostics");
+                    Logger.Instance.Info("[HannibalAI] Debug settings forced: Debug=true, AIControlsEnemies=true, VerboseLogging=true");
+                }
+            }
+            
             // Tick counter to limit debug output
             _updateTimer += dt;
             
@@ -189,21 +203,54 @@ namespace HannibalAI
                 _playerTeam = null;
                 _enemyTeam = null;
 
+                // Log all available teams for debugging
+                System.Diagnostics.Debug.Print($"[HannibalAI] Mission has {mission.Teams.Count} teams");
                 foreach (Team team in mission.Teams)
                 {
+                    int formationCount = team.FormationsIncludingEmpty?.Count ?? 0;
+                    bool isPlayerTeam = team.IsPlayerTeam;
+                    string teamSide = team.Side.ToString();
+                    
+                    System.Diagnostics.Debug.Print($"[HannibalAI] Team {team.TeamIndex}: Side={teamSide}, " +
+                        $"IsPlayerTeam={isPlayerTeam}, Formations={formationCount}");
+                    
+                    // Detailed formation information
+                    if (formationCount > 0)
+                    {
+                        System.Diagnostics.Debug.Print($"[HannibalAI] Formations for Team {team.TeamIndex}:");
+                        foreach (Formation formation in team.FormationsIncludingEmpty)
+                        {
+                            if (formation != null)
+                            {
+                                string formClass = formation.FormationIndex.ToString();
+                                int unitCount = formation.CountOfUnits;
+                                System.Diagnostics.Debug.Print($"[HannibalAI]   Formation {formClass}: {unitCount} units");
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.Print("[HannibalAI]   Formation: NULL");
+                            }
+                        }
+                    }
+                    
                     if (team.Side == BattleSideEnum.Defender)
                     {
                         _playerTeam = team;
+                        System.Diagnostics.Debug.Print($"[HannibalAI] Player team assigned: Team {team.TeamIndex}");
                     }
                     else if (team.Side == BattleSideEnum.Attacker)
                     {
                         _enemyTeam = team;
+                        System.Diagnostics.Debug.Print($"[HannibalAI] Enemy team assigned: Team {team.TeamIndex}");
                     }
                 }
 
                 // Ensure we found both teams
                 if (_playerTeam == null || _enemyTeam == null)
                 {
+                    System.Diagnostics.Debug.Print("[HannibalAI] Failed to assign teams: " +
+                        $"Player team: {(_playerTeam != null ? "Found" : "NULL")}, " +
+                        $"Enemy team: {(_enemyTeam != null ? "Found" : "NULL")}");
                     return;
                 }
 
@@ -346,7 +393,7 @@ namespace HannibalAI
                     // Log AI settings and configuration for debugging
                     Logger.Instance.Info($"[HannibalAI] Debug mode: {ModConfig.Instance.Debug}, Verbose logging: {ModConfig.Instance.VerboseLogging}");
                     Logger.Instance.Info($"[HannibalAI] AI Controls player formations: true, AI Controls enemy formations: {ModConfig.Instance.AIControlsEnemies}");
-                    Logger.Instance.Info($"[HannibalAI] UseTerrainAnalysis: {ModConfig.Instance.UseTerrainAnalysis}, UseCommanderMemory: {ModConfig.Instance.UseCommanderMemory}");
+                    Logger.Instance.Info($"[HannibalAI] PreferHighGround: {ModConfig.Instance.PreferHighGround}, UseCommanderMemory: {ModConfig.Instance.UseCommanderMemory}");
                 }
                 
                 // Second notification with more details
@@ -746,9 +793,20 @@ namespace HannibalAI
         /// </summary>
         private void ExecuteAIDecisions(List<FormationOrder> orders, float aggressionFactor)
         {
+            // Debug print to confirm method is being called
+            System.Diagnostics.Debug.Print($"[HannibalAI] ExecuteAIDecisions called with {orders?.Count ?? 0} orders");
+            
             if (orders == null || orders.Count == 0)
             {
+                System.Diagnostics.Debug.Print("[HannibalAI] No orders to execute - orders list is null or empty");
+                Logger.Instance.Info("[HannibalAI] ExecuteAIDecisions: No orders to execute");
                 return;
+            }
+            
+            // Log orders summary for debugging
+            if (ModConfig.Instance.Debug)
+            {
+                Logger.Instance.Info($"[HannibalAI] Executing {orders.Count} AI orders with aggression factor: {aggressionFactor:F2}");
             }
 
             try
@@ -756,9 +814,26 @@ namespace HannibalAI
                 // Execute each order
                 foreach (var order in orders)
                 {
-                    // Skip if formation is invalid
-                    if (order.TargetFormation == null || order.TargetFormation.CountOfUnits <= 0)
+                    // Skip if formation is invalid - with detailed diagnostic info
+                    if (order.TargetFormation == null)
                     {
+                        System.Diagnostics.Debug.Print("[HannibalAI] Skipping order execution: Target formation is null");
+                        continue;
+                    }
+                    
+                    // Log formation details for debugging formation issues
+                    if (ModConfig.Instance.Debug)
+                    {
+                        System.Diagnostics.Debug.Print($"[HannibalAI] Formation {order.TargetFormation.Index} details: " +
+                            $"Units: {order.TargetFormation.CountOfUnits}, " +
+                            $"Team: {(order.TargetFormation.Team?.TeamIndex.ToString() ?? "null")}, " +
+                            $"Has AI: {(order.TargetFormation.AI != null ? "Yes" : "No")}");
+                    }
+                    
+                    // Skip if formation has no units
+                    if (order.TargetFormation.CountOfUnits <= 0)
+                    {
+                        System.Diagnostics.Debug.Print($"[HannibalAI] Skipping order for formation {order.TargetFormation.Index}: No units");
                         continue;
                     }
 
@@ -766,24 +841,80 @@ namespace HannibalAI
                     if (order.TargetFormation.Team.IsEnemyOf(Mission.Current.MainAgent.Team) && 
                         !ModConfig.Instance.AIControlsEnemies)
                     {
+                        if (ModConfig.Instance.Debug)
+                        {
+                            System.Diagnostics.Debug.Print($"[HannibalAI] Skipping enemy formation {order.TargetFormation.Index}: AI control disabled");
+                        }
                         continue;
                     }
 
                     // Execute the order, potentially modifying it based on aggressionFactor
-                    CommandExecutor.Instance.ExecuteOrder(order, aggressionFactor); //Added aggressionFactor
-
-
-                    // Log if debug is enabled
-                    if (ModConfig.Instance.Debug)
+                    try
                     {
-                        string message = $"Order: {order.OrderType} to formation {order.TargetFormation.Index}";
-                        Logger.Instance.Debug(message);
+                        // Debug print to confirm order execution attempt for each formation
+                        System.Diagnostics.Debug.Print($"[HannibalAI] Attempting to execute order: {order.OrderType} for formation {order.TargetFormation.Index}");
+                        
+                        // Execute the order and track success/failure
+                        bool orderSuccess = CommandExecutor.Instance.ExecuteOrder(order, aggressionFactor);
+                        
+                        // Log outcome with more detail
+                        if (ModConfig.Instance.Debug || ModConfig.Instance.VerboseLogging)
+                        {
+                            string outcome = orderSuccess ? "SUCCESS" : "FAILED";
+                            string position = order.TargetPosition.ToString();
+                            string orderDetails = $"Order: {order.OrderType} to formation {order.TargetFormation.Index} -> {outcome}";
+                            
+                            if (order.TargetPosition != null)
+                            {
+                                orderDetails += $" at position {position}";
+                            }
+                            
+                            Logger.Instance.Info($"[HannibalAI] {orderDetails}");
+                            System.Diagnostics.Debug.Print($"[HannibalAI] {orderDetails}");
+                            
+                            // Show in-game message for important orders in debug mode
+                            if (ModConfig.Instance.Debug && order.OrderType != FormationOrderType.Charge)
+                            {
+                                InformationManager.DisplayMessage(new InformationMessage(
+                                    $"HannibalAI: {order.OrderType} order to formation {order.TargetFormation.Index} - {outcome}",
+                                    Color.FromUint(orderSuccess ? 0x00FF00U : 0xFF0000U)));
+                            }
+                        }
+                    }
+                    catch (Exception orderEx)
+                    {
+                        // Log error details with full stack trace in debug mode
+                        Logger.Instance.Error($"[HannibalAI] Order execution error: {orderEx.Message}");
+                        System.Diagnostics.Debug.Print($"[HannibalAI] Order execution error: {orderEx.Message}\n{orderEx.StackTrace}");
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error executing AI decisions: {ex.Message}");
+                // Enhanced error logging with stack trace
+                Logger.Instance.Error($"[HannibalAI] Error executing AI decisions: {ex.Message}\n{ex.StackTrace}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] EXCEPTION in ExecuteAIDecisions: {ex.Message}\n{ex.StackTrace}");
+                
+                // Display diagnostic message to player
+                if (ModConfig.Instance != null && (ModConfig.Instance.Debug || ModConfig.Instance.VerboseLogging))
+                {
+                    string errorType = ex.GetType().Name;
+                    InformationManager.DisplayMessage(
+                        new InformationMessage($"HannibalAI error ({errorType}): {ex.Message}", Color.FromUint(0xFF0000)));
+                    
+                    // Show stack frame info in debug mode for better diagnostics
+                    if (ModConfig.Instance.Debug)
+                    {
+                        string[] stackFrames = ex.StackTrace?.Split('\n');
+                        if (stackFrames != null && stackFrames.Length > 0)
+                        {
+                            // Show first stack frame for context
+                            string topFrame = stackFrames[0].Trim();
+                            InformationManager.DisplayMessage(
+                                new InformationMessage($"Error location: {topFrame}", Color.FromUint(0xFFAA00)));
+                        }
+                    }
+                }
             }
         }
 

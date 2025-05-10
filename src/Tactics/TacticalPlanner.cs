@@ -77,17 +77,54 @@ namespace HannibalAI.Tactics
         {
             try
             {
+                // Basic validation and debug info
+                if (team == null)
+                {
+                    Logger.Instance.Error("DevelopTacticalPlan called with null team");
+                    System.Diagnostics.Debug.Print("[HannibalAI] ERROR: DevelopTacticalPlan called with null team");
+                    return new TacticalPlan();
+                }
+                
+                if (enemyTeam == null)
+                {
+                    Logger.Instance.Error("DevelopTacticalPlan called with null enemyTeam");
+                    System.Diagnostics.Debug.Print("[HannibalAI] ERROR: DevelopTacticalPlan called with null enemyTeam");
+                    return new TacticalPlan();
+                }
+                
+                // Debug log team info
+                System.Diagnostics.Debug.Print($"[HannibalAI] DevelopTacticalPlan called for team {team.TeamIndex}" +
+                    $" against enemy team {enemyTeam.TeamIndex}");
+                System.Diagnostics.Debug.Print($"[HannibalAI] Team {team.TeamIndex} formations: {team.FormationsIncludingEmpty.Count}, " +
+                    $"active formations: {team.FormationsIncludingEmpty.Count(f => f.CountOfUnits > 0)}");
+                
+                // Log formation details
+                foreach (var formation in team.FormationsIncludingEmpty)
+                {
+                    if (formation.CountOfUnits > 0)
+                    {
+                        System.Diagnostics.Debug.Print($"[HannibalAI] Formation {formation.Index}: " +
+                            $"Type={formation.FormationIndex}, Units={formation.CountOfUnits}");
+                    }
+                }
+                
                 // Check if it's time for a new plan
                 bool needsNewPlan = !_teamPlans.ContainsKey(team) || 
                                     (DateTime.Now - _lastPlanningTime).TotalSeconds > PLANNING_INTERVAL;
                 
+                System.Diagnostics.Debug.Print($"[HannibalAI] Need new plan? {needsNewPlan}, " +
+                    $"Has existing plan: {_teamPlans.ContainsKey(team)}, " + 
+                    $"Time since last plan: {(DateTime.Now - _lastPlanningTime).TotalSeconds:F1}s");
+                
                 // Use existing plan if it's still valid and it's not time for an update
                 if (!needsNewPlan && _teamPlans.ContainsKey(team))
                 {
+                    System.Diagnostics.Debug.Print("[HannibalAI] Reusing existing tactical plan");
                     return _teamPlans[team];
                 }
                 
                 // 1. Assess battlefield situation
+                System.Diagnostics.Debug.Print("[HannibalAI] Beginning battlefield assessment");
                 BattlefieldAssessment assessment = AssessBattlefield(team, enemyTeam);
                 _battlefieldAssessments[team] = assessment;
                 
@@ -95,26 +132,59 @@ namespace HannibalAI.Tactics
                 TacticalPlan plan = new TacticalPlan();
                 
                 // 3. Set overall strategy based on assessment
+                System.Diagnostics.Debug.Print("[HannibalAI] Determining overall strategy");
                 plan.Strategy = DetermineOverallStrategy(assessment);
                 
                 // 4. Assign roles to formations based on strategy
+                System.Diagnostics.Debug.Print("[HannibalAI] Assigning formation roles");
                 AssignFormationRoles(plan, team, assessment);
                 
                 // 5. Create actions for each formation
+                System.Diagnostics.Debug.Print("[HannibalAI] Creating formation actions");
                 CreateFormationActions(plan, team, enemyTeam, assessment);
                 
                 // Store the plan
                 _teamPlans[team] = plan;
                 _lastPlanningTime = DateTime.Now;
                 
-                // Log the plan
-                Logger.Instance.Info($"Developed tactical plan: {plan.Strategy} with {plan.FormationRoles.Count} formation roles");
+                // Log the plan details
+                string planDetails = $"Developed tactical plan for team {team.TeamIndex}: Strategy={plan.Strategy}, " +
+                    $"FormationRoles={plan.FormationRoles.Count}, " +
+                    $"FormationActions={plan.FormationActions.Count}";
+                
+                Logger.Instance.Info(planDetails);
+                System.Diagnostics.Debug.Print($"[HannibalAI] {planDetails}");
+                
+                // Log each formation role and action
+                foreach (var role in plan.FormationRoles)
+                {
+                    System.Diagnostics.Debug.Print($"[HannibalAI] Role: Formation {role.Formation.Index} assigned {role.Role}");
+                }
+                
+                foreach (var action in plan.FormationActions)
+                {
+                    System.Diagnostics.Debug.Print($"[HannibalAI] Action: Formation {action.Formation.Index} to {action.ActionType}");
+                    
+                    if (action.TargetPosition != null)
+                    {
+                        System.Diagnostics.Debug.Print($"[HannibalAI] Action target: {action.TargetPosition}");
+                    }
+                }
                 
                 return plan;
             }
             catch (Exception ex)
             {
-                Logger.Instance.Error($"Error developing tactical plan: {ex.Message}");
+                string errorMsg = $"Error developing tactical plan: {ex.Message}\n{ex.StackTrace}";
+                Logger.Instance.Error(errorMsg);
+                System.Diagnostics.Debug.Print($"[HannibalAI] EXCEPTION in DevelopTacticalPlan: {errorMsg}");
+                
+                // Report error in game if debug is enabled
+                if (ModConfig.Instance.Debug)
+                {
+                    InformationManager.DisplayMessage(
+                        new InformationMessage($"HannibalAI tactical planning error: {ex.Message}", Color.FromUint(0xFF0000)));
+                }
                 
                 // Return empty plan if error
                 return new TacticalPlan();

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Prefab>
+    <Window>
+        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent">
+            <Children>
+                <!-- Main Panel -->
+                <ListPanel WidthSizePolicy="CoverChildren" HeightSizePolicy="CoverChildren" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Children>
+                        <!-- Title -->
+                        <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="500" SuggestedHeight="45">
+                            <Children>
+                                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Brush="HannibalAI.Title" Text="@SettingsTitle" />
+                            </Children>
+                        </Widget>
+                        
+                        <!-- Options Panel -->
+                        <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="500" SuggestedHeight="400" Brush="HannibalAI.Panel">
+                            <Children>
+                                <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="CoverChildren" VerticalAlignment="Top" MarginTop="20" MarginLeft="20" MarginRight="20" MarginBottom="20">
+                                    <Children>
+                                        <!-- AI Enable Toggle -->
+                                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40">
+                                            <Children>
+                                                <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="250" VerticalAlignment="Center" Brush="HannibalAI.Text" Text="@EnableAI" />
+                                                <CheckboxWidget DataSource="{EnableAI}" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="32" SuggestedHeight="32" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            </Children>
+                                        </Widget>
+                                        
+                                        <!-- AI Controls Enemies Toggle -->
+                                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40">
+                                            <Children>
+                                                <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="250" VerticalAlignment="Center" Brush="HannibalAI.Text" Text="@AIControlsEnemies" />
+                                                <CheckboxWidget DataSource="{AIControlsEnemies}" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="32" SuggestedHeight="32" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            </Children>
+                                        </Widget>
+                                        
+                                        <!-- Debug Toggle -->
+                                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40">
+                                            <Children>
+                                                <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="250" VerticalAlignment="Center" Brush="HannibalAI.Text" Text="@Debug" />
+                                                <CheckboxWidget DataSource="{Debug}" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="32" SuggestedHeight="32" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            </Children>
+                                        </Widget>
+                                        
+                                        <!-- Verbose Logging Toggle -->
+                                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40">
+                                            <Children>
+                                                <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="250" VerticalAlignment="Center" Brush="HannibalAI.Text" Text="@VerboseLogging" />
+                                                <CheckboxWidget DataSource="{VerboseLogging}" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="32" SuggestedHeight="32" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            </Children>
+                                        </Widget>
+                                        
+                                        <!-- Commander Memory Toggle -->
+                                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40">
+                                            <Children>
+                                                <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="250" VerticalAlignment="Center" Brush="HannibalAI.Text" Text="@UseCommanderMemory" />
+                                                <CheckboxWidget DataSource="{UseCommanderMemory}" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="32" SuggestedHeight="32" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            </Children>
+                                        </Widget>
+                                        
+                                        <!-- Aggressiveness Slider -->
+                                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40">
+                                            <Children>
+                                                <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="200" VerticalAlignment="Center" Brush="HannibalAI.Text" Text="@Aggressiveness" />
+                                                <SliderWidget DataSource="{Aggressiveness}" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="200" SuggestedHeight="32" HorizontalAlignment="Right" VerticalAlignment="Center" MinValue="0" MaxValue="100" />
+                                                <TextWidget DataSource="{AggressivenessValue}" WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="50" HorizontalAlignment="Right" VerticalAlignment="Center" Brush="HannibalAI.Text" MarginRight="210" />
+                                            </Children>
+                                        </Widget>
+                                        
+                                        <!-- Prefer High Ground Toggle -->
+                                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40">
+                                            <Children>
+                                                <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="250" VerticalAlignment="Center" Brush="HannibalAI.Text" Text="@PreferHighGround" />
+                                                <CheckboxWidget DataSource="{PreferHighGround}" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="32" SuggestedHeight="32" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            </Children>
+                                        </Widget>
+                                        
+                                        <!-- Prefer Ranged Formations Toggle -->
+                                        <Widget WidthSizePolicy="StretchToParent" HeightSizePolicy="Fixed" SuggestedHeight="40">
+                                            <Children>
+                                                <TextWidget WidthSizePolicy="Fixed" HeightSizePolicy="StretchToParent" SuggestedWidth="250" VerticalAlignment="Center" Brush="HannibalAI.Text" Text="@PreferRangedFormations" />
+                                                <CheckboxWidget DataSource="{PreferRangedFormations}" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="32" SuggestedHeight="32" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            </Children>
+                                        </Widget>
+                                    </Children>
+                                </ListPanel>
+                            </Children>
+                        </Widget>
+                        
+                        <!-- Buttons Panel -->
+                        <Widget WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="500" SuggestedHeight="50">
+                            <Children>
+                                <ListPanel WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" HorizontalAlignment="Center">
+                                    <Children>
+                                        <!-- Save Button -->
+                                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="200" SuggestedHeight="40" HorizontalAlignment="Left" MarginLeft="20" Brush="HannibalAI.Button" Command.Click="ExecuteSave">
+                                            <Children>
+                                                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Brush="HannibalAI.ButtonText" Text="@SaveSettings" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                            </Children>
+                                        </ButtonWidget>
+                                        
+                                        <!-- Reset Button -->
+                                        <ButtonWidget DoNotPassEventsToChildren="true" WidthSizePolicy="Fixed" HeightSizePolicy="Fixed" SuggestedWidth="200" SuggestedHeight="40" HorizontalAlignment="Right" MarginRight="20" Brush="HannibalAI.Button" Command.Click="ExecuteReset">
+                                            <Children>
+                                                <TextWidget WidthSizePolicy="StretchToParent" HeightSizePolicy="StretchToParent" Brush="HannibalAI.ButtonText" Text="@ResetSettings" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                                            </Children>
+                                        </ButtonWidget>
+                                    </Children>
+                                </ListPanel>
+                            </Children>
+                        </Widget>
+                    </Children>
+                </ListPanel>
+            </Children>
+        </Widget>
+    </Window>
+</Prefab>
